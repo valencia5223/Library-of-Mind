@@ -141,7 +141,7 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
                             <div
                               className="spine-3d"
                               style={{
-                                backgroundColor: getSpineColor(book.id),
+                                background: getSpineColor(book.id),
                                 height: `${spineHeight}px`,
                                 width: `${spineWidth}px`
                               }}
