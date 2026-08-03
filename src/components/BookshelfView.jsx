@@ -144,7 +144,7 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
                             style={{
                               height: `${spineHeight}px`,
                               width: `${spineWidth}px`,
-                              transform: `rotateZ(${tiltAngle}deg)`
+                              '--tilt-angle': `${tiltAngle}deg`
                             }}
                           >
                             <div className="book-3d-box">

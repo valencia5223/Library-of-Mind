@@ -435,6 +435,7 @@ input:focus, select:focus, textarea:focus {
   perspective: 1200px;
   transform-style: preserve-3d;
   margin-right: 0.15rem;
+  transform: rotateZ(var(--tilt-angle, 0deg));
   transition: margin 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.35s ease;
 }
 
@@ -454,8 +455,9 @@ input:focus, select:focus, textarea:focus {
 }
 
 .book-3d-container:hover {
-  margin-right: 2.8rem; /* 뒤에 있는 옆 칸 도서 표지에 가려지지 않게 3D 가로 간격 확보 */
-  z-index: 20;
+  margin-right: 3.5rem; /* 뒤에 있는 옆 칸 도서 표지에 가려지지 않게 3D 가로 간격 확보 */
+  transform: rotateZ(var(--tilt-angle, 0deg)) scale(1.04);
+  z-index: 50;
 }
 
 /* 3D 책장 책등 (정면) */
