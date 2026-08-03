@@ -1,7 +1,15 @@
 import React, { useState } from 'react';
 import { BookOpen, Star, ExternalLink, PlusCircle, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare } from 'lucide-react';
 
-export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onAddManualBook, onUpdateBookDetails }) {
+export default function BookshelfView({ 
+  books, 
+  onUpdateStatus, 
+  onDeleteBook, 
+  onAddManualBook, 
+  onUpdateBookDetails, 
+  viewedFriend = null, 
+  onBackToMyBookshelf 
+}) {
   const [viewMode, setViewMode] = useState('3d'); // '3d' | 'grid'
   const [selectedBook, setSelectedBook] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -81,11 +89,28 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
 
   return (
     <div className="bookshelf-container">
+      {/* 친구 서재 탐색 시 정보 배너 */}
+      {viewedFriend && (
+        <div className="friend-view-banner p-3 mb-4 rounded flex justify-between align-middle" style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af' }}>
+          <div className="flex align-middle font-medium">
+            <span className="me-2">📢</span>
+            <span>현재 <strong>{viewedFriend.email}</strong> 님의 서재를 둘러보고 있습니다. (읽기 전용 모드)</span>
+          </div>
+          <button className="btn btn-primary btn-sm px-3 py-1" onClick={onBackToMyBookshelf} style={{ fontSize: '0.8rem' }}>
+            내 서재로 돌아가기
+          </button>
+        </div>
+      )}
+
       {/* 헤더 컨트롤 */}
       <div className="bookshelf-header">
         <div>
-          <h2>나만의 3D 비주얼 서재</h2>
-          <p className="sub-text">원목 책장에 꽂힌 책을 클릭하여 상태 변경, 별점 및 독서 리뷰를 남기세요.</p>
+          <h2>{viewedFriend ? `${viewedFriend.email.split('@')[0]} 님의 3D 비주얼 서재` : '나만의 3D 비주얼 서재'}</h2>
+          <p className="sub-text">
+            {viewedFriend 
+              ? '친구의 책장에 꽂힌 양장본 도서들을 마우스 포인터로 움직여 관찰하고 클릭해 독평을 읽어보세요.'
+              : '원목 책장에 꽂힌 책을 클릭하여 상태 변경, 별점 및 독서 리뷰를 남기세요.'}
+          </p>
         </div>
         <div className="flex gap-2 align-center">
           <div className="toggle-group">
@@ -103,9 +128,11 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
             </button>
           </div>
 
-          <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-            <PlusCircle size={18} /> 수동 책 추가
-          </button>
+          {!viewedFriend && (
+            <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+              <PlusCircle size={18} /> 수동 책 추가
+            </button>
+          )}
         </div>
       </div>
 
@@ -265,35 +292,37 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
                 <p className="detail-author">{selectedBook.author} | {selectedBook.publisher || '출판사 정보'}</p>
 
                 {/* 상태 선택 */}
-                <div className="status-selector mt-3">
-                  <label className="sub-text">독서 상태 변경:</label>
-                  <div className="btn-group mt-1">
-                    <button
-                      className={`btn btn-sm ${selectedBook.status === 'READING' ? 'btn-primary' : 'btn-outline'}`}
-                      onClick={() => { onUpdateStatus(selectedBook.id, 'READING'); setSelectedBook({ ...selectedBook, status: 'READING' }); }}
-                    >
-                      <Clock size={14} /> 읽는 중
-                    </button>
-                    <button
-                      className={`btn btn-sm ${selectedBook.status === 'READ' ? 'btn-success' : 'btn-outline'}`}
-                      onClick={() => { onUpdateStatus(selectedBook.id, 'READ'); setSelectedBook({ ...selectedBook, status: 'READ' }); }}
-                    >
-                      <CheckCircle size={14} /> 완독함
-                    </button>
-                    <button
-                      className={`btn btn-sm ${selectedBook.status === 'TO_READ' ? 'btn-warning' : 'btn-outline'}`}
-                      onClick={() => { onUpdateStatus(selectedBook.id, 'TO_READ'); setSelectedBook({ ...selectedBook, status: 'TO_READ' }); }}
-                    >
-                      <Bookmark size={14} /> 읽고 싶음
-                    </button>
+                {!viewedFriend && (
+                  <div className="status-selector mt-3">
+                    <label className="sub-text">독서 상태 변경:</label>
+                    <div className="btn-group mt-1">
+                      <button
+                        className={`btn btn-sm ${selectedBook.status === 'READING' ? 'btn-primary' : 'btn-outline'}`}
+                        onClick={() => { onUpdateStatus(selectedBook.id, 'READING'); setSelectedBook({ ...selectedBook, status: 'READING' }); }}
+                      >
+                        <Clock size={14} /> 읽는 중
+                      </button>
+                      <button
+                        className={`btn btn-sm ${selectedBook.status === 'READ' ? 'btn-success' : 'btn-outline'}`}
+                        onClick={() => { onUpdateStatus(selectedBook.id, 'READ'); setSelectedBook({ ...selectedBook, status: 'READ' }); }}
+                      >
+                        <CheckCircle size={14} /> 완독함
+                      </button>
+                      <button
+                        className={`btn btn-sm ${selectedBook.status === 'TO_READ' ? 'btn-warning' : 'btn-outline'}`}
+                        onClick={() => { onUpdateStatus(selectedBook.id, 'TO_READ'); setSelectedBook({ ...selectedBook, status: 'TO_READ' }); }}
+                      >
+                        <Bookmark size={14} /> 읽고 싶음
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* 독서 리뷰 및 별점 섹션 */}
                 <div className="review-section mt-4 p-3 border-card">
                   <div className="flex justify-between align-center">
                     <h4 className="flex align-center gap-1"><MessageSquare size={16} className="text-primary" /> 독서 평가 & 한줄평</h4>
-                    {!isEditingReview && (
+                    {!isEditingReview && !viewedFriend && (
                       <button className="btn btn-sm btn-outline" onClick={() => setIsEditingReview(true)}>
                         <Edit3 size={14} /> {selectedBook.review ? '수정' : '작성'}
                       </button>
@@ -376,15 +405,17 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
                     </a>
                   )}
 
-                  <button
-                    className="btn btn-danger btn-sm"
-                    onClick={() => {
-                      onDeleteBook(selectedBook.id);
-                      setSelectedBook(null);
-                    }}
-                  >
-                    <Trash2 size={16} /> 서재에서 삭제
-                  </button>
+                  {!viewedFriend && (
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={() => {
+                        onDeleteBook(selectedBook.id);
+                        setSelectedBook(null);
+                      }}
+                    >
+                      <Trash2 size={16} /> 서재에서 삭제
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

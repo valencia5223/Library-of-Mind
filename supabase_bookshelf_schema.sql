@@ -177,3 +177,81 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
+
+-- ========================================================
+-- 4. 사용자 공개 프로필 테이블 생성 (이메일로 친구 매핑)
+-- ========================================================
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- profiles RLS 설정하여 전체 조회를 허용 (이메일로 친구의 ID 검색 가능)
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public select for profiles" 
+  ON public.profiles FOR SELECT 
+  USING (true);
+
+CREATE POLICY "Allow upsert own profile" 
+  ON public.profiles FOR INSERT 
+  WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Allow update own profile" 
+  ON public.profiles FOR UPDATE 
+  USING (auth.uid() = id);
+
+
+-- ========================================================
+-- 5. 친구 관계 테이블 생성
+-- ========================================================
+CREATE TABLE IF NOT EXISTS public.user_friends (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  friend_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, friend_id)
+);
+
+-- user_friends RLS 설정
+ALTER TABLE public.user_friends ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own friends list" 
+  ON public.user_friends FOR SELECT 
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can add friends" 
+  ON public.user_friends FOR INSERT 
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete friends" 
+  ON public.user_friends FOR DELETE 
+  USING (auth.uid() = user_id);
+
+
+-- ========================================================
+-- 6. user_books & book_notes 에 친구 공개용 SELECT RLS 정책 추가
+-- ========================================================
+DROP POLICY IF EXISTS "Users can view their own books" ON public.user_books;
+DROP POLICY IF EXISTS "Users can view own or friends books" ON public.user_books;
+
+CREATE POLICY "Users can view own or friends books" 
+  ON public.user_books FOR SELECT 
+  USING (
+    auth.uid() = user_id 
+    OR user_id IN (SELECT friend_id FROM public.user_friends WHERE user_id = auth.uid())
+  );
+
+DROP POLICY IF EXISTS "Users can view their own notes" ON public.book_notes;
+DROP POLICY IF EXISTS "Users can view own or friends notes" ON public.book_notes;
+
+CREATE POLICY "Users can view own or friends notes" 
+  ON public.book_notes FOR SELECT 
+  USING (
+    auth.uid() = user_id 
+    OR user_id IN (SELECT friend_id FROM public.user_friends WHERE user_id = auth.uid())
+  );
+
+
+

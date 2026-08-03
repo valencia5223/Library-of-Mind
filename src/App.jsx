@@ -6,7 +6,9 @@ import BookSearch from './components/BookSearch';
 import ThoughtLedger from './components/ThoughtLedger';
 import FocusStudio from './components/FocusStudio';
 import ReadingStats from './components/ReadingStats';
-import { BookOpen, Search, MessageSquare, Timer, Trophy, User, Library, Lock, Sparkles, LogIn, ArrowRight } from 'lucide-react';
+import FriendManager from './components/FriendManager';
+import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users } from 'lucide-react';
+
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('bookshelf');
@@ -39,10 +41,21 @@ export default function App() {
     }
   }, []);
 
+  // 친구 조회 모드 상태
+  const [viewedFriend, setViewedFriend] = useState(null); // { id: 'uuid', email: 'email@test.com' } 또는 null
+
   // 로그인 상태 변화 시 사용자별 데이터 로딩
   useEffect(() => {
     if (user) {
       if (isSupabaseConfigured()) {
+        // public.profiles 에 유저 이메일 연동 동기화 (Upsert)
+        supabase.from('profiles').upsert({
+          id: user.id,
+          email: user.email
+        }).then(({ error }) => {
+          if (error) console.warn('프로필 자동 등록 실패 (profiles 테이블이 없을 수 있음):', error);
+        });
+        
         fetchSupabaseData();
       } else {
         const userKey = `user_books_${user.id || 'demo'}`;
@@ -60,15 +73,28 @@ export default function App() {
     } else {
       setBooks([]);
       setNotes([]);
+      setViewedFriend(null);
       setSessions([]);
     }
   }, [user]);
 
+  // viewedFriend가 바뀌었을 때도 데이터 다시 로드
+  useEffect(() => {
+    if (user && isSupabaseConfigured()) {
+      fetchSupabaseData();
+    }
+  }, [viewedFriend]);
+
   const fetchSupabaseData = async () => {
     try {
-      const { data: bData } = await supabase.from('user_books').select('*').order('created_at', { ascending: false });
-      const { data: nData } = await supabase.from('book_notes').select('*').order('created_at', { ascending: false });
-      const { data: sData } = await supabase.from('reading_sessions').select('*').order('created_at', { ascending: false });
+      // viewedFriend가 엮여 있으면 친구의 데이터를 로드하고, 아니면 본인 데이터 로드
+      const targetUserId = viewedFriend ? viewedFriend.id : user.id;
+
+      const { data: bData } = await supabase.from('user_books').select('*').eq('user_id', targetUserId).order('created_at', { ascending: false });
+      const { data: nData } = await supabase.from('book_notes').select('*').eq('user_id', targetUserId).order('created_at', { ascending: false });
+      
+      // 독서 세션(타임라인)은 오직 본인 통계용이므로 친구 것은 불필요
+      const { data: sData } = await supabase.from('reading_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
 
       if (bData) setBooks(bData);
       if (nData) setNotes(nData);
@@ -243,7 +269,15 @@ export default function App() {
               className={`nav-item ${activeTab === 'stats' ? 'active' : ''}`}
               onClick={() => setActiveTab('stats')}
             >
-              <Trophy size={18} /> 독서 리포트
+              <BarChart2 size={18} /> 독서 리포트
+            </button>
+
+
+            <button
+              className={`nav-item ${activeTab === 'social' ? 'active' : ''}`}
+              onClick={() => setActiveTab('social')}
+            >
+              <Users size={18} /> 소셜 서재
             </button>
           </nav>
         )}
@@ -287,6 +321,8 @@ export default function App() {
               onDeleteBook={handleDeleteBook}
               onAddManualBook={handleAddBook}
               onUpdateBookDetails={handleUpdateBookDetails}
+              viewedFriend={viewedFriend}
+              onBackToMyBookshelf={() => setViewedFriend(null)}
             />
           )}
 
@@ -317,6 +353,18 @@ export default function App() {
             <ReadingStats
               books={books}
               sessions={sessions}
+            />
+          )}
+
+          {activeTab === 'social' && (
+            <FriendManager
+              user={user}
+              onViewFriendBookshelf={(friendId, friendEmail) => {
+                setViewedFriend({ id: friendId, email: friendEmail });
+                setActiveTab('bookshelf');
+              }}
+              currentViewedFriend={viewedFriend}
+              onBackToMyBookshelf={() => setViewedFriend(null)}
             />
           )}
         </main>
