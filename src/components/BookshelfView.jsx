@@ -321,16 +321,16 @@ export default function BookshelfView({
                 <div className="progress-box mt-3">
                   <div className="flex justify-between text-xs sub-text font-bold mb-1">
                     <span>독서 진행률</span>
-                    <span>{Math.round(((selectedBook.current_pages || 0) / (selectedBook.total_pages || 300)) * 100)}%</span>
+                    <span>{Math.round(((isEditingReview ? editCurrentPages : (selectedBook.current_pages || 0)) / (isEditingReview ? editTotalPages : (selectedBook.total_pages || 300))) * 100) || 0}%</span>
                   </div>
                   <div className="progress-bar-bg">
                     <div
                       className="progress-bar-fill"
-                      style={{ width: `${Math.min(100, ((selectedBook.current_pages || 0) / (selectedBook.total_pages || 300)) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (((isEditingReview ? editCurrentPages : (selectedBook.current_pages || 0)) / (isEditingReview ? editTotalPages : (selectedBook.total_pages || 300))) * 100) || 0)}%` }}
                     ></div>
                   </div>
-                  <span className="sub-text text-center block mt-1">
-                    {selectedBook.current_pages || 0} / {selectedBook.total_pages || 300} 페이지
+                  <span className="sub-text text-center block mt-1" style={{ fontSize: '0.8rem' }}>
+                    {isEditingReview ? editCurrentPages : (selectedBook.current_pages || 0)} / {isEditingReview ? editTotalPages : (selectedBook.total_pages || 300)} 페이지
                   </span>
                 </div>
               </div>
