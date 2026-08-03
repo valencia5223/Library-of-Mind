@@ -142,8 +142,12 @@ END;
 $$;
 
 
--- 3. 알라딘 실시간 도서 검색 API 프록시 함수 정의
-CREATE OR REPLACE FUNCTION public.aladin_search_proxy(search_query TEXT)
+-- 3. 알라딘 실시간 도서 검색 API 프록시 함수 정의 (정렬 및 페이지네이션 매개변수 추가)
+CREATE OR REPLACE FUNCTION public.aladin_search_proxy(
+  search_query TEXT,
+  start_page INT DEFAULT 1,
+  sort_option TEXT DEFAULT 'Accuracy'
+)
 RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -153,8 +157,13 @@ DECLARE
   result_json JSON;
   api_url TEXT;
 BEGIN
-  -- 알라딘 도서 검색 API URL
-  api_url := 'http://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=ttbcdw2341334001&Query=' || urlencode(search_query) || '&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101&output=js';
+  -- MaxResults=30으로 고정하고 start, Sort 파라미터를 동적으로 바인딩
+  api_url := 'http://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=ttbcdw2341334001&Query=' 
+             || urlencode(search_query) 
+             || '&MaxResults=30' 
+             || '&start=' || start_page 
+             || '&Sort=' || urlencode(sort_option) 
+             || '&SearchTarget=Book&Cover=Big&Version=20131101&output=js';
   
   -- HTTP GET 수행
   SELECT * FROM http_get(api_url) INTO response_record;

@@ -488,11 +488,11 @@ input:focus, select:focus, textarea:focus {
   width: 100%;
   height: 100%;
   background-size: cover;
-  background-position: center;
-  opacity: 0.22;
-  mix-blend-mode: multiply;
+  background-position: center left;
+  opacity: 0.88; /* 표지의 실제 색감과 디자인을 거의 온전하게(88%) 흡수함 */
+  mix-blend-mode: normal; /* 원본의 다채로운 색상이 그대로 투과되도록 투명 혼합 모드 제거 */
   pointer-events: none;
-  filter: saturate(1.1) brightness(0.9);
+  filter: brightness(0.85) contrast(1.15) saturate(0.95); /* 양장본의 그윽한 입체감을 위해 밝기/대비만 살짝 보정 */
   z-index: 0;
 }
 
@@ -503,8 +503,8 @@ input:focus, select:focus, textarea:focus {
   bottom: 0;
   left: 5px;
   width: 2px;
-  background: rgba(0, 0, 0, 0.35);
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.45);
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
   z-index: 2;
 }
 
@@ -515,50 +515,59 @@ input:focus, select:focus, textarea:focus {
   bottom: 0;
   left: 15%;
   width: 25%;
-  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.18) 50%, transparent 100%);
   pointer-events: none;
   z-index: 1;
 }
 
+/* 세로 쓰기 전용 레이아웃 교정 (Flex-direction 꼬임 방지) */
 .spine-content {
   writing-mode: vertical-rl;
   text-orientation: mixed;
   color: #ffffff;
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  flex-direction: column; /* 세로 쓰기 모드에서의 column은 물리적으로 좌우 배치 축이 됨 */
+  justify-content: flex-start;
   align-items: center;
-  height: 90%;
+  height: 100%;
   width: 100%;
-  padding: 0.3rem 0;
+  padding: 0.6rem 0.2rem;
   z-index: 3;
+  box-sizing: border-box;
 }
 
 .spine-title {
-  font-size: 0.76rem; /* 세로 글씨 한 자씩 정확하게 들어가도록 크기 소폭 조절 */
-  font-weight: 800;
-  letter-spacing: 0.2em;
-  line-height: 1.25;
-  max-height: 75%;
+  font-size: 0.76rem;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  max-height: 70%;
+  max-width: 1.25em; /* 좁은 책등에서 타이틀 글씨가 좌우로 겹치지 않고 온전히 1줄 세로정렬되게 폭 제한 */
   overflow: hidden;
   text-shadow: 
-    1.5px 1.5px 1px #000, 
-    -1.5px -1.5px 1px #000, 
-    1.5px -1.5px 1px #000, 
-    -1.5px 1.5px 1px #000, 
-    0px 0px 4px rgba(0,0,0,0.95);
-  word-break: keep-all;
+    1px 1px 2px #000, 
+    -1px -1px 2px #000, 
+    1.5px -1.5px 2px #000, 
+    -1.5px 1.5px 2px #000, 
+    0px 0px 5px rgba(0,0,0,0.95); /* 실물 책의 검은 가죽 불박 인쇄 느낌을 위한 뚜렷한 외곽 대조림 */
+  word-break: break-all; /* 영문 혼용 시에도 한 글자씩 끊어 떨어지도록 처리 */
   text-align: center;
+  margin-top: 0.2rem;
+  font-family: 'Outfit', 'Pretendard', sans-serif;
 }
 
 .spine-author {
-  font-size: 0.62rem;
-  opacity: 0.88;
-  letter-spacing: 0.12em;
+  font-size: 0.58rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.05em;
   max-height: 20%;
+  max-width: 1.2em; /* 저자명 뭉개짐 방지 */
   overflow: hidden;
-  text-shadow: 1px 1px 1px rgba(0,0,0,0.9);
-  margin-top: 0.2rem;
+  text-shadow: 1px 1px 1px rgba(0,0,0,0.95);
+  margin-top: auto; /* 저자 정보는 책등 꼬리 부분으로 자연스럽게 하단 정렬 */
+  word-break: break-all;
 }
 
 /* 3D 책 우측 표지 (옆면에 90도 회전 배치되어 숨어 있다가 호버 시 회전 회동 노출) */
