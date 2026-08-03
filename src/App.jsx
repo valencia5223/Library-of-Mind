@@ -80,8 +80,23 @@ export default function App() {
 
   // CRUD 핸들러
   const handleAddBook = async (newBook) => {
+    // DB user_books 테이블 스키마에 정의된 컬럼만 안전하게 필터링하여 삽입
+    const cleanBook = {
+      title: newBook.title || '제목 정보 없음',
+      author: newBook.author || '저자 미상',
+      publisher: newBook.publisher || '',
+      cover_url: newBook.cover_url || '',
+      isbn: newBook.isbn || '',
+      total_pages: newBook.total_pages ? parseInt(newBook.total_pages) : 320,
+      current_pages: newBook.current_pages ? parseInt(newBook.current_pages) : 0,
+      status: newBook.status || 'TO_READ',
+      rating: newBook.rating ? Math.min(5, Math.max(0, Math.round(parseFloat(newBook.rating)))) : 0, 
+      buy_link: newBook.buy_link || '',
+      category: newBook.category || '일반'
+    };
+
     const bookObj = {
-      ...newBook,
+      ...cleanBook,
       id: `b-${Date.now()}`,
       created_at: new Date().toISOString()
     };
@@ -92,7 +107,7 @@ export default function App() {
     if (!isSupabaseConfigured()) {
       localStorage.setItem(`user_books_${user?.id || 'demo'}`, JSON.stringify(updated));
     } else if (user) {
-      await supabase.from('user_books').insert([{ ...newBook, user_id: user.id }]);
+      await supabase.from('user_books').insert([{ ...cleanBook, user_id: user.id }]);
     }
   };
 
