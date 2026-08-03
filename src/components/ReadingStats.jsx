@@ -56,8 +56,9 @@ export default function ReadingStats({ books = [], sessions = [] }) {
 
   // 월별 완독 도서수 채우기
   books.filter(b => b.status === 'READ').forEach(book => {
-    if (book.updated_at) {
-      const date = new Date(book.updated_at);
+    const targetDateStr = book.completed_at || book.updated_at || book.created_at;
+    if (targetDateStr) {
+      const date = new Date(targetDateStr);
       const y = date.getFullYear();
       const m = date.getMonth() + 1;
       const monthData = last6Months.find(x => x.year === y && x.month === m);

@@ -14,8 +14,9 @@ CREATE TABLE IF NOT EXISTS public.user_books (
   isbn TEXT,
   total_pages INT DEFAULT 0,
   current_pages INT DEFAULT 0,
+  completed_at TIMESTAMPTZ, -- 완독 달성 시각
   status TEXT NOT NULL DEFAULT 'TO_READ', -- 'TO_READ' (읽고싶은), 'READING' (읽는중), 'READ' (완독)
-  rating INT DEFAULT 0, -- 1~5점
+  rating NUMERIC(2,1) DEFAULT 0.0, -- 0.5 단위 지원 (예: 4.5점)
   buy_link TEXT,
   category TEXT DEFAULT '일반',
   created_at TIMESTAMPTZ DEFAULT NOW(),

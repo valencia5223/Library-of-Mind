@@ -138,24 +138,34 @@ export default function App() {
   };
 
   const handleUpdateStatus = async (bookId, newStatus) => {
-    const updated = books.map(b => b.id === bookId ? { ...b, status: newStatus } : b);
+    const isCompleted = newStatus === 'READ';
+    const completedAt = isCompleted ? new Date().toISOString() : null;
+    const updated = books.map(b => b.id === bookId ? { ...b, status: newStatus, completed_at: completedAt } : b);
     setBooks(updated);
 
     if (!isSupabaseConfigured()) {
       localStorage.setItem(`user_books_${user?.id || 'demo'}`, JSON.stringify(updated));
     } else if (user) {
-      await supabase.from('user_books').update({ status: newStatus }).eq('id', bookId);
+      await supabase.from('user_books').update({ status: newStatus, completed_at: completedAt }).eq('id', bookId);
     }
   };
 
   const handleUpdateBookDetails = async (bookId, updatedBookData) => {
-    const updated = books.map(b => b.id === bookId ? { ...b, ...updatedBookData } : b);
+    let cleanData = { ...updatedBookData };
+    if (cleanData.status === 'READ') {
+      if (!cleanData.completed_at) {
+        cleanData.completed_at = new Date().toISOString();
+      }
+    } else {
+      cleanData.completed_at = null;
+    }
+    const updated = books.map(b => b.id === bookId ? { ...b, ...cleanData } : b);
     setBooks(updated);
 
     if (!isSupabaseConfigured()) {
       localStorage.setItem(`user_books_${user?.id || 'demo'}`, JSON.stringify(updated));
     } else if (user) {
-      await supabase.from('user_books').update(updatedBookData).eq('id', bookId);
+      await supabase.from('user_books').update(cleanData).eq('id', bookId);
     }
   };
 

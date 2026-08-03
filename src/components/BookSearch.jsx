@@ -164,7 +164,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
         description: item.description || '',
         buy_link: item.link || `https://www.aladin.co.kr/search/wsearchresult.aspx?SearchTarget=Book&SearchWord=${encodeURIComponent(item.title)}`,
         rating: item.customerReviewRank ? (item.customerReviewRank / 2).toFixed(1) : '4.8',
-        total_pages: 320,
+        total_pages: parseInt(item.subInfo?.itemPage || item.itemPage) || 320,
         price: item.priceSales ? `₩${item.priceSales.toLocaleString()}` : '',
         category: item.categoryName || '',
         bestRank: item.bestRank || null

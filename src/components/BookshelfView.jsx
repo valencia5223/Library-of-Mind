@@ -21,6 +21,18 @@ export default function BookshelfView({
   const [editTotalPages, setEditTotalPages] = useState(250);
   const [editCurrentPages, setEditCurrentPages] = useState(0);
 
+  // 별점 및 정보 독립화 동기화
+  React.useEffect(() => {
+    if (selectedBook) {
+      setEditRating(selectedBook.rating || 5);
+      setEditReview(selectedBook.review || '');
+      setEditTotalPages(selectedBook.total_pages || 300);
+      setEditCurrentPages(selectedBook.current_pages || 0);
+    } else {
+      setIsEditingReview(false);
+    }
+  }, [selectedBook]);
+
   // 수동 등록 폼
   const [newTitle, setNewTitle] = useState('');
   const [newAuthor, setNewAuthor] = useState('');
@@ -59,11 +71,29 @@ export default function BookshelfView({
 
   const handleOpenDetail = (book) => {
     setSelectedBook(book);
-    setEditRating(book.rating || 5);
-    setEditReview(book.review || '');
-    setEditTotalPages(book.total_pages || 300);
-    setEditCurrentPages(book.current_pages || 0);
-    setIsEditingReview(false);
+  };
+
+  // 반/온 별점 렌더러 함수 추가
+  const renderStars = (rating) => {
+    const stars = [];
+    const clampRating = Math.min(5, Math.max(0, parseFloat(rating) || 0));
+    for (let i = 1; i <= 5; i++) {
+        if (clampRating >= i) {
+          stars.push(<Star key={i} size={15} fill="#f59e0b" color="#f59e0b" style={{ display: 'inline' }} />);
+        } else if (clampRating >= i - 0.5) {
+          stars.push(
+            <span key={i} style={{ display: 'inline-flex', position: 'relative', width: '15px', height: '15px' }} className="me-0.5">
+              <Star size={15} color="#f59e0b" style={{ position: 'absolute' }} />
+              <span style={{ width: '7.5px', overflow: 'hidden', position: 'absolute', display: 'inline-block' }}>
+                <Star size={15} fill="#f59e0b" color="#f59e0b" />
+              </span>
+            </span>
+          );
+        } else {
+          stars.push(<Star key={i} size={15} fill="none" color="#f59e0b" style={{ display: 'inline' }} />);
+        }
+    }
+    return stars;
   };
 
   const handleSaveReview = () => {
@@ -179,7 +209,7 @@ export default function BookshelfView({
                               <div
                                 className="book-3d-spine"
                                 style={{
-                                  background: getSpineColor(book.id)
+                                  background: getSpineThemeColor(book.cover_url, book.id)
                                 }}
                               >
                                 <div className="spine-ridge"></div>
@@ -237,7 +267,7 @@ export default function BookshelfView({
                           className="book-card-cover"
                         />
                         <span className="rating-pill">
-                          <Star size={12} fill="#f59e0b" color="#f59e0b" /> {book.rating || 5}.0
+                          {renderStars(book.rating || 5.0)} <span className="ms-1" style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{(book.rating || 5.0).toFixed(1)}</span>
                         </span>
                       </div>
                       <div className="book-card-info">
@@ -331,22 +361,34 @@ export default function BookshelfView({
 
                   {isEditingReview ? (
                     <div className="edit-review-box mt-2">
-                      <div className="rating-select-row flex align-center gap-2 mb-2">
-                        <span className="sub-text">내 별점:</span>
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            className="star-btn"
-                            type="button"
-                            onClick={() => setEditRating(star)}
-                          >
-                            <Star size={18} fill={star <= editRating ? '#f59e0b' : 'none'} color="#f59e0b" />
-                          </button>
-                        ))}
+                      <div className="rating-select-row flex flex-col gap-1 mb-2">
+                        <div className="flex align-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span className="sub-text font-bold" style={{ fontSize: '0.85rem' }}>내 별점: <strong style={{ color: '#f59e0b' }}>{editRating.toFixed(1)}점</strong></span>
+                          <div className="flex" style={{ display: 'flex', gap: '2px' }}>{renderStars(editRating)}</div>
+                        </div>
+                        <input
+                          type="range"
+                          min="0.5"
+                          max="5.0"
+                          step="0.5"
+                          value={editRating}
+                          onChange={(e) => setEditRating(parseFloat(e.target.value))}
+                          style={{
+                            width: '100%',
+                            accentColor: '#f59e0b',
+                            cursor: 'pointer',
+                            height: '6px',
+                            backgroundColor: '#cbd5e1',
+                            borderRadius: '3px',
+                            border: 'none',
+                            outline: 'none',
+                            marginTop: '4px'
+                          }}
+                        />
                       </div>
 
-                      <div className="flex gap-2 mb-2">
-                        <div className="flex-1">
+                      <div className="flex gap-2 mb-2" style={{ display: 'flex', gap: '0.5rem' }}>
+                        <div className="flex-1" style={{ flex: 1 }}>
                           <label className="sub-text">현재 페이지</label>
                           <input
                             type="number"
@@ -354,7 +396,7 @@ export default function BookshelfView({
                             onChange={(e) => setEditCurrentPages(parseInt(e.target.value) || 0)}
                           />
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1" style={{ flex: 1 }}>
                           <label className="sub-text">전체 페이지</label>
                           <input
                             type="number"
@@ -382,12 +424,15 @@ export default function BookshelfView({
                     </div>
                   ) : (
                     <div className="saved-review-view mt-2">
-                      <div className="flex align-center gap-1 mb-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star key={star} size={16} fill={star <= (selectedBook.rating || 5) ? '#f59e0b' : 'none'} color="#f59e0b" />
-                        ))}
-                        <span className="ms-2 font-bold">{selectedBook.rating || 5}.0</span>
+                      <div className="flex align-center gap-1 mb-1" style={{ display: 'flex', alignItems: 'center' }}>
+                        {renderStars(selectedBook.rating || 5.0)}
+                        <span className="ms-2 font-bold" style={{ marginLeft: '0.5rem' }}>{(selectedBook.rating || 5.0).toFixed(1)}</span>
                       </div>
+                      {selectedBook.status === 'READ' && selectedBook.completed_at && (
+                        <p className="sub-text font-bold mb-2" style={{ color: '#16a34a', fontSize: '0.8rem' }}>
+                          🏆 완독 일자: {new Date(selectedBook.completed_at).toLocaleDateString()}
+                        </p>
+                      )}
                       <p className="review-text">{selectedBook.review || '아직 남긴 감상평이 없습니다. 수정 버튼을 눌러 적어보세요!'}</p>
                     </div>
                   )}
@@ -503,18 +548,15 @@ export default function BookshelfView({
   );
 }
 
-function getSpineColor(id) {
-  const colors = [
-    'linear-gradient(180deg, #182230 0%, #0d1520 100%)', // 엔틱 다크챠콜
-    'linear-gradient(180deg, #6b1212 0%, #3f0a0a 100%)', // 딤 버건디
-    'linear-gradient(180deg, #0f3d3d 0%, #0a2929 100%)', // 클래식 딥틸
-    'linear-gradient(180deg, #112d4e 0%, #0b1d32 100%)', // 로열 딥블루
-    'linear-gradient(180deg, #4c1d95 0%, #2e1065 100%)', // 황실 다크퍼플
-    'linear-gradient(180deg, #6c3b0c 0%, #462507 100%)', // 골드브라운 레더
-    'linear-gradient(180deg, #581c0c 0%, #371007 100%)', // 마호가니 목판
-    'linear-gradient(180deg, #0b453a 0%, #072c25 100%)', // 포레스트 다크그린
-    'linear-gradient(180deg, #27272a 0%, #18181b 100%)', // 흑돌 그래파이트
-  ];
-  const charSum = (id || 'abc').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return colors[charSum % colors.length];
+function getSpineThemeColor(coverUrl, id) {
+  if (!coverUrl) return '#334155';
+  const source = coverUrl + (id || '');
+  let hash = 0;
+  for (let i = 0; i < source.length; i++) {
+    hash = source.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const hue = Math.abs(hash) % 360;
+  const saturation = 45 + (Math.abs(hash >> 2) % 20); // 45% ~ 65% 채도
+  const lightness = 20 + (Math.abs(hash >> 4) % 15);   // 20% ~ 35% 명도
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
