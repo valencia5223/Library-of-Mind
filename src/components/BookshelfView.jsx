@@ -228,6 +228,16 @@ export default function BookshelfView({
       {statusCategories.map((cat) => {
         const catBooks = books.filter((b) => b.status === cat.key);
 
+        // 12권씩 한 층(선반)으로 구성 및 분배
+        const chunks = [];
+        const chunkSize = 12;
+        for (let i = 0; i < catBooks.length; i += chunkSize) {
+          chunks.push(catBooks.slice(i, i + chunkSize));
+        }
+        if (chunks.length === 0) {
+          chunks.push([]); // 빈 선반 1개 표시 보장
+        }
+
         return (
           <div key={cat.key} className="shelf-section">
             <div className="shelf-badge" style={{ borderColor: cat.color, color: cat.color, backgroundColor: cat.bg }}>
@@ -236,82 +246,84 @@ export default function BookshelfView({
             </div>
 
             {viewMode === '3d' ? (
-              <div className="wood-shelf">
-                <div className="shelf-surface">
-                  {catBooks.length === 0 ? (
-                    <div className="empty-shelf-text">이 책장은 비어 있습니다. 탐색 탭에서 책을 찾아 꽂아보세요!</div>
-                  ) : (
-                    <div className="spine-row">
-                      {catBooks.map((book) => {
-                        const spineHeight = Math.min(170, Math.max(130, 120 + ((book.total_pages || 300) / 10)));
-                        const spineWidth = Math.min(54, Math.max(38, 32 + ((book.total_pages || 300) / 20)));
+              chunks.map((shelfBooks, chunkIdx) => (
+                <div key={`${cat.key}-shelf-${chunkIdx}`} className="wood-shelf" style={{ marginBottom: '2rem' }}>
+                  <div className="shelf-surface">
+                    {shelfBooks.length === 0 ? (
+                      <div className="empty-shelf-text">이 책장은 비어 있습니다. 탐색 탭에서 책을 찾아 꽂아보세요!</div>
+                    ) : (
+                      <div className="spine-row">
+                        {shelfBooks.map((book) => {
+                          const spineHeight = Math.min(170, Math.max(130, 120 + ((book.total_pages || 300) / 10)));
+                          const spineWidth = Math.min(54, Math.max(38, 32 + ((book.total_pages || 300) / 20)));
 
-                        const charSum = (book.id || 'abc').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                        const isLeaning = charSum % 4 === 0;
-                        const tiltAngle = isLeaning ? (charSum % 2 === 0 ? 5 : -5) : 0;
+                          const charSum = (book.id || 'abc').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                          const isLeaning = charSum % 4 === 0;
+                          const tiltAngle = isLeaning ? (charSum % 2 === 0 ? 5 : -5) : 0;
 
-                        return (
-                          <div
-                            key={book.id}
-                            className="book-3d-container"
-                            onClick={() => handleOpenDetail(book)}
-                            title={`${book.title} - ${book.author}`}
-                            style={{
-                              height: `${spineHeight}px`,
-                              width: `${spineWidth}px`,
-                              '--tilt-angle': `${tiltAngle}deg`
-                            }}
-                          >
-                            <div className="book-3d-box">
-                              {/* 3D 책등 책등 본연의 그라데이션 바탕과 세로 텍스트 정렬만 출력 */}
-                              <div
-                                className="book-3d-spine"
-                                style={{
-                                  background: coverColors[book.id] || (() => {
-                                    extractMainColor(book.id, book.cover_url);
-                                    return getSpineThemeColor(book.cover_url, book.id);
-                                  })()
-                                }}
-                              >
-                                <div className="spine-ridge"></div>
-                                <div className="spine-highlight"></div>
-                                <div className="spine-content">
-                                  <span className="spine-author">{formatAuthor(book.author)}</span>
-                                  <span className="spine-title">{book.title}</span>
+                          return (
+                            <div
+                              key={book.id}
+                              className="book-3d-container"
+                              onClick={() => handleOpenDetail(book)}
+                              title={`${book.title} - ${book.author}`}
+                              style={{
+                                height: `${spineHeight}px`,
+                                width: `${spineWidth}px`,
+                                '--tilt-angle': `${tiltAngle}deg`
+                              }}
+                            >
+                              <div className="book-3d-box">
+                                {/* 3D 책등 책등 본연의 그라데이션 바탕과 세로 텍스트 정렬만 출력 */}
+                                <div
+                                  className="book-3d-spine"
+                                  style={{
+                                    background: coverColors[book.id] || (() => {
+                                      extractMainColor(book.id, book.cover_url);
+                                      return getSpineThemeColor(book.cover_url, book.id);
+                                    })()
+                                  }}
+                                >
+                                  <div className="spine-ridge"></div>
+                                  <div className="spine-highlight"></div>
+                                  <div className="spine-content">
+                                    <span className="spine-author">{formatAuthor(book.author)}</span>
+                                    <span className="spine-title">{book.title}</span>
+                                  </div>
                                 </div>
-                              </div>
 
-                              {/* 3D 책표지 (호버 시 회전하여 표지가 눈앞에 노출됨) */}
-                              <div
-                                className="book-3d-cover"
-                                style={{
-                                  width: `${spineHeight * 0.72}px`
-                                }}
-                              >
-                                <img
-                                  src={book.cover_url}
-                                  alt={book.title}
-                                  referrerPolicy="no-referrer"
-                                  onError={(e) => handleImgError(e, book.fallback_cover)}
-                                />
-                              </div>
+                                {/* 3D 책표지 (호버 시 회전하여 표지가 눈앞에 노출됨) */}
+                                <div
+                                  className="book-3d-cover"
+                                  style={{
+                                    width: `${spineHeight * 0.72}px`
+                                  }}
+                                >
+                                  <img
+                                    src={book.cover_url}
+                                    alt={book.title}
+                                    referrerPolicy="no-referrer"
+                                    onError={(e) => handleImgError(e, book.fallback_cover)}
+                                  />
+                                </div>
 
-                              {/* 3D 종이속지 옆면 */}
-                              <div
-                                className="book-3d-pages"
-                                style={{
-                                  width: `${spineHeight * 0.7}px`
-                                }}
-                              ></div>
+                                {/* 3D 종이속지 옆면 */}
+                                <div
+                                  className="book-3d-pages"
+                                  style={{
+                                    width: `${spineHeight * 0.7}px`
+                                  }}
+                                ></div>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <div className="shelf-plank"></div>
                 </div>
-                <div className="shelf-plank"></div>
-              </div>
+              ))
             ) : (
               <div className="book-grid mt-3">
                 {catBooks.length === 0 ? (

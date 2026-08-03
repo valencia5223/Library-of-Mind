@@ -548,8 +548,8 @@ input:focus, select:focus, textarea:focus {
   font-weight: 700;
   color: rgba(255, 255, 255, 0.9);
   letter-spacing: 0.05em;
-  max-height: 20%;
-  max-width: 1.2em; /* 저자명 뭉개짐 방지 */
+  max-height: 5em; /* 3글자 이상 세로 쓰기가 잘리지 않고 충분히 노출되도록 보강 */
+  max-width: 1.5em; /* 저자명 뭉개짐 방지 */
   overflow: hidden;
   text-shadow: 1px 1px 1px rgba(0,0,0,0.95);
   margin-top: auto; /* 저자 정보는 책등 꼬리 부분으로 자연스럽게 하단 정렬 */
