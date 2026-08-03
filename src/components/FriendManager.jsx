@@ -19,50 +19,67 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
     setLoading(true);
     setErrorMsg('');
     try {
-      // 1. 내가 추가한 친구 목록 조회
+      // 1. 내가 추가한 친구 관계 목록 가져오기
       const { data: friendsData, error: friendsError } = await supabase
         .from('user_friends')
-        .select('*, profiles!user_friends_friend_id_fkey(email)')
+        .select('id, friend_id')
         .eq('user_id', user.id);
 
       if (friendsError) throw friendsError;
 
-      // 2. 각 친구의 도서 건수(책 개수)를 가져옴
-      const loadedFriends = await Promise.all(
-        (friendsData || []).map(async (friend) => {
-          const friendEmail = friend.profiles?.email || '알 수 없는 사용자';
-          
-          let bookCount = 0;
-          let completedCount = 0;
-          try {
-            // RLS 정책이 친구의 user_books SELECT를 허용하도록 되어 있으므로 조회 가능
-            const { data: bData } = await supabase
-              .from('user_books')
-              .select('status')
-              .eq('user_id', friend.friend_id);
-            
-            if (bData) {
-              bookCount = bData.length;
-              completedCount = bData.filter(b => b.status === 'READ').length;
-            }
-          } catch (e) {
-            console.warn(`책 권수 조회 실패 (친구 또는 스키마 미반영):`, e);
-          }
+      if (friendsData && friendsData.length > 0) {
+        // 2. 관계자들의 이메일 프로필 조회
+        const friendIds = friendsData.map(f => f.friend_id);
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, email')
+          .in('id', friendIds);
 
+        if (profilesError) throw profilesError;
+
+        // 3. 로컬에서 profiles 이메일 매핑
+        const mappedFriends = friendsData.map(f => {
+          const prof = profilesData?.find(p => p.id === f.friend_id);
           return {
-            id: friend.id,
-            friend_id: friend.friend_id,
-            email: friendEmail,
-            bookCount,
-            completedCount
+            id: f.id,
+            friend_id: f.friend_id,
+            email: prof ? prof.email : '알 수 없는 사용자'
           };
-        })
-      );
+        });
 
-      setFriendsList(loadedFriends);
+        // 4. 각 친구들의 실시간 독서 통계 획득 (user_books SELECT 가이드)
+        const loadedFriends = await Promise.all(
+          mappedFriends.map(async (friend) => {
+            let bookCount = 0;
+            let completedCount = 0;
+            try {
+              const { data: bData } = await supabase
+                .from('user_books')
+                .select('status')
+                .eq('user_id', friend.friend_id);
+              
+              if (bData) {
+                bookCount = bData.length;
+                completedCount = bData.filter(b => b.status === 'READ').length;
+              }
+            } catch (e) {
+              console.warn(`책 권수 조회 실패 (친구 또는 RLS 미반영):`, e);
+            }
+
+            return {
+              ...friend,
+              bookCount,
+              completedCount
+            };
+          })
+        );
+
+        setFriendsList(loadedFriends);
+      } else {
+        setFriendsList([]);
+      }
     } catch (err) {
       console.error('친구 목록 불러오기 오류:', err);
-      // 테이블 누락 경고 처리
       if (err.message?.includes('relation "user_friends" does not exist')) {
         setErrorMsg('💡 안내: 친구 기능용 DB 스키마가 생성되지 않았습니다. supabase_bookshelf_schema.sql 파일 하단의 친구 테이블 관련 SQL 스크립트를 Supabase SQL Editor에 실행(Run)해 주세요.');
       } else {
@@ -107,10 +124,23 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
         return;
       }
 
-      // 2. 이미 등록된 친구인지 확인
+      // 2. 이미 등록되었는지 DB 및 로컬 상태 중복 확인 (예외 에러 사전방지)
       const isAlreadyFriend = friendsList.some(f => f.friend_id === profileData.id);
       if (isAlreadyFriend) {
-        setErrorMsg('이미 등록된 친구입니다.');
+        setErrorMsg('이미 친구로 등록된 이메일 주소입니다.');
+        setLoading(false);
+        return;
+      }
+
+      const { data: checkExist } = await supabase
+        .from('user_friends')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('friend_id', profileData.id)
+        .maybeSingle();
+
+      if (checkExist) {
+        setErrorMsg('이미 친구로 등록된 이메일 주소입니다.');
         setLoading(false);
         return;
       }
