@@ -15,6 +15,46 @@ export default function BookshelfView({
   const [showAddModal, setShowAddModal] = useState(false);
   const [isEditingReview, setIsEditingReview] = useState(false);
 
+  // 책 커버의 실제 메인 대표 색상을 수집하기 위한 상태 캐시
+  const [coverColors, setCoverColors] = useState({});
+
+  // 1. URL로부터 실제 메인 대표 색상을 CORS 우회 추출하는 헬퍼 함수
+  const extractMainColor = (bookId, coverUrl) => {
+    if (!coverUrl || coverColors[bookId]) return;
+
+    // CORS 우회 이미지 프록시 (weserv.nl)
+    const cleanUrl = coverUrl.replace(/^https?:\/\//, '');
+    const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(cleanUrl)}&w=10&h=10`;
+
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = proxyUrl;
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1;
+        canvas.height = 1;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 1, 1);
+        const data = ctx.getImageData(0, 0, 1, 1).data;
+        const rgbColor = `rgb(${data[0]}, ${data[1]}, ${data[2]})`;
+        setCoverColors(prev => ({ ...prev, [bookId]: rgbColor }));
+      } catch (err) {
+        console.warn("표지 대표색 획득 실패 (CORS 또는 포맷 불가):", err);
+      }
+    };
+  };
+
+  // 2. 저자 3자 단명화 포맷터
+  const formatAuthor = (author) => {
+    if (!author) return '';
+    const clean = author.split('(')[0].split('지음')[0].split('옮김')[0].split('저')[0].trim();
+    if (clean.length > 3) {
+      return clean.substring(0, 3) + '...';
+    }
+    return clean;
+  };
+
   // 수정 리뷰 & 별점 폼
   const [editRating, setEditRating] = useState(5);
   const [editReview, setEditReview] = useState('');
@@ -227,13 +267,16 @@ export default function BookshelfView({
                               <div
                                 className="book-3d-spine"
                                 style={{
-                                  background: getSpineThemeColor(book.cover_url, book.id)
+                                  background: coverColors[book.id] || (() => {
+                                    extractMainColor(book.id, book.cover_url);
+                                    return getSpineThemeColor(book.cover_url, book.id);
+                                  })()
                                 }}
                               >
                                 <div className="spine-ridge"></div>
                                 <div className="spine-highlight"></div>
                                 <div className="spine-content">
-                                  <span className="spine-author">{book.author}</span>
+                                  <span className="spine-author">{formatAuthor(book.author)}</span>
                                   <span className="spine-title">{book.title}</span>
                                 </div>
                               </div>
