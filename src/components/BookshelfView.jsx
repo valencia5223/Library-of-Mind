@@ -146,6 +146,8 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
                                 width: `${spineWidth}px`
                               }}
                             >
+                              <div className="spine-ridge"></div>
+                              <div className="spine-highlight"></div>
                               <div className="spine-content">
                                 <span className="spine-author">{book.author}</span>
                                 <span className="spine-title">{book.title}</span>
@@ -446,15 +448,15 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
 
 function getSpineColor(id) {
   const colors = [
-    'linear-gradient(180deg, #0078a6 0%, #004d6b 100%)', // 알라딘 네이비
-    'linear-gradient(180deg, #eb117b 0%, #9e064f 100%)', // 알라딘 핑크
-    'linear-gradient(180deg, #0d9488 0%, #0f766e 100%)', // 틸
-    'linear-gradient(180deg, #d97706 0%, #92400e 100%)', // 골드오렌지
-    'linear-gradient(180deg, #4f46e5 0%, #312e81 100%)', // 로열인디고
-    'linear-gradient(180deg, #dc2626 0%, #7f1d1d 100%)', // 로즈레드
-    'linear-gradient(180deg, #0891b2 0%, #155e75 100%)', // 시안블루
-    'linear-gradient(180deg, #7c3aed 0%, #4c1d95 100%)', // 퍼플
-    'linear-gradient(180deg, #b45309 0%, #78350f 100%)', // 클래식가죽 브라운
+    'linear-gradient(180deg, #182230 0%, #0d1520 100%)', // 엔틱 다크챠콜
+    'linear-gradient(180deg, #6b1212 0%, #3f0a0a 100%)', // 딤 버건디
+    'linear-gradient(180deg, #0f3d3d 0%, #0a2929 100%)', // 클래식 딥틸
+    'linear-gradient(180deg, #112d4e 0%, #0b1d32 100%)', // 로열 딥블루
+    'linear-gradient(180deg, #4c1d95 0%, #2e1065 100%)', // 황실 다크퍼플
+    'linear-gradient(180deg, #6c3b0c 0%, #462507 100%)', // 골드브라운 레더
+    'linear-gradient(180deg, #581c0c 0%, #371007 100%)', // 마호가니 목판
+    'linear-gradient(180deg, #0b453a 0%, #072c25 100%)', // 포레스트 다크그린
+    'linear-gradient(180deg, #27272a 0%, #18181b 100%)', // 흑돌 그래파이트
   ];
   const charSum = (id || 'abc').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return colors[charSum % colors.length];

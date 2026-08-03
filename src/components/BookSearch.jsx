@@ -102,7 +102,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
         author: item.author || '저자 미상',
         publisher: item.publisher || '출판사',
         cover_url: coverUrl,
-        description: item.description ? `${item.description.substring(0, 100)}...` : '',
+        description: item.description || '',
         buy_link: item.link || `https://www.aladin.co.kr/search/wsearchresult.aspx?SearchTarget=Book&SearchWord=${encodeURIComponent(item.title)}`,
         rating: item.customerReviewRank ? (item.customerReviewRank / 2).toFixed(1) : '4.8',
         total_pages: 320,

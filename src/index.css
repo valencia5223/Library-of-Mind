@@ -421,41 +421,84 @@ input:focus, select:focus, textarea:focus {
 }
 
 .spine-3d {
-  border-radius: 5px 5px 0 0;
-  box-shadow: -2px 0 6px rgba(0, 0, 0, 0.25), inset -1px 0 2px rgba(255, 255, 255, 0.35);
+  position: relative;
+  border-radius: 4px 4px 0 0;
+  box-shadow: 
+    -3px 0 6px rgba(0, 0, 0, 0.4), 
+    inset 3px 0 4px rgba(255, 255, 255, 0.15),
+    inset -3px 0 4px rgba(0, 0, 0, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0.6rem 0;
-  border-left: 1px solid rgba(255, 255, 255, 0.15);
-  border-right: 1px solid rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(0, 0, 0, 0.25);
+}
+
+/* 3D 가죽 골선 주름 (Hardcover vertical groove ridge) */
+.spine-ridge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 6px;
+  width: 2px;
+  background: rgba(0, 0, 0, 0.35);
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+  z-index: 2;
+}
+
+/* 3D 책등 엠보싱 하이라이트 (Cylinder gradient glare reflection) */
+.spine-highlight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 15%;
+  width: 25%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 50%, transparent 100%);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .spine-content {
   writing-mode: vertical-rl;
   text-orientation: mixed;
-  color: #fff;
+  color: #ffffff;
   display: flex;
-  gap: 0.6rem;
-  max-height: 140px;
-  overflow: hidden;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  height: 90%;
+  width: 100%;
+  padding: 0.3rem 0;
+  z-index: 3;
 }
 
 .spine-title {
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 800;
-  letter-spacing: 2px;
+  letter-spacing: 0.22em;
+  line-height: 1.25;
+  max-height: 75%;
+  overflow: hidden;
   text-shadow: 
-    1px 1px 1px #000, -1px -1px 1px #000, 
-    1px -1px 1px #000, -1px 1px 1px #000, 
-    0px 0px 4px rgba(0,0,0,0.9);
+    1.5px 1.5px 1px #000, 
+    -1.5px -1.5px 1px #000, 
+    1.5px -1.5px 1px #000, 
+    -1.5px 1.5px 1px #000, 
+    0px 0px 4px rgba(0,0,0,0.95);
+  word-break: keep-all;
+  text-align: center;
 }
 
 .spine-author {
-  font-size: 0.72rem;
+  font-size: 0.65rem;
   opacity: 0.9;
-  letter-spacing: 1px;
-  text-shadow: 1px 1px 1px rgba(0,0,0,0.8);
+  letter-spacing: 0.15em;
+  max-height: 20%;
+  overflow: hidden;
+  text-shadow: 1px 1px 1px rgba(0,0,0,0.9);
+  margin-top: 0.3rem;
 }
 
 .spine-cover-hover {
