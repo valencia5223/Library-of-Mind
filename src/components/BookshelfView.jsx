@@ -74,6 +74,11 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
     setIsEditingReview(false);
   };
 
+  const handleImgError = (e, fallbackUrl) => {
+    e.target.onerror = null;
+    e.target.src = fallbackUrl || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&q=80';
+  };
+
   return (
     <div className="bookshelf-container">
       {/* 헤더 컨트롤 */}
@@ -123,7 +128,6 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
                   ) : (
                     <div className="spine-row">
                       {catBooks.map((book) => {
-                        // 페이지 수에 맞춘 입체 높이 조절
                         const spineHeight = Math.min(170, Math.max(130, 120 + ((book.total_pages || 300) / 10)));
                         const spineWidth = Math.min(54, Math.max(38, 32 + ((book.total_pages || 300) / 20)));
 
@@ -147,7 +151,13 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
                                 <span className="spine-title">{book.title}</span>
                               </div>
                             </div>
-                            <img src={book.cover_url} alt={book.title} className="spine-cover-hover" />
+                            <img
+                              src={book.cover_url}
+                              alt={book.title}
+                              referrerPolicy="no-referrer"
+                              onError={(e) => handleImgError(e, book.fallback_cover)}
+                              className="spine-cover-hover"
+                            />
                           </div>
                         );
                       })}
@@ -164,7 +174,13 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
                   catBooks.map((book) => (
                     <div key={book.id} className="book-card" onClick={() => handleOpenDetail(book)}>
                       <div className="book-card-cover-wrapper">
-                        <img src={book.cover_url} alt={book.title} className="book-card-cover" />
+                        <img
+                          src={book.cover_url}
+                          alt={book.title}
+                          referrerPolicy="no-referrer"
+                          onError={(e) => handleImgError(e, book.fallback_cover)}
+                          className="book-card-cover"
+                        />
                         <span className="rating-pill">
                           <Star size={12} fill="#f59e0b" color="#f59e0b" /> {book.rating || 5}.0
                         </span>
@@ -190,7 +206,13 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
 
             <div className="detail-grid">
               <div className="detail-cover-side">
-                <img src={selectedBook.cover_url} alt={selectedBook.title} className="detail-cover" />
+                <img
+                  src={selectedBook.cover_url}
+                  alt={selectedBook.title}
+                  referrerPolicy="no-referrer"
+                  onError={(e) => handleImgError(e, selectedBook.fallback_cover)}
+                  className="detail-cover"
+                />
                 
                 {/* 진행률 바 */}
                 <div className="progress-box mt-3">
@@ -422,7 +444,6 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
   );
 }
 
-// 3D 책등 그라데이션 하드코딩 패턴
 function getSpineColor(id) {
   const colors = [
     'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
