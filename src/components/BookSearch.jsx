@@ -1,43 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, ShoppingBag, Plus, CheckCircle2, Flame, ExternalLink, RefreshCw, BookOpen, Sparkles } from 'lucide-react';
-
-// 알라딘 TTB Open API (JSONP 방식 - CORS & Mixed Content 완벽 우회)
-const ALADIN_TTB_KEY = 'ttbcdw2341334001';
-
-// JSONP 호출 유틸리티 (크롬 nosniff 대응 및 호환성 보장)
-function fetchJsonp(url) {
-  return new Promise((resolve, reject) => {
-    const callbackName = `aladinCb_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
-    const script = document.createElement('script');
-
-    // 타임아웃
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error('인터넷 연결이 원활하지 않거나 API 응답이 지연되고 있습니다.'));
-    }, 15000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      delete window[callbackName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-
-    window[callbackName] = (data) => {
-      cleanup();
-      resolve(data);
-    };
-
-    // 브라우저의 strict MIME type checking을 우회하기 위해 인위적으로 type 명시
-    script.type = 'text/javascript';
-    script.src = `${url}&output=js&callback=${callbackName}`;
-    script.onerror = () => {
-      cleanup();
-      reject(new Error('도서 정보를 불러오는데 실패하였습니다.'));
-    };
-
-    document.head.appendChild(script);
-  });
-}
+import { supabase } from '../supabaseClient'; // Supabase 인스턴스 가져오기
 
 export default function BookSearch({ onAddBook, existingBooks = [] }) {
   const [activeTab, setActiveTab] = useState('bestseller');
@@ -48,12 +11,25 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
   const [bestsellerLoading, setBestsellerLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // 1. Supabase Database DB Proxy를 활용한 국내 베스트셀러 호출 (CORS & ORB 우회 완료)
   const fetchAladinBestsellers = useCallback(async () => {
     setBestsellerLoading(true);
     setErrorMsg('');
     try {
-      const url = `https://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=${ALADIN_TTB_KEY}&QueryType=Bestseller&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101`;
-      const data = await fetchJsonp(url);
+      const { data, error } = await supabase.rpc('aladin_bestseller_proxy');
+      
+      if (error) {
+        // RPC 함수가 존재하지 않는 에러인 경우 사용자 가이드를 상정
+        if (error.message && error.message.includes('does not exist')) {
+          setErrorMsg('Supabase DB에 프록시 함수(SQL)를 등록해야 알라딘 API 호출이 가능합니다. 대화창의 가이드를 따라 SQL을 꼭 실행해 주세요!');
+          return;
+        }
+        throw error;
+      }
+
+      if (data && data.error) {
+        throw new Error(data.error);
+      }
 
       if (data && data.item && data.item.length > 0) {
         setBestsellerList(parseAladinItems(data.item));
@@ -72,6 +48,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
     fetchAladinBestsellers();
   }, [fetchAladinBestsellers]);
 
+  // 2. Supabase Database DB Proxy를 활용한 실시간 국내 도서 검색 (CORS & ORB 우회 완료)
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!query.trim()) return;
@@ -81,8 +58,19 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
     setActiveTab('search');
 
     try {
-      const url = `https://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=${ALADIN_TTB_KEY}&Query=${encodeURIComponent(query)}&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101`;
-      const data = await fetchJsonp(url);
+      const { data, error } = await supabase.rpc('aladin_search_proxy', { search_query: query });
+      
+      if (error) {
+        if (error.message && error.message.includes('does not exist')) {
+          setErrorMsg('Supabase DB 프록시 함수 등록이 필요합니다. SQL 가이드를 실행해 주세요.');
+          return;
+        }
+        throw error;
+      }
+
+      if (data && data.error) {
+        throw new Error(data.error);
+      }
 
       if (data && data.item && data.item.length > 0) {
         setSearchResults(parseAladinItems(data.item));
@@ -99,9 +87,11 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
     }
   };
 
+  // 알라딘 응답 데이터 가공 및 고화질 표지 매핑
   const parseAladinItems = (items) => {
     return items.map((item) => {
       let coverUrl = item.cover || '';
+      // coversum → cover500 교체하여 해상도 대폭 업그레이드
       coverUrl = coverUrl.replace('/coversum/', '/cover500/');
 
       return {
@@ -131,7 +121,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
     <div className="book-search-container">
       <div className="search-header-banner">
         <h2><Sparkles size={24} className="text-warning inline-block me-1" /> 알라딘 실시간 국내 베스트셀러 & 도서 검색</h2>
-        <p className="sub-text">알라딘 공식 TTB Open API를 통해 국내 전체 도서 DB에서 실시간 검색하고, 100% 실제 책 표지를 제공합니다.</p>
+        <p className="sub-text">Supabase DB Proxy 방식을 통해 국내 도서 데이터와 100% 실제 물리 책 표지를 안전하고 안정적으로 제공합니다.</p>
 
         <form onSubmit={handleSearch} className="search-bar-wrapper mt-3">
           <Search size={20} className="search-icon" />
@@ -164,7 +154,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
       </div>
 
       {errorMsg && (
-        <div className="p-3 text-warning text-center mt-3 bg-opacity-10 bg-warning rounded-lg">
+        <div className="p-4 text-warning text-center mt-3 bg-opacity-10 bg-warning rounded-lg border border-warning">
           ⚠️ {errorMsg}
         </div>
       )}
