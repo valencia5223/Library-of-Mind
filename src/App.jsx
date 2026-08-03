@@ -8,6 +8,7 @@ import FocusStudio from './components/FocusStudio';
 import ReadingStats from './components/ReadingStats';
 import FriendManager from './components/FriendManager';
 import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users } from 'lucide-react';
+import { fetchGooglePageCount } from './utils/googleBooks';
 
 
 export default function App() {
@@ -106,6 +107,21 @@ export default function App() {
 
   // CRUD 핸들러
   const handleAddBook = async (newBook) => {
+    // Google Books API를 이용해 실제 페이지 수 연동 시도
+    let finalTotalPages = newBook.total_pages ? parseInt(newBook.total_pages) : 0;
+    if (!finalTotalPages || finalTotalPages === 320) {
+      const googlePages = await fetchGooglePageCount(newBook.title, newBook.isbn);
+      if (googlePages) {
+        finalTotalPages = googlePages;
+      } else {
+        // 도서 제목 해시 기반 보정 (200~550p)
+        let hash = 0;
+        const str = newBook.title || 'book';
+        for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        finalTotalPages = 200 + (Math.abs(hash) % 350);
+      }
+    }
+
     // DB user_books 테이블 스키마에 정의된 컬럼만 안전하게 필터링하여 삽입
     const cleanBook = {
       title: newBook.title || '제목 정보 없음',
@@ -113,7 +129,7 @@ export default function App() {
       publisher: newBook.publisher || '',
       cover_url: newBook.cover_url || '',
       isbn: newBook.isbn || '',
-      total_pages: newBook.total_pages ? parseInt(newBook.total_pages) : 320,
+      total_pages: finalTotalPages,
       current_pages: newBook.current_pages ? parseInt(newBook.current_pages) : 0,
       status: newBook.status || 'TO_READ',
       rating: newBook.rating ? Math.min(5, Math.max(0, parseFloat((parseFloat(newBook.rating) || 0).toFixed(1)))) : 0.0, 

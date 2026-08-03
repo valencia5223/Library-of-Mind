@@ -254,66 +254,64 @@ export default function ReadingStats({ books = [], sessions = [] }) {
         </div>
 
         {/* 2. 최근 6개월 월별 독서 결산 및 완독 수 */}
-        <div className="card month-chart-card p-4 shadow-sm">
-          <h3 className="flex align-middle font-bold text-lg mb-3" style={{ gap: '0.5rem', color: '#334155' }}>
-            <TrendingUp size={20} />
-            최근 6개월 독서 결산 (완독 수 / 페이지 수)
-          </h3>
-          <p className="text-xs text-slate-400 mb-4">막대(배경)는 해당 월 독서 페이지수, 전면 바는 완독한 도서 개수를 보여줍니다.</p>
-
-          <div className="chart-wrapper flex items-end justify-between px-2 pt-4 relative">
-            {/* 눈금선 */}
-            <div className="absolute inset-x-0 bottom-0 flex flex-col justify-between" style={{ height: '100%', pointerEvents: 'none' }}>
-              <div style={{ borderBottom: '1px dashed #f1f5f9', width: '100%', height: '0' }}></div>
-              <div style={{ borderBottom: '1px dashed #f1f5f9', width: '100%', height: '0' }}></div>
-              <div style={{ borderBottom: '1px dashed #f1f5f9', width: '100%', height: '0' }}></div>
-              <div style={{ borderBottom: '1px dashed #f1f5f9', width: '100%', height: '0' }}></div>
+        <div className="card month-chart-card p-4 shadow-sm" style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+          <div className="flex justify-between items-center mb-2" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 className="flex align-middle font-bold text-lg" style={{ gap: '0.5rem', color: '#334155', margin: 0 }}>
+              <TrendingUp size={20} className="text-primary" />
+              최근 6개월 독서 결산
+            </h3>
+            <div className="flex gap-3 text-xs font-semibold" style={{ display: 'flex', gap: '0.75rem', fontSize: '0.75rem' }}>
+              <span className="flex items-center gap-1" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <span style={{ width: '10px', height: '10px', backgroundColor: '#0284c7', borderRadius: '2px', display: 'inline-block' }}></span> 페이지 수
+              </span>
+              <span className="flex items-center gap-1" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <span style={{ width: '10px', height: '10px', backgroundColor: '#059669', borderRadius: '2px', display: 'inline-block' }}></span> 완독 수
+              </span>
             </div>
+          </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '0.5rem', marginTop: '1rem' }}>
             {last6Months.map((m, idx) => {
               const pageHeightPercent = Math.min(100, (m.pagesRead / maxMonthPages) * 100);
               const completedHeightPercent = Math.min(100, (m.completedCount / maxMonthCompleted) * 100);
               
               return (
-                <div key={idx} className="flex flex-col items-center z-10" style={{ width: `${100 / 6}%` }}>
-                  <div className="relative group flex items-end justify-center w-full" style={{ height: '220px' }}>
-                    
-                    {/* 독서 페이지수 (배경 하늘색 바) */}
+                <div key={idx} className="flex flex-col items-center p-2 rounded-lg" style={{ backgroundColor: '#f8fafc', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  {/* 상단 수치 요약 */}
+                  <div className="text-center mb-1" style={{ height: '34px', textAlign: 'center' }}>
+                    <span className="block font-bold" style={{ color: '#0284c7', fontSize: '0.75rem', display: 'block' }}>{m.pagesRead}p</span>
+                    <span className="block font-bold" style={{ color: '#059669', fontSize: '0.75rem', display: 'block' }}>{m.completedCount}권</span>
+                  </div>
+
+                  {/* 듀얼 그래프 바 */}
+                  <div className="flex items-end justify-center gap-1 w-full" style={{ height: '110px', borderBottom: '2px solid #cbd5e1', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: '4px', width: '100%' }}>
+                    {/* 페이지수 (파란색 바) */}
                     <div 
+                      title={`${m.label}: ${m.pagesRead}페이지`}
                       style={{ 
-                        height: m.pagesRead > 0 ? `${pageHeightPercent}%` : '4px',
-                        width: '28px',
-                        background: 'linear-gradient(180deg, #e0f2fe 0%, #bae6fd 100%)',
-                        borderRadius: '4px 4px 0 0',
-                        position: 'absolute',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        zIndex: 1
+                        height: m.pagesRead > 0 ? `${Math.max(10, pageHeightPercent)}%` : '4px',
+                        width: '12px',
+                        background: 'linear-gradient(180deg, #38bdf8 0%, #0284c7 100%)',
+                        borderRadius: '3px 3px 0 0',
+                        transition: 'height 0.3s ease'
                       }}
                     ></div>
 
-                    {/* 완독 도서수 (전면 에메랄드 그린 바) */}
+                    {/* 완독수 (에메랄드 그린 바) */}
                     <div 
+                      title={`${m.label}: ${m.completedCount}권 완독`}
                       style={{ 
-                        height: m.completedCount > 0 ? `${completedHeightPercent}%` : '4px',
-                        width: '14px',
+                        height: m.completedCount > 0 ? `${Math.max(10, completedHeightPercent)}%` : '4px',
+                        width: '12px',
                         background: 'linear-gradient(180deg, #34d399 0%, #059669 100%)',
                         borderRadius: '3px 3px 0 0',
-                        position: 'absolute',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        zIndex: 2,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        transition: 'height 0.3s ease'
                       }}
-                      className="cursor-pointer"
                     ></div>
-
-                    {/* 툴팁 */}
-                    <span className="absolute bottom-full mb-2 bg-slate-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-20 shadow-lg" style={{ left: '50%', transform: 'translateX(-50%)' }}>
-                      {m.label}: {m.pagesRead}페이지 / {m.completedCount}권 완독
-                    </span>
                   </div>
-                  <span className="text-xs mt-2 font-medium text-slate-500">{m.label}</span>
+
+                  {/* 하단 월 표기 */}
+                  <span className="text-xs mt-2 font-bold" style={{ fontSize: '0.8rem', color: '#475569', marginTop: '0.4rem' }}>{m.label}</span>
                 </div>
               );
             })}

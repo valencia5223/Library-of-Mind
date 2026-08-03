@@ -436,8 +436,7 @@ export default function BookshelfView({
                     <div className="edit-review-box mt-2">
                       <div className="rating-select-row flex flex-col gap-1 mb-2">
                         <div className="flex align-center justify-between" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span className="sub-text font-bold" style={{ fontSize: '0.85rem' }}>내 별점: <strong style={{ color: '#f59e0b' }}>{editRating.toFixed(1)}점</strong></span>
-                          <div className="flex" style={{ display: 'flex', gap: '2px' }}>{renderStars(editRating)}</div>
+                          <span className="sub-text font-bold" style={{ fontSize: '0.9rem' }}>별점 선택: <strong style={{ color: '#f59e0b', fontSize: '1rem' }}>{editRating.toFixed(1)}점</strong></span>
                         </div>
                         {/* 0.5 단위 직관적인 별점 선택 칩 -> 대화형 반쪽/전체 클릭 별점으로 교체 */}
                         <div className="flex align-center gap-1 mt-1 justify-center">
