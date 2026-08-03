@@ -1,4 +1,6 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+@import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@700;800&display=swap');
+
 
 :root {
   --bg-dark: #f1f5f9; /* 화사하고 시원한 라이트 그레이 */
@@ -392,15 +394,20 @@ input:focus, select:focus, textarea:focus {
 /* 책장 뒷판을 포근하고 부드러운 패브릭/그레이 톤으로 전환 및 선반 테두리 3D 음영 적용 */
 .shelf-surface {
   min-height: 220px;
-  background: linear-gradient(180deg, #f3f4f6 0%, #e5e7eb 100%);
-  border-left: 14px solid #cbd5e1;
-  border-right: 14px solid #cbd5e1;
-  border-top: 6px solid #94a3b8;
+  /* 메이플 원목 나뭇결 질감을 형상화한 다중 백그라운드 그라디언트 적용 */
+  background: 
+    repeating-linear-gradient(90deg, rgba(238, 220, 195, 0.07) 0px, rgba(238, 220, 195, 0.07) 40px, rgba(216, 187, 149, 0.07) 41px, rgba(216, 187, 149, 0.07) 42px),
+    linear-gradient(180deg, #fdf8f1 0%, #eedbc1 100%);
+  border-left: 14px solid #d9b891;
+  border-right: 14px solid #d9b891;
+  border-top: 6px solid #ba9269;
   border-radius: 6px 6px 0 0;
   padding: 1.5rem 2rem 0 2rem;
   display: flex;
   align-items: flex-end;
-  box-shadow: inset 0 20px 30px rgba(0, 0, 0, 0.04);
+  box-shadow: 
+    inset 0 25px 35px rgba(186, 146, 105, 0.1),
+    inset 0 -10px 20px rgba(0, 0, 0, 0.03);
   transform-style: preserve-3d;
   perspective: 1000px;
   overflow: visible;
@@ -540,7 +547,7 @@ input:focus, select:focus, textarea:focus {
   word-break: break-all; /* 영문 혼용 시에도 한 글자씩 끊어 떨어지도록 처리 */
   text-align: center;
   margin-top: 0.2rem;
-  font-family: 'Outfit', 'Pretendard', sans-serif;
+  font-family: 'Nanum Myeongjo', serif; /* 명조 서체 변경 */
 }
 
 .spine-author {
@@ -554,6 +561,7 @@ input:focus, select:focus, textarea:focus {
   text-shadow: 1px 1px 1px rgba(0,0,0,0.95);
   margin-top: auto; /* 저자 정보는 책등 꼬리 부분으로 자연스럽게 하단 정렬 */
   word-break: break-all;
+  font-family: 'Nanum Myeongjo', serif; /* 명조 서체 변경 */
 }
 
 /* 3D 책 우측 표지 (옆면에 90도 회전 배치되어 숨어 있다가 호버 시 회전 회동 노출) */
@@ -615,9 +623,11 @@ input:focus, select:focus, textarea:focus {
 /* 책장나무를 환하고 세련된 라이트 메이플/크림 빛 오크 톤으로 변경 */
 .shelf-plank {
   height: 22px;
-  background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
+  background: linear-gradient(180deg, #ebd0aa 0%, #d2a673 40%, #b3885d 100%);
   border-radius: 0 0 8px 8px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  box-shadow: 
+    0 12px 24px rgba(0, 0, 0, 0.16),
+    0 2px 4px rgba(0, 0, 0, 0.08);
 }
 
 .empty-shelf-text {
@@ -915,4 +925,238 @@ input:focus, select:focus, textarea:focus {
   color: var(--primary) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
+
+
+/* --- 독서 통계 대시보드 리뉴얼 스타일 --- */
+.stats-header h2 {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.stats-header h2 svg {
+  color: #eb117b !important;
+}
+.stats-header .sub-text {
+  font-size: 0.95rem;
+}
+
+/* 6대 통계 카드 */
+.stats-summary-grid .stat-card {
+  padding: 1.4rem 1.25rem !important;
+  border-radius: 14px !important;
+  border-left: 1px solid transparent;
+  border-right: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  cursor: default;
+}
+.stats-summary-grid .stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* 개별 카드 칼라 테마 */
+.stat-card-total {
+  border-top: 4px solid #3b82f6 !important;
+  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%) !important;
+  border-color: #dbeafe !important;
+}
+.stat-card-total .stat-value {
+  color: #1e3a8a !important;
+  font-weight: 900 !important;
+  font-size: 1.8rem !important;
+}
+.stat-card-total .stat-label {
+  color: #1e40af !important;
+  font-weight: 600 !important;
+}
+
+.stat-card-read {
+  border-top: 4px solid #10b981 !important;
+  background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%) !important;
+  border-color: #d1fae5 !important;
+}
+.stat-card-read .stat-value {
+  color: #065f46 !important;
+  font-weight: 900 !important;
+  font-size: 1.8rem !important;
+}
+.stat-card-read .stat-label {
+  color: #047857 !important;
+  font-weight: 600 !important;
+}
+
+.stat-card-reading {
+  border-top: 4px solid #f59e0b !important;
+  background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%) !important;
+  border-color: #fef3c7 !important;
+}
+.stat-card-reading .stat-value {
+  color: #92400e !important;
+  font-weight: 900 !important;
+  font-size: 1.8rem !important;
+}
+.stat-card-reading .stat-label {
+  color: #b45309 !important;
+  font-weight: 600 !important;
+}
+
+.stat-card-rate {
+  border-top: 4px solid #8b5cf6 !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%) !important;
+  border-color: #ede9fe !important;
+}
+.stat-card-rate .stat-value {
+  color: #5b21b6 !important;
+  font-weight: 900 !important;
+  font-size: 1.8rem !important;
+}
+.stat-card-rate .stat-label {
+  color: #6d28d9 !important;
+  font-weight: 600 !important;
+}
+
+.stat-card-time {
+  border-top: 4px solid #eb117b !important;
+  background: linear-gradient(135deg, #ffffff 0%, #fff1f2 100%) !important;
+  border-color: #ffe4e6 !important;
+}
+.stat-card-time .stat-value {
+  color: #9f1239 !important;
+  font-weight: 900 !important;
+  font-size: 1.35rem !important;
+}
+.stat-card-time .stat-label {
+  color: #be123c !important;
+  font-weight: 600 !important;
+}
+
+.stat-card-page {
+  border-top: 4px solid #6366f1 !important;
+  background: linear-gradient(135deg, #ffffff 0%, #eef2ff 100%) !important;
+  border-color: #e0e7ff !important;
+}
+.stat-card-page .stat-value {
+  color: #3730a3 !important;
+  font-weight: 900 !important;
+  font-size: 1.8rem !important;
+}
+.stat-card-page .stat-label {
+  color: #4338ca !important;
+  font-weight: 600 !important;
+}
+
+/* 요일별 차트 */
+.day-chart-card {
+  padding: 1.25rem !important;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.02) !important;
+}
+.day-chart-card h3 svg {
+  color: #eb117b !important;
+}
+.day-chart-card .chart-wrapper {
+  height: 220px !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+}
+
+/* 6개월 독서 결산 */
+.month-chart-card {
+  padding: 1.25rem !important;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.02) !important;
+}
+.month-chart-card h3 svg {
+  color: #10b981 !important;
+}
+.month-chart-card .chart-wrapper {
+  height: 220px !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+}
+
+/* 상세 페이스 분석 블록 */
+.pace-box-days {
+  background: #f0f9ff !important;
+  border: 1px solid #bae6fd !important;
+}
+.pace-box-days span {
+  color: #0369a1 !important;
+  font-weight: 700;
+}
+.pace-box-days strong {
+  color: #0c4a6e !important;
+  font-weight: 900;
+  font-size: 1.35rem;
+}
+.pace-box-days small {
+  color: #0284c7 !important;
+}
+
+.pace-box-time {
+  background: #f0fdfa !important;
+  border: 1px solid #99f6e4 !important;
+}
+.pace-box-time span {
+  color: #0f766e !important;
+  font-weight: 700;
+}
+.pace-box-time strong {
+  color: #115e59 !important;
+  font-weight: 900;
+  font-size: 1.35rem;
+}
+.pace-box-time small {
+  color: #0d9488 !important;
+}
+
+.pace-box-session {
+  background: #fffbeb !important;
+  border: 1px solid #fde68a !important;
+}
+.pace-box-session span {
+  color: #b45309 !important;
+  font-weight: 700;
+}
+.pace-box-session strong {
+  color: #78350f !important;
+  font-weight: 900;
+  font-size: 1.35rem;
+}
+.pace-box-session small {
+  color: #d97706 !important;
+}
+
+.pace-box-pages {
+  background: #faf5ff !important;
+  border: 1px solid #e9d5ff !important;
+}
+.pace-box-pages span {
+  color: #6d28d9 !important;
+  font-weight: 700;
+}
+.pace-box-pages strong {
+  color: #4c1d95 !important;
+  font-weight: 900;
+  font-size: 1.35rem;
+}
+.pace-box-pages small {
+  color: #7c3aed !important;
+}
+
+/* 카테고리 게이지 테두리 */
+.cat-progress-bg {
+  height: 10px !important;
+  background-color: #f1f5f9 !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+/* 타임라인 로그 카드 */
+.timeline-item-fancy {
+  padding: 1rem !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.01) !important;
+}
+
 

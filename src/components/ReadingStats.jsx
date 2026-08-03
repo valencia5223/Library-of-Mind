@@ -147,8 +147,8 @@ export default function ReadingStats({ books = [], sessions = [] }) {
   return (
     <div className="reading-stats-container p-4" style={{ maxWidth: '1200px', margin: '0 auto' }}>
       <div className="stats-header text-center mb-5">
-        <h2 className="flex justify-center align-middle font-bold text-2xl" style={{ gap: '0.5rem', color: '#1e293b' }}>
-          <BarChart2 className="text-primary animate-pulse" size={32} />
+        <h2 className="flex justify-center align-middle font-bold text-2xl" style={{ gap: '0.5rem' }}>
+          <BarChart2 className="animate-pulse" size={32} />
           정량적 독서 분석 대시보드
         </h2>
         <p className="sub-text mt-1 text-slate-500">
@@ -158,65 +158,65 @@ export default function ReadingStats({ books = [], sessions = [] }) {
 
       {/* 대시보드 6대 정량적 수치 카드 */}
       <div className="stats-summary-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1.25rem', marginBottom: '2.5rem' }}>
-        <div className="stat-card" style={{ borderLeft: '4px solid #3b82f6', padding: '1.25rem', borderRadius: '12px', background: '#ffffff', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)' }}>
-          <BookOpen className="text-blue" size={24} style={{ marginBottom: '0.5rem' }} />
+        <div className="stat-card stat-card-total">
+          <BookOpen size={24} style={{ marginBottom: '0.5rem' }} />
           <div>
-            <span className="stat-value" style={{ display: 'block', fontSize: '1.75rem', fontWeight: '800', color: '#1e293b' }}>{totalBooksCount}권</span>
-            <span className="stat-label" style={{ fontSize: '0.85rem', color: '#64748b' }}>보유 총 도서</span>
+            <span className="stat-value">{totalBooksCount}권</span>
+            <span className="stat-label">보유 총 도서</span>
           </div>
         </div>
 
-        <div className="stat-card" style={{ borderLeft: '4px solid #10b981', padding: '1.25rem', borderRadius: '12px', background: '#ffffff', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)' }}>
-          <CheckCircle className="text-green" size={24} style={{ marginBottom: '0.5rem' }} />
+        <div className="stat-card stat-card-read">
+          <CheckCircle size={24} style={{ marginBottom: '0.5rem' }} />
           <div>
-            <span className="stat-value" style={{ display: 'block', fontSize: '1.75rem', fontWeight: '800', color: '#1e293b' }}>{readBooksCount}권</span>
-            <span className="stat-label" style={{ fontSize: '0.85rem', color: '#64748b' }}>완독한 도서</span>
+            <span className="stat-value">{readBooksCount}권</span>
+            <span className="stat-label">완독한 도서</span>
           </div>
         </div>
 
-        <div className="stat-card" style={{ borderLeft: '4px solid #f59e0b', padding: '1.25rem', borderRadius: '12px', background: '#ffffff', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)' }}>
-          <Clock className="text-amber" size={24} style={{ marginBottom: '0.5rem' }} />
+        <div className="stat-card stat-card-reading">
+          <Clock size={24} style={{ marginBottom: '0.5rem' }} />
           <div>
-            <span className="stat-value" style={{ display: 'block', fontSize: '1.75rem', fontWeight: '800', color: '#1e293b' }}>{readingBooksCount}권</span>
-            <span className="stat-label" style={{ fontSize: '0.85rem', color: '#64748b' }}>현재 읽는 중</span>
+            <span className="stat-value">{readingBooksCount}권</span>
+            <span className="stat-label">현재 읽는 중</span>
           </div>
         </div>
 
-        <div className="stat-card" style={{ borderLeft: '4px solid #8b5cf6', padding: '1.25rem', borderRadius: '12px', background: '#ffffff', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)' }}>
-          <Compass className="text-purple" size={24} style={{ marginBottom: '0.5rem' }} />
+        <div className="stat-card stat-card-rate">
+          <Compass size={24} style={{ marginBottom: '0.5rem' }} />
           <div>
-            <span className="stat-value" style={{ display: 'block', fontSize: '1.75rem', fontWeight: '800', color: '#1e293b' }}>{completionRate}%</span>
-            <span className="stat-label" style={{ fontSize: '0.85rem', color: '#64748b' }}>독서 완독률</span>
+            <span className="stat-value">{completionRate}%</span>
+            <span className="stat-label">독서 완독률</span>
           </div>
         </div>
 
-        <div className="stat-card" style={{ borderLeft: '4px solid #ef4444', padding: '1.25rem', borderRadius: '12px', background: '#ffffff', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)' }}>
-          <Clock className="text-red" size={24} style={{ color: '#ef4444', marginBottom: '0.5rem' }} />
+        <div className="stat-card stat-card-time">
+          <Clock size={24} style={{ marginBottom: '0.5rem' }} />
           <div>
-            <span className="stat-value" style={{ display: 'block', fontSize: '1.5rem', fontWeight: '800', color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{formatTime(totalMinutes)}</span>
-            <span className="stat-label" style={{ fontSize: '0.85rem', color: '#64748b' }}>누적 독서 시간</span>
+            <span className="stat-value">{formatTime(totalMinutes)}</span>
+            <span className="stat-label">누적 독서 시간</span>
           </div>
         </div>
 
-        <div className="stat-card" style={{ borderLeft: '4px solid #6366f1', padding: '1.25rem', borderRadius: '12px', background: '#ffffff', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)' }}>
-          <FileText className="text-indigo" size={24} style={{ color: '#6366f1', marginBottom: '0.5rem' }} />
+        <div className="stat-card stat-card-page">
+          <FileText size={24} style={{ marginBottom: '0.5rem' }} />
           <div>
-            <span className="stat-value" style={{ display: 'block', fontSize: '1.75rem', fontWeight: '800', color: '#1e293b' }}>{totalPages}p</span>
-            <span className="stat-label" style={{ fontSize: '0.85rem', color: '#64748b' }}>누적 독서 페이지</span>
+            <span className="stat-value">{totalPages}p</span>
+            <span className="stat-label">누적 독서 페이지</span>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {/* 1. 요일별 집중 독서 시간 (SVG 막대 차트) */}
-        <div className="card p-4 shadow-sm" style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+        {/* 1. 요일별 집중 독서 시간 (알라딘 마젠타 핑크 테마 차트) */}
+        <div className="card day-chart-card p-4 shadow-sm">
           <h3 className="flex align-middle font-bold text-lg mb-3" style={{ gap: '0.5rem', color: '#334155' }}>
-            <Calendar className="text-blue" size={20} />
+            <Calendar size={20} />
             요일별 누적 독서 집중도 (분)
           </h3>
           <p className="text-xs text-slate-400 mb-4">타이머를 활용해 집중적으로 독서에 투입한 총 시간의 요일 분포입니다.</p>
           
-          <div className="chart-wrapper flex items-end justify-between px-2 pt-4" style={{ height: '200px', borderBottom: '2px solid #cbd5e1' }}>
+          <div className="chart-wrapper flex items-end justify-between px-2 pt-4">
             {dayMinutes.map((minutes, idx) => {
               const heightPercent = Math.min(100, (minutes / maxDayMinutes) * 100);
               const isToday = new Date().getDay() === idx;
@@ -232,9 +232,13 @@ export default function ReadingStats({ books = [], sessions = [] }) {
                       style={{ 
                         height: minutes > 0 ? `${Math.max(8, heightPercent * 1.5)}px` : '4px',
                         width: '32px',
-                        background: minutes === 0 ? '#cbd5e1' : isToday ? 'linear-gradient(180deg, #60a5fa 0%, #2563eb 100%)' : 'linear-gradient(180deg, #94a3b8 0%, #475569 100%)',
+                        background: minutes === 0 
+                          ? '#cbd5e1' 
+                          : isToday 
+                            ? 'linear-gradient(180deg, #eb117b 0%, #db2777 100%)' 
+                            : 'linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%)',
                         borderRadius: '6px 6px 0 0',
-                        transition: 'height 0.8s ease-in-out',
+                        transition: 'all 0.25s ease-in-out',
                         boxShadow: minutes > 0 ? '0 4px 6px -1px rgba(0,0,0,0.1)' : 'none'
                       }}
                       className="cursor-pointer"
@@ -249,16 +253,16 @@ export default function ReadingStats({ books = [], sessions = [] }) {
           </div>
         </div>
 
-        {/* 2. 최근 6개월 월별 독서 결산 및 완독 수 (듀얼 스케일 SVG 바 차트) */}
-        <div className="card p-4 shadow-sm" style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+        {/* 2. 최근 6개월 월별 독서 결산 및 완독 수 */}
+        <div className="card month-chart-card p-4 shadow-sm">
           <h3 className="flex align-middle font-bold text-lg mb-3" style={{ gap: '0.5rem', color: '#334155' }}>
-            <TrendingUp className="text-green" size={20} />
+            <TrendingUp size={20} />
             최근 6개월 독서 결산 (완독 수 / 페이지 수)
           </h3>
-          <p className="text-xs text-slate-400 mb-4">막대(배경)는 해당 월 독서 페이지수, 전면 선(포인트)은 완독한 도서 개수를 보여줍니다.</p>
+          <p className="text-xs text-slate-400 mb-4">막대(배경)는 해당 월 독서 페이지수, 전면 바는 완독한 도서 개수를 보여줍니다.</p>
 
-          <div className="chart-wrapper flex items-end justify-between px-2 pt-4 relative" style={{ height: '200px', borderBottom: '2px solid #cbd5e1' }}>
-            {/* 배경 눈금선 */}
+          <div className="chart-wrapper flex items-end justify-between px-2 pt-4 relative">
+            {/* 눈금선 */}
             <div className="absolute inset-x-0 bottom-0 flex flex-col justify-between" style={{ height: '100%', pointerEvents: 'none' }}>
               <div style={{ borderBottom: '1px dashed #f1f5f9', width: '100%', height: '0' }}></div>
               <div style={{ borderBottom: '1px dashed #f1f5f9', width: '100%', height: '0' }}></div>
@@ -274,12 +278,12 @@ export default function ReadingStats({ books = [], sessions = [] }) {
                 <div key={idx} className="flex flex-col items-center z-10" style={{ width: `${100 / 6}%` }}>
                   <div className="relative group flex items-end justify-center w-full" style={{ height: '150px' }}>
                     
-                    {/* 독서 페이지수 (배경 투명 바) */}
+                    {/* 독서 페이지수 (배경 하늘색 바) */}
                     <div 
                       style={{ 
                         height: m.pagesRead > 0 ? `${pageHeightPercent}%` : '4px',
                         width: '28px',
-                        background: '#e2e8f0',
+                        background: 'linear-gradient(180deg, #e0f2fe 0%, #bae6fd 100%)',
                         borderRadius: '4px 4px 0 0',
                         position: 'absolute',
                         left: '50%',
@@ -288,7 +292,7 @@ export default function ReadingStats({ books = [], sessions = [] }) {
                       }}
                     ></div>
 
-                    {/* 완독 도서수 (전면 그라디언트 바) */}
+                    {/* 완독 도서수 (전면 에메랄드 그린 바) */}
                     <div 
                       style={{ 
                         height: m.completedCount > 0 ? `${completedHeightPercent}%` : '4px',
@@ -327,28 +331,28 @@ export default function ReadingStats({ books = [], sessions = [] }) {
           <p className="text-xs text-slate-400 mb-4">독서 진행 템포와 1회당 집중 세션을 산출한 객관적 독서 속도 관련 수치입니다.</p>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div className="p-3 rounded-lg" style={{ background: '#f8fafc', border: '1px solid #f1f5f9' }}>
-              <span style={{ fontSize: '0.8rem', color: '#64748b', display: 'block' }}>도서 평균 완독 기간</span>
-              <strong style={{ fontSize: '1.25rem', color: '#1e293b', marginTop: '0.25rem', display: 'block' }}>{avgDaysResult}</strong>
-              <small className="text-slate-400" style={{ fontSize: '0.7rem' }}>책 등록일부터 완독 처리일까지의 평균 소요 기간</small>
+            <div className="p-3 rounded-lg pace-box-days">
+              <span>도서 평균 완독 기간</span>
+              <strong>{avgDaysResult}</strong>
+              <small className="block mt-1">등록일부터 완독 처리일까지의 평균 일수</small>
             </div>
 
-            <div className="p-3 rounded-lg" style={{ background: '#f8fafc', border: '1px solid #f1f5f9' }}>
-              <span style={{ fontSize: '0.8rem', color: '#64748b', display: 'block' }}>1페이지당 평균 시간</span>
-              <strong style={{ fontSize: '1.25rem', color: '#1e293b', marginTop: '0.25rem', display: 'block' }}>{timePerPage}분 / page</strong>
-              <small className="text-slate-400" style={{ fontSize: '0.7rem' }}>세션 기록 기반 1페이지를 정독하는 데 걸린 시간</small>
+            <div className="p-3 rounded-lg pace-box-time">
+              <span>1페이지당 소요 시간</span>
+              <strong>{timePerPage}분 / page</strong>
+              <small className="block mt-1">1페이지를 읽는 데 걸린 시간</small>
             </div>
 
-            <div className="p-3 rounded-lg" style={{ background: '#f8fafc', border: '1px solid #f1f5f9' }}>
-              <span style={{ fontSize: '0.8rem', color: '#64748b', display: 'block' }}>1회 평균 독서 집중</span>
-              <strong style={{ fontSize: '1.25rem', color: '#1e293b', marginTop: '0.25rem', display: 'block' }}>{avgMinutesPerSession}분</strong>
-              <small className="text-slate-400" style={{ fontSize: '0.7rem' }}>몰입 스튜디오 타이머 가동시 1회당 평균 독서 밀도</small>
+            <div className="p-3 rounded-lg pace-box-session">
+              <span>1회 평균 독서 집중</span>
+              <strong>{avgMinutesPerSession}분</strong>
+              <small className="block mt-1">평균적인 독서 시간</small>
             </div>
 
-            <div className="p-3 rounded-lg" style={{ background: '#f8fafc', border: '1px solid #f1f5f9' }}>
-              <span style={{ fontSize: '0.8rem', color: '#64748b', display: 'block' }}>1회 평균 독서량</span>
-              <strong style={{ fontSize: '1.25rem', color: '#1e293b', marginTop: '0.25rem', display: 'block' }}>{avgPagesPerSession}페이지</strong>
-              <small className="text-slate-400" style={{ fontSize: '0.7rem' }}>몰입 스튜디오 타이머 가동시 1회당 평균 돌파력</small>
+            <div className="p-3 rounded-lg pace-box-pages">
+              <span>1회 평균 독서량</span>
+              <strong>{avgPagesPerSession}페이지</strong>
+              <small className="block mt-1">평균적으로 돌파하는 분량</small>
             </div>
           </div>
         </div>
@@ -369,15 +373,14 @@ export default function ReadingStats({ books = [], sessions = [] }) {
                 <div key={idx} style={{ marginBottom: '1rem' }}>
                   <div className="flex justify-between text-xs mb-1" style={{ fontWeight: '600', color: '#475569' }}>
                     <span>{cat.name} ({cat.completed} / {cat.count}권 완료)</span>
-                    <span style={{ color: cat.rate === 100 ? '#10b981' : '#4f46e5' }}>{cat.rate}% 완독</span>
+                    <span style={{ color: cat.rate === 100 ? '#10b981' : '#eb117b' }}>{cat.rate}% 완독</span>
                   </div>
-                  <div style={{ height: '8px', backgroundColor: '#e2e8f0', borderRadius: '4px', overflow: 'hidden', display: 'flex' }}>
+                  <div className="cat-progress-bg">
                     <div 
                       style={{ 
                         height: '100%', 
                         width: `${cat.rate}%`, 
-                        background: `linear-gradient(90deg, #6366f1 0%, ${cat.rate === 100 ? '#10b981' : '#4f46e5'} 100%)`,
-                        borderRadius: '4px',
+                        background: `linear-gradient(90deg, #6366f1 0%, ${cat.rate === 100 ? '#10b981' : '#eb117b'} 100%)`,
                         transition: 'width 0.5s ease-out'
                       }}
                     ></div>
@@ -407,7 +410,7 @@ export default function ReadingStats({ books = [], sessions = [] }) {
             {sessions.slice(0, 10).map((session, idx) => {
               const corrBook = books.find(b => b.id === session.book_id);
               return (
-                <div key={session.id || idx} className="timeline-item p-3 rounded-lg border flex justify-between" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                <div key={session.id || idx} className="timeline-item-fancy flex justify-between">
                   <div className="timeline-info flex flex-col justify-between">
                     <span className="font-bold text-slate-700" style={{ fontSize: '0.9rem', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                       {corrBook ? corrBook.title : '등록 도서'}
@@ -415,7 +418,7 @@ export default function ReadingStats({ books = [], sessions = [] }) {
                     <small className="text-slate-400" style={{ fontSize: '0.75rem', marginTop: '0.25rem' }}>{session.read_date || '날짜 정보 없음'}</small>
                   </div>
                   <div className="timeline-values text-right">
-                    <span className="font-bold block text-primary" style={{ fontSize: '0.9rem', color: '#2563eb' }}>{session.duration_minutes}분 집중</span>
+                    <span className="font-bold block text-primary" style={{ fontSize: '0.9rem', color: '#eb117b' }}>{session.duration_minutes}분 집중</span>
                     <small className="text-green font-semibold" style={{ fontSize: '0.75rem', color: '#16a34a' }}>+{session.pages_read || 0}페이지 읽음</small>
                   </div>
                 </div>
