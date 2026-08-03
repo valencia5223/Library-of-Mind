@@ -84,14 +84,17 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
         response = { error: { code: '42883', message: 'fallback' } };
       }
 
-      // 42883: function does not exist (구버전 RPC 스키마인 경우)
+      // 42883 (함수 미존재) 또는 PGRST202 (스키마 캐시 함수 누락)인 경우 폴백 대처
       if (response.error && (
         response.error.code === '42883' || 
-        response.error.message.includes('42883') || 
-        response.error.message.includes('does not exist') ||
-        response.error.message.includes('fallback')
+        response.error.code === 'PGRST202' ||
+        String(response.error.message).includes('42883') || 
+        String(response.error.message).includes('PGRST202') || 
+        String(response.error.message).includes('does not exist') ||
+        String(response.error.message).includes('Could not find the function') ||
+        String(response.error.message).includes('fallback')
       )) {
-        console.log('구버전 RPC 파라미터로 폴백 호출');
+        console.log('구버전 RPC 파라미터로 폴백 호출 진행');
         const fallbackResp = await supabase.rpc('aladin_search_proxy', { search_query: query });
         if (fallbackResp.error) throw fallbackResp.error;
 
@@ -99,7 +102,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
           const parsed = parseAladinItems(fallbackResp.data.item);
           setSearchResults(parsed);
           setHasMore(false);
-          setErrorMsg('💡 팁: 더많은 도서 로딩 및 정렬 필터를 사용하시려면, supabase_bookshelf_schema.sql 파일 하단의 3번 SQL을 복사해 Supabase 대시보드 SQL Editor에 실행(Run)해 주세요!');
+          setErrorMsg('💡 안내: 정렬 조건 필터와 결과 더보기 기능을 활성화하시려면, supabase_bookshelf_schema.sql 파일 하단의 SQL 스크립트를 복사해 Supabase 대시보드 SQL Editor에 실행(Run)해 주세요!');
         } else {
           setSearchResults([]);
           setHasMore(false);

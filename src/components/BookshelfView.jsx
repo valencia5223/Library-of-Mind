@@ -148,17 +148,13 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
                             }}
                           >
                             <div className="book-3d-box">
-                              {/* 3D 책등 책표지가 은은하게 투영됨 */}
+                              {/* 3D 책등 책등 본연의 그라데이션 바탕과 세로 텍스트 정렬만 출력 */}
                               <div
                                 className="book-3d-spine"
                                 style={{
                                   background: getSpineColor(book.id)
                                 }}
                               >
-                                <div
-                                  className="spine-cover-overlay"
-                                  style={{ backgroundImage: `url(${book.cover_url})` }}
-                                ></div>
                                 <div className="spine-ridge"></div>
                                 <div className="spine-highlight"></div>
                                 <div className="spine-content">

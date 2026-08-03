@@ -480,21 +480,7 @@ input:focus, select:focus, textarea:focus {
   z-index: 3;
 }
 
-/* 책등 배경 위에 실제 책 표지의 색감/정체성이 투영되게 중첩 */
-.spine-cover-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-size: cover;
-  background-position: center left;
-  opacity: 0.88; /* 표지의 실제 색감과 디자인을 거의 온전하게(88%) 흡수함 */
-  mix-blend-mode: normal; /* 원본의 다채로운 색상이 그대로 투과되도록 투명 혼합 모드 제거 */
-  pointer-events: none;
-  filter: brightness(0.85) contrast(1.15) saturate(0.95); /* 양장본의 그윽한 입체감을 위해 밝기/대비만 살짝 보정 */
-  z-index: 0;
-}
+/* 책등 배경 위에 실제 책 표지의 색감/정체성 투영 (사전 스타일 원복을 위해 미사용 보관/제거) */
 
 /* 3D 가죽 골선 주름 (Hardcover vertical groove ridge) */
 .spine-ridge {
