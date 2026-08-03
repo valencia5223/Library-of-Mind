@@ -420,24 +420,74 @@ input:focus, select:focus, textarea:focus {
 }
 
 .book-spine-item:hover {
-  transform: translateY(-16px) scale(1.08) rotate(-1deg); /* 호버 시 약간 삐져나오며 기우는 효과 추가 */
+  transform: translateY(-16px) scale(1.08) rotate(-1deg);
   z-index: 10;
 }
 
-.spine-3d {
+/* 3D 책상 입체 3D 공간 컨테이너 */
+.book-3d-container {
   position: relative;
+  cursor: pointer;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  margin-right: 0.15rem;
+  transition: margin 0.35s ease;
+}
+
+.book-3d-box {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transform: rotateY(0deg) translateZ(0px);
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* 호버 시 선반 밖으로 꺼내지는(pull-out) 슬라이딩 & 3D 회전 애니메이션 */
+.book-3d-container:hover .book-3d-box {
+  transform: translateZ(60px) translateY(-14px) rotateY(-34deg) translateX(-12px);
+  z-index: 20;
+}
+
+.book-3d-container:hover {
+  margin-right: 2.8rem; /* 뒤에 있는 옆 칸 도서 표지에 가려지지 않게 3D 가로 간격 확보 */
+  z-index: 20;
+}
+
+/* 3D 책장 책등 (정면) */
+.book-3d-spine {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   border-radius: 4px 4px 1px 1px;
   box-shadow: 
-    -4px 0 8px rgba(0, 0, 0, 0.45), 
-    inset 3px 0 4px rgba(255, 255, 255, 0.18),
-    inset -3px 0 4px rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.6rem 0;
+    -3px 0 6px rgba(0, 0, 0, 0.45), 
+    inset 2px 0 3px rgba(255, 255, 255, 0.15),
+    inset -2px 0 3px rgba(0, 0, 0, 0.45);
   overflow: hidden;
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
-  border-right: 1px solid rgba(0, 0, 0, 0.3);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(0, 0, 0, 0.25);
+  transform: rotateY(0deg) translateZ(0px);
+  backface-visibility: hidden;
+  z-index: 3;
+}
+
+/* 책등 배경 위에 실제 책 표지의 색감/정체성이 투영되게 중첩 */
+.spine-cover-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.22;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  filter: saturate(1.1) brightness(0.9);
+  z-index: 0;
 }
 
 /* 3D 가죽 골선 주름 (Hardcover vertical groove ridge) */
@@ -445,7 +495,7 @@ input:focus, select:focus, textarea:focus {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 6px;
+  left: 5px;
   width: 2px;
   background: rgba(0, 0, 0, 0.35);
   border-right: 1px solid rgba(255, 255, 255, 0.12);
@@ -479,9 +529,9 @@ input:focus, select:focus, textarea:focus {
 }
 
 .spine-title {
-  font-size: 0.8rem;
+  font-size: 0.76rem; /* 세로 글씨 한 자씩 정확하게 들어가도록 크기 소폭 조절 */
   font-weight: 800;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.2em;
   line-height: 1.25;
   max-height: 75%;
   overflow: hidden;
@@ -496,13 +546,49 @@ input:focus, select:focus, textarea:focus {
 }
 
 .spine-author {
-  font-size: 0.65rem;
-  opacity: 0.9;
-  letter-spacing: 0.15em;
+  font-size: 0.62rem;
+  opacity: 0.88;
+  letter-spacing: 0.12em;
   max-height: 20%;
   overflow: hidden;
   text-shadow: 1px 1px 1px rgba(0,0,0,0.9);
-  margin-top: 0.3rem;
+  margin-top: 0.2rem;
+}
+
+/* 3D 책 우측 표지 (옆면에 90도 회전 배치되어 숨어 있다가 호버 시 회전 회동 노출) */
+.book-3d-cover {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  height: 100%;
+  transform-origin: left center;
+  transform: rotateY(90deg);
+  z-index: 2;
+  box-shadow: 3px 2px 10px rgba(0, 0, 0, 0.3);
+  background: #f8fafc;
+  overflow: hidden;
+  border-radius: 0 3px 3px 0;
+}
+
+.book-3d-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* 3D 책 옆면 종이 속지 질감 */
+.book-3d-pages {
+  position: absolute;
+  top: 1px;
+  left: 100%;
+  height: calc(100% - 2px);
+  transform-origin: left center;
+  transform: rotateY(90deg) translateZ(-3px); /* 책 표지보다 약간 안쪽으로 종이가 들어가게 마감 */
+  background: repeating-linear-gradient(90deg, #f5f3ef, #f5f3ef 2px, #e2dfda 3px, #e2dfda 4px);
+  border-left: 1px solid #dcdad5;
+  box-shadow: inset -2px 0 5px rgba(0,0,0,0.06);
+  z-index: 1;
 }
 
 .spine-cover-hover {

@@ -131,35 +131,65 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
                         const spineHeight = Math.min(170, Math.max(130, 120 + ((book.total_pages || 300) / 10)));
                         const spineWidth = Math.min(54, Math.max(38, 32 + ((book.total_pages || 300) / 20)));
 
+                        const charSum = (book.id || 'abc').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                        const isLeaning = charSum % 4 === 0;
+                        const tiltAngle = isLeaning ? (charSum % 2 === 0 ? 5 : -5) : 0;
+
                         return (
                           <div
                             key={book.id}
-                            className="book-spine-item"
+                            className="book-3d-container"
                             onClick={() => handleOpenDetail(book)}
                             title={`${book.title} - ${book.author}`}
+                            style={{
+                              height: `${spineHeight}px`,
+                              width: `${spineWidth}px`,
+                              transform: `rotateZ(${tiltAngle}deg)`
+                            }}
                           >
-                            <div
-                              className="spine-3d"
-                              style={{
-                                background: getSpineColor(book.id),
-                                height: `${spineHeight}px`,
-                                width: `${spineWidth}px`
-                              }}
-                            >
-                              <div className="spine-ridge"></div>
-                              <div className="spine-highlight"></div>
-                              <div className="spine-content">
-                                <span className="spine-author">{book.author}</span>
-                                <span className="spine-title">{book.title}</span>
+                            <div className="book-3d-box">
+                              {/* 3D 책등 책표지가 은은하게 투영됨 */}
+                              <div
+                                className="book-3d-spine"
+                                style={{
+                                  background: getSpineColor(book.id)
+                                }}
+                              >
+                                <div
+                                  className="spine-cover-overlay"
+                                  style={{ backgroundImage: `url(${book.cover_url})` }}
+                                ></div>
+                                <div className="spine-ridge"></div>
+                                <div className="spine-highlight"></div>
+                                <div className="spine-content">
+                                  <span className="spine-author">{book.author}</span>
+                                  <span className="spine-title">{book.title}</span>
+                                </div>
                               </div>
+
+                              {/* 3D 책표지 (호버 시 회전하여 표지가 눈앞에 노출됨) */}
+                              <div
+                                className="book-3d-cover"
+                                style={{
+                                  width: `${spineHeight * 0.72}px`
+                                }}
+                              >
+                                <img
+                                  src={book.cover_url}
+                                  alt={book.title}
+                                  referrerPolicy="no-referrer"
+                                  onError={(e) => handleImgError(e, book.fallback_cover)}
+                                />
+                              </div>
+
+                              {/* 3D 종이속지 옆면 */}
+                              <div
+                                className="book-3d-pages"
+                                style={{
+                                  width: `${spineHeight * 0.7}px`
+                                }}
+                              ></div>
                             </div>
-                            <img
-                              src={book.cover_url}
-                              alt={book.title}
-                              referrerPolicy="no-referrer"
-                              onError={(e) => handleImgError(e, book.fallback_cover)}
-                              className="spine-cover-hover"
-                            />
                           </div>
                         );
                       })}
