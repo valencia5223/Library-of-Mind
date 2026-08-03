@@ -1,16 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Volume2, VolumeX, CloudRain, Flame, Coffee, FileText, CheckCircle2, Timer } from 'lucide-react';
+import { Play, Pause, RotateCcw, Volume2, VolumeX, CloudRain, Flame, Coffee, FileText, CheckCircle2, Timer, Zap, Coffee as RestIcon } from 'lucide-react';
 
 export default function FocusStudio({ books = [], onSaveSession }) {
+  // 모드: 'stopwatch' | 'pomodoro'
+  const [timerMode, setTimerMode] = useState('stopwatch');
+  
   // 타이머 상태
   const [seconds, setSeconds] = useState(0);
+  const [pomodoroMins, setPomodoroMins] = useState(25); // 25분 기본
+  const [isRestPhase, setIsRestPhase] = useState(false);
   const [isActive, setIsActive] = useState(false);
+  
   const [selectedBookId, setSelectedBookId] = useState('');
   const [pagesReadInput, setPagesReadInput] = useState('');
   const [sessionSaved, setSessionSaved] = useState(false);
 
   // ASMR 사운드 오디오 믹서 (Web Audio Synth)
-  const [activeSound, setActiveSound] = useState(null); // 'rain' | 'fire' | 'cafe' | 'page' | null
+  const [activeSound, setActiveSound] = useState(null);
   const [volume, setVolume] = useState(0.5);
 
   const audioCtxRef = useRef(null);
@@ -21,13 +27,42 @@ export default function FocusStudio({ books = [], onSaveSession }) {
     let interval = null;
     if (isActive) {
       interval = setInterval(() => {
-        setSeconds((sec) => sec + 1);
+        setSeconds((sec) => {
+          if (timerMode === 'pomodoro') {
+            if (sec <= 1) {
+              // 뽀모도로 종료
+              if (!isRestPhase) {
+                setIsRestPhase(true);
+                alert('🎉 25분 독서 몰입 세션이 완료되었습니다! 5분간 달콤한 휴식을 가지세요.');
+                return 5 * 60; // 5분 휴식 카운트
+              } else {
+                setIsRestPhase(false);
+                setIsActive(false);
+                alert('☕ 휴식 시간이 끝났습니다. 다시 독서를 시작해 보세요!');
+                return 25 * 60;
+              }
+            }
+            return sec - 1;
+          }
+          return sec + 1;
+        });
       }, 1000);
     } else if (!isActive && seconds !== 0) {
       clearInterval(interval);
     }
     return () => clearInterval(interval);
-  }, [isActive, seconds]);
+  }, [isActive, seconds, timerMode, isRestPhase]);
+
+  const switchTimerMode = (mode) => {
+    setTimerMode(mode);
+    setIsActive(false);
+    setIsRestPhase(false);
+    if (mode === 'pomodoro') {
+      setSeconds(pomodoroMins * 60);
+    } else {
+      setSeconds(0);
+    }
+  };
 
   // Web Audio 백색소음 생성기
   const playAmbient = (type) => {
@@ -48,11 +83,10 @@ export default function FocusStudio({ books = [], onSaveSession }) {
       const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const output = noiseBuffer.getChannelData(0);
 
-      // 핑크/브라운 노이즈 생성
       let lastOut = 0.0;
       for (let i = 0; i < bufferSize; i++) {
         const white = Math.random() * 2 - 1;
-        output[i] = (lastOut + (0.02 * white)) / 1.02; // soft noise filter
+        output[i] = (lastOut + (0.02 * white)) / 1.02;
         lastOut = output[i];
       }
 
@@ -108,7 +142,7 @@ export default function FocusStudio({ books = [], onSaveSession }) {
   };
 
   const handleSave = () => {
-    const minutes = Math.max(1, Math.round(seconds / 60));
+    const minutes = timerMode === 'pomodoro' ? 25 : Math.max(1, Math.round(seconds / 60));
     onSaveSession({
       book_id: selectedBookId || null,
       duration_minutes: minutes,
@@ -120,7 +154,12 @@ export default function FocusStudio({ books = [], onSaveSession }) {
 
   const handleReset = () => {
     setIsActive(false);
-    setSeconds(0);
+    setIsRestPhase(false);
+    if (timerMode === 'pomodoro') {
+      setSeconds(pomodoroMins * 60);
+    } else {
+      setSeconds(0);
+    }
     setPagesReadInput('');
   };
 
@@ -129,16 +168,32 @@ export default function FocusStudio({ books = [], onSaveSession }) {
       {/* 타이틀 */}
       <div className="studio-header text-center">
         <h2><Timer className="text-warning inline-block me-2" size={28} /> 몰입 독서 스튜디오</h2>
-        <p className="sub-text">백색소음과 함께 집중 시간을 측정하고 독서 기록을 세워보세요.</p>
+        <p className="sub-text">백색소음과 함께 집중 시간을 측정하고 독서 세션을 남겨보세요.</p>
       </div>
 
       <div className="studio-grid mt-4">
         {/* 타이머 카드 */}
         <div className="timer-card">
-          <div className="timer-display">
+          {/* 타이머 모드 탭 */}
+          <div className="toggle-group justify-center mb-3">
+            <button
+              className={`toggle-btn ${timerMode === 'stopwatch' ? 'active' : ''}`}
+              onClick={() => switchTimerMode('stopwatch')}
+            >
+              <Zap size={14} /> 자유 타이머 (스톱워치)
+            </button>
+            <button
+              className={`toggle-btn ${timerMode === 'pomodoro' ? 'active' : ''}`}
+              onClick={() => switchTimerMode('pomodoro')}
+            >
+              <Timer size={14} /> 25분 뽀모도로
+            </button>
+          </div>
+
+          <div className={`timer-display ${isRestPhase ? 'rest-phase' : ''}`}>
             <span className="time-text">{formatTime(seconds)}</span>
             <p className="timer-sub font-mono">
-              {isActive ? '⏱️ 독서 몰입 중...' : '일시정지됨'}
+              {isRestPhase ? '☕ 5분 휴식 세션 중' : isActive ? '⏱️ 독서 몰입 중...' : '일시정지됨'}
             </p>
           </div>
 
@@ -183,14 +238,14 @@ export default function FocusStudio({ books = [], onSaveSession }) {
             <button
               className="btn btn-success w-full mt-3"
               onClick={handleSave}
-              disabled={seconds === 0}
+              disabled={timerMode === 'stopwatch' && seconds === 0}
             >
-              독서 기록 저장하기 ({Math.round(seconds / 60)}분 기록)
+              독서 기록 저장하기 ({timerMode === 'pomodoro' ? '25' : Math.round(seconds / 60)}분 기록)
             </button>
 
             {sessionSaved && (
               <div className="text-success text-center mt-2 flex align-center justify-center gap-1">
-                <CheckCircle2 size={16} /> 독서 시간이 기록되었습니다!
+                <CheckCircle2 size={16} /> 독서 시간이 성공적으로 저장되었습니다!
               </div>
             )}
           </div>
@@ -199,7 +254,7 @@ export default function FocusStudio({ books = [], onSaveSession }) {
         {/* ASMR 백색소음 플레이어 */}
         <div className="asmr-card">
           <h3>🎧 독서 백색소음 (Ambient Sounds)</h3>
-          <p className="sub-text">몰입을 돕는 자연 소리를 선택하여 재생하세요.</p>
+          <p className="sub-text">몰입을 돕는 자연 소리를 선택하여 자유롭게 조합해보세요.</p>
 
           <div className="sound-buttons-grid mt-3">
             <button

@@ -6,10 +6,10 @@ import BookSearch from './components/BookSearch';
 import ThoughtLedger from './components/ThoughtLedger';
 import FocusStudio from './components/FocusStudio';
 import ReadingStats from './components/ReadingStats';
-import { BookOpen, Search, MessageSquare, Timer, Trophy, User, Library, Sparkles } from 'lucide-react';
+import { BookOpen, Search, MessageSquare, Timer, Trophy, User, Library } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('bookshelf'); // 'bookshelf'|'search'|'ledger'|'focus'|'stats'
+  const [activeTab, setActiveTab] = useState('bookshelf');
   const [user, setUser] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -29,6 +29,9 @@ export default function App() {
       cover_url: 'https://images.unsplash.com/photo-1532012197267-da84d127e765?w=400&q=80',
       status: 'READING',
       rating: 5,
+      review: '개발자의 사상과 자세를 가다듬어주는 프로그래밍계의 클래식 지침서.',
+      total_pages: 580,
+      current_pages: 210,
       buy_link: 'https://search.shopping.naver.com/book/search?query=클린코드'
     },
     {
@@ -39,6 +42,9 @@ export default function App() {
       cover_url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&q=80',
       status: 'READ',
       rating: 5,
+      review: '단 하나에 집중할 때 삶의 모든 복잡함이 해소되는 놀라운 경험!',
+      total_pages: 280,
+      current_pages: 280,
       buy_link: 'https://search.shopping.naver.com/book/search?query=원씽'
     },
     {
@@ -49,6 +55,9 @@ export default function App() {
       cover_url: 'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=400&q=80',
       status: 'TO_READ',
       rating: 4,
+      review: '스마트폰과 알고리즘에 빼앗긴 내 주의력을 어떻게 회복할까?',
+      total_pages: 450,
+      current_pages: 0,
       buy_link: 'https://search.shopping.naver.com/book/search?query=도둑맞은집중력'
     }
   ];
@@ -66,7 +75,6 @@ export default function App() {
 
   // 인증 및 초기 데이터 로딩
   useEffect(() => {
-    // 1. Supabase Auth 감지
     if (isSupabaseConfigured()) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         setUser(session?.user ?? null);
@@ -79,7 +87,6 @@ export default function App() {
 
       return () => subscription.unsubscribe();
     } else {
-      // 2. Local Storage 데모 세션
       const savedUser = localStorage.getItem('demo_user');
       if (savedUser) setUser(JSON.parse(savedUser));
       setLoading(false);
@@ -89,10 +96,8 @@ export default function App() {
   // 데이터 수신 / 로컬스토리지 보관
   useEffect(() => {
     if (isSupabaseConfigured() && user) {
-      // Supabase DB fetch
       fetchSupabaseData();
     } else {
-      // LocalStorage fallback
       const localB = localStorage.getItem('user_books');
       const localN = localStorage.getItem('user_notes');
       const localS = localStorage.getItem('user_sessions');
@@ -117,7 +122,7 @@ export default function App() {
     }
   };
 
-  // 핸들러 함수들 (CRUD)
+  // CRUD 핸들러
   const handleAddBook = async (newBook) => {
     const bookObj = {
       ...newBook,
@@ -141,6 +146,16 @@ export default function App() {
 
     if (isSupabaseConfigured() && user) {
       await supabase.from('user_books').update({ status: newStatus }).eq('id', bookId);
+    }
+  };
+
+  const handleUpdateBookDetails = async (bookId, updatedBookData) => {
+    const updated = books.map(b => b.id === bookId ? { ...b, ...updatedBookData } : b);
+    setBooks(updated);
+    localStorage.setItem('user_books', JSON.stringify(updated));
+
+    if (isSupabaseConfigured() && user) {
+      await supabase.from('user_books').update(updatedBookData).eq('id', bookId);
     }
   };
 
@@ -256,6 +271,7 @@ export default function App() {
             onUpdateStatus={handleUpdateStatus}
             onDeleteBook={handleDeleteBook}
             onAddManualBook={handleAddBook}
+            onUpdateBookDetails={handleUpdateBookDetails}
           />
         )}
 
