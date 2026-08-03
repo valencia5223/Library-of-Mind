@@ -151,14 +151,24 @@ export default function App() {
   };
 
   const handleUpdateBookDetails = async (bookId, updatedBookData) => {
-    let cleanData = { ...updatedBookData };
-    if (cleanData.status === 'READ') {
-      if (!cleanData.completed_at) {
-        cleanData.completed_at = new Date().toISOString();
-      }
-    } else {
-      cleanData.completed_at = null;
-    }
+    let cleanData = {
+      title: updatedBookData.title || '제목 정보 없음',
+      author: updatedBookData.author || '저자 미상',
+      publisher: updatedBookData.publisher || '',
+      cover_url: updatedBookData.cover_url || '',
+      isbn: updatedBookData.isbn || '',
+      total_pages: updatedBookData.total_pages ? parseInt(updatedBookData.total_pages) : 320,
+      current_pages: updatedBookData.current_pages ? parseInt(updatedBookData.current_pages) : 0,
+      status: updatedBookData.status || 'TO_READ',
+      rating: parseFloat(updatedBookData.rating) || 0,
+      review: updatedBookData.review || '',
+      buy_link: updatedBookData.buy_link || '',
+      category: updatedBookData.category || '일반',
+      completed_at: updatedBookData.status === 'READ' 
+        ? (updatedBookData.completed_at || new Date().toISOString()) 
+        : null
+    };
+    
     const updated = books.map(b => b.id === bookId ? { ...b, ...cleanData } : b);
     setBooks(updated);
 
