@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, ShoppingBag, Plus, CheckCircle2, Flame, ExternalLink, RefreshCw, BookOpen, Sparkles } from 'lucide-react';
+import { Search, ShoppingBag, Plus, CheckCircle2, Flame, ExternalLink, RefreshCw, BookOpen, Sparkles, Star } from 'lucide-react';
 import { supabase } from '../supabaseClient'; // Supabase 인스턴스 가져오기
 
 export default function BookSearch({ onAddBook, existingBooks = [] }) {
@@ -10,6 +10,8 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
   const [loading, setLoading] = useState(false);
   const [bestsellerLoading, setBestsellerLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
+  const [selectedBook, setSelectedBook] = useState(null);
+
 
   // 1. Supabase Database DB Proxy를 활용한 국내 베스트셀러 호출 (CORS & ORB 우회 완료)
   const fetchAladinBestsellers = useCallback(async () => {
@@ -173,7 +175,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
           currentList.map((book) => {
             const added = isAlreadyInShelf(book.title);
             return (
-              <div key={book.id} className="search-card">
+              <div key={book.id} className="search-card cursor-pointer" onClick={() => setSelectedBook(book)}>
                 <div className="search-card-img-wrapper">
                   <img
                     src={book.cover_url}
@@ -191,7 +193,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
                   <p className="author-text">{book.author}</p>
                   <p className="author-text">{book.publisher} {book.price && `· ${book.price}`}</p>
                   {book.description && <p className="desc-text">{book.description}</p>}
-                  <div className="card-btn-group mt-3">
+                  <div className="card-btn-group mt-3" onClick={(e) => e.stopPropagation()}>
                     {added ? (
                       <button className="btn btn-sm btn-disabled" disabled><CheckCircle2 size={14} /> 내 책장에 있음</button>
                     ) : (
@@ -209,6 +211,84 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
           })
         )}
       </div>
+
+      {/* 검색 및 베스트셀러 도서 상세 정보 모달 */}
+      {selectedBook && (
+        <div className="modal-overlay" onClick={() => setSelectedBook(null)}>
+          <div className="modal-card book-detail-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setSelectedBook(null)}>✕</button>
+
+            <div className="detail-grid">
+              <div className="detail-cover-side">
+                <img
+                  src={selectedBook.cover_url}
+                  alt={selectedBook.title}
+                  referrerPolicy="no-referrer"
+                  className="detail-cover"
+                />
+                
+                {selectedBook.price && (
+                  <div className="mt-3 text-center">
+                    <span className="small-tag font-bold" style={{ fontSize: '0.9rem', padding: '0.35rem 0.8rem', background: 'rgba(0, 120, 166, 0.05)', color: 'var(--primary)', borderColor: 'rgba(0, 120, 166, 0.2)' }}>
+                      판매가: {selectedBook.price}
+                    </span>
+                  </div>
+                )}
+                {selectedBook.rating && (
+                  <div className="mt-2 text-center text-warning flex align-center justify-center gap-1 font-bold">
+                    <Star size={16} fill="#f59e0b" color="#f59e0b" />
+                    <span>평점 {selectedBook.rating} / 5.0</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="detail-content">
+                <h3>{selectedBook.title}</h3>
+                <p className="detail-author">{selectedBook.author} | {selectedBook.publisher || '출판사 정보'}</p>
+
+                {/* 도서 상세 설명 */}
+                <div className="review-section mt-3 p-3 border-card" style={{ background: '#f8fafc', borderRadius: '8px', minHeight: '120px' }}>
+                  <h4 className="flex align-center gap-1" style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.5rem' }}>
+                    📖 도서 소개
+                  </h4>
+                  <p className="desc-text" style={{ fontSize: '0.9rem', color: '#334155', lineHeight: 1.6, maxHeight: '200px', overflowY: 'auto' }}>
+                    {selectedBook.description || '알라딘에 등록된 소개글 설명이 없습니다.'}
+                  </p>
+                </div>
+
+                <div className="action-row mt-4 flex justify-between align-center">
+                  {isAlreadyInShelf(selectedBook.title) ? (
+                    <button className="btn btn-disabled" disabled>
+                      <CheckCircle2 size={16} /> 이미 내 책장에 있음
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => {
+                        onAddBook({ ...selectedBook, status: 'TO_READ' });
+                        setSelectedBook(null);
+                      }}
+                    >
+                      <Plus size={16} /> 내 책장에 담기
+                    </button>
+                  )}
+
+                  {selectedBook.buy_link && (
+                    <a
+                      href={selectedBook.buy_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-secondary text-decoration-none"
+                    >
+                      <ShoppingBag size={16} /> 알라딘 구매 <ExternalLink size={12} />
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -446,12 +446,15 @@ export default function BookshelfView({ books, onUpdateStatus, onDeleteBook, onA
 
 function getSpineColor(id) {
   const colors = [
-    'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
-    'linear-gradient(180deg, #b91c1c 0%, #7f1d1d 100%)',
-    'linear-gradient(180deg, #047857 0%, #064e3b 100%)',
-    'linear-gradient(180deg, #1d4ed8 0%, #1e40af 100%)',
-    'linear-gradient(180deg, #7c3aed 0%, #5b21b6 100%)',
-    'linear-gradient(180deg, #c2410c 0%, #9a3412 100%)',
+    'linear-gradient(180deg, #0078a6 0%, #004d6b 100%)', // 알라딘 네이비
+    'linear-gradient(180deg, #eb117b 0%, #9e064f 100%)', // 알라딘 핑크
+    'linear-gradient(180deg, #0d9488 0%, #0f766e 100%)', // 틸
+    'linear-gradient(180deg, #d97706 0%, #92400e 100%)', // 골드오렌지
+    'linear-gradient(180deg, #4f46e5 0%, #312e81 100%)', // 로열인디고
+    'linear-gradient(180deg, #dc2626 0%, #7f1d1d 100%)', // 로즈레드
+    'linear-gradient(180deg, #0891b2 0%, #155e75 100%)', // 시안블루
+    'linear-gradient(180deg, #7c3aed 0%, #4c1d95 100%)', // 퍼플
+    'linear-gradient(180deg, #b45309 0%, #78350f 100%)', // 클래식가죽 브라운
   ];
   const charSum = (id || 'abc').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return colors[charSum % colors.length];
