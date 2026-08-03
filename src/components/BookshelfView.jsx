@@ -20,6 +20,7 @@ export default function BookshelfView({
   const [editReview, setEditReview] = useState('');
   const [editTotalPages, setEditTotalPages] = useState(250);
   const [editCurrentPages, setEditCurrentPages] = useState(0);
+  const [editCompletedAt, setEditCompletedAt] = useState('');
 
   // 별점 및 정보 독립화 동기화
   React.useEffect(() => {
@@ -28,6 +29,13 @@ export default function BookshelfView({
       setEditReview(selectedBook.review || '');
       setEditTotalPages(selectedBook.total_pages || 300);
       setEditCurrentPages(selectedBook.current_pages || 0);
+
+      const todayISO = new Date().toISOString().split('T')[0];
+      if (selectedBook.completed_at) {
+        setEditCompletedAt(selectedBook.completed_at.split('T')[0]);
+      } else {
+        setEditCompletedAt(todayISO);
+      }
     } else {
       setIsEditingReview(false);
     }
@@ -99,12 +107,22 @@ export default function BookshelfView({
   const handleSaveReview = () => {
     if (!selectedBook) return;
 
+    const isRead = selectedBook.status === 'READ' || editCurrentPages >= editTotalPages;
+    const finalStatus = isRead ? 'READ' : selectedBook.status;
+    
+    let completedAt = null;
+    if (finalStatus === 'READ') {
+      completedAt = editCompletedAt ? new Date(editCompletedAt).toISOString() : new Date().toISOString();
+    }
+
     const updated = {
       ...selectedBook,
       rating: editRating,
       review: editReview,
       total_pages: editTotalPages,
-      current_pages: editCurrentPages
+      current_pages: editCurrentPages,
+      status: finalStatus,
+      completed_at: completedAt
     };
 
     onUpdateBookDetails(selectedBook.id, updated);
@@ -366,25 +384,32 @@ export default function BookshelfView({
                           <span className="sub-text font-bold" style={{ fontSize: '0.85rem' }}>내 별점: <strong style={{ color: '#f59e0b' }}>{editRating.toFixed(1)}점</strong></span>
                           <div className="flex" style={{ display: 'flex', gap: '2px' }}>{renderStars(editRating)}</div>
                         </div>
-                        <input
-                          type="range"
-                          min="0.5"
-                          max="5.0"
-                          step="0.5"
-                          value={editRating}
-                          onChange={(e) => setEditRating(parseFloat(e.target.value))}
-                          style={{
-                            width: '100%',
-                            accentColor: '#f59e0b',
-                            cursor: 'pointer',
-                            height: '6px',
-                            backgroundColor: '#cbd5e1',
-                            borderRadius: '3px',
-                            border: 'none',
-                            outline: 'none',
-                            marginTop: '4px'
-                          }}
-                        />
+                        {/* 0.5 단위 직관적인 별점 선택 칩 */}
+                        <div className="flex flex-wrap gap-1 mt-1" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.4rem' }}>
+                          {[0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0].map((val) => (
+                            <button
+                              key={val}
+                              type="button"
+                              onClick={() => setEditRating(val)}
+                              className={`btn btn-sm ${editRating === val ? 'btn-primary' : 'btn-outline'}`}
+                              style={{
+                                fontSize: '0.75rem',
+                                padding: '0.2rem 0.4rem',
+                                minWidth: '33px',
+                                textAlign: 'center',
+                                borderRadius: '12px',
+                                border: editRating === val ? '1px solid var(--primary)' : '1px solid #cbd5e1',
+                                backgroundColor: editRating === val ? 'rgba(0, 120, 166, 0.1)' : '#ffffff',
+                                color: editRating === val ? 'var(--primary)' : '#475569',
+                                fontWeight: editRating === val ? 700 : 400,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease'
+                              }}
+                            >
+                              {val}
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
                       <div className="flex gap-2 mb-2" style={{ display: 'flex', gap: '0.5rem' }}>
@@ -405,6 +430,28 @@ export default function BookshelfView({
                           />
                         </div>
                       </div>
+
+                      {/* 완독 일자 선택기 추가 (status가 READ이거나 완독 페이지 달성 시 표시) */}
+                      {(selectedBook.status === 'READ' || editCurrentPages >= editTotalPages) && (
+                        <div className="mb-2" style={{ marginTop: '0.5rem' }}>
+                          <label className="sub-text font-bold" style={{ fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>🏆 완독 날짜 지정</label>
+                          <input
+                            type="date"
+                            value={editCompletedAt}
+                            onChange={(e) => setEditCompletedAt(e.target.value)}
+                            max={new Date().toISOString().split('T')[0]} // 오늘 이후 날짜 지정 금지
+                            style={{
+                              width: '100%',
+                              padding: '0.4rem 0.5rem',
+                              borderRadius: '6px',
+                              border: '1px solid #cbd5e1',
+                              fontSize: '0.85rem',
+                              fontFamily: 'inherit',
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+                      )}
 
                       <textarea
                         rows="3"

@@ -137,9 +137,9 @@ export default function App() {
     }
   };
 
-  const handleUpdateStatus = async (bookId, newStatus) => {
+  const handleUpdateStatus = async (bookId, newStatus, customCompletedAt = null) => {
     const isCompleted = newStatus === 'READ';
-    const completedAt = isCompleted ? new Date().toISOString() : null;
+    const completedAt = isCompleted ? (customCompletedAt || new Date().toISOString()) : null;
     const updated = books.map(b => b.id === bookId ? { ...b, status: newStatus, completed_at: completedAt } : b);
     setBooks(updated);
 

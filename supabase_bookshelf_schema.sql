@@ -128,7 +128,7 @@ DECLARE
   api_url TEXT;
 BEGIN
   -- 알라딘 베스트셀러 API URL (ttbkey 하드코딩)
-  api_url := 'http://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=ttbcdw2341334001&QueryType=Bestseller&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101&output=js';
+  api_url := 'http://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=ttbcdw2341334001&QueryType=Bestseller&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101&output=js&OptResult=itemPage';
   
   -- HTTP GET 수행
   SELECT * FROM http_get(api_url) INTO response_record;
@@ -164,7 +164,7 @@ BEGIN
              || '&MaxResults=30' 
              || '&start=' || start_page 
              || '&Sort=' || urlencode(sort_option) 
-             || '&SearchTarget=Book&Cover=Big&Version=20131101&output=js';
+             || '&SearchTarget=Book&Cover=Big&Version=20131101&output=js&OptResult=itemPage';
   
   -- HTTP GET 수행
   SELECT * FROM http_get(api_url) INTO response_record;
@@ -253,6 +253,32 @@ CREATE POLICY "Users can view own or friends notes"
     auth.uid() = user_id 
     OR user_id IN (SELECT friend_id FROM public.user_friends WHERE user_id = auth.uid())
   );
+
+
+-- ========================================================
+-- 7. 신규 가입(auth.users) 발생 시 profiles 자동 동기화 트리거
+-- ========================================================
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email)
+  VALUES (new.id, new.email)
+  ON CONFLICT (id) DO UPDATE
+  SET email = EXCLUDED.email;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 트리거 생성
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 기존 회원들 일괄 profiles 마이그레이션 백필(Backfill)
+INSERT INTO public.profiles (id, email)
+SELECT id, email FROM auth.users
+ON CONFLICT (id) DO NOTHING;
 
 
 
