@@ -1,8 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import { Search, ShoppingBag, Plus, CheckCircle2, Flame, ExternalLink, RefreshCw, BookOpen, Sparkles, Star } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Search, ShoppingBag, Plus, CheckCircle2, Flame, ExternalLink, RefreshCw, BookOpen, Sparkles } from 'lucide-react';
 
-// 알라딘 TTB Open API (검증 완료 - 실시간 국내 베스트셀러 + 한국어 도서 검색 + 실물 표지 100%)
+// 알라딘 TTB Open API (JSONP 방식 - CORS & Mixed Content 완벽 우회)
 const ALADIN_TTB_KEY = 'ttbcdw2341334001';
+
+// JSONP 호출 유틸리티 (크롬 nosniff 대응 및 호환성 보장)
+function fetchJsonp(url) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `aladinCb_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+    const script = document.createElement('script');
+
+    // 타임아웃
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error('인터넷 연결이 원활하지 않거나 API 응답이 지연되고 있습니다.'));
+    }, 15000);
+
+    function cleanup() {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    window[callbackName] = (data) => {
+      cleanup();
+      resolve(data);
+    };
+
+    // 브라우저의 strict MIME type checking을 우회하기 위해 인위적으로 type 명시
+    script.type = 'text/javascript';
+    script.src = `${url}&output=js&callback=${callbackName}`;
+    script.onerror = () => {
+      cleanup();
+      reject(new Error('도서 정보를 불러오는데 실패하였습니다.'));
+    };
+
+    document.head.appendChild(script);
+  });
+}
 
 export default function BookSearch({ onAddBook, existingBooks = [] }) {
   const [activeTab, setActiveTab] = useState('bestseller');
@@ -11,61 +46,61 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
   const [bestsellerList, setBestsellerList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [bestsellerLoading, setBestsellerLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  useEffect(() => {
-    fetchAladinBestsellers();
-  }, []);
-
-  // 알라딘 실시간 국내 베스트셀러 TOP20 API
-  const fetchAladinBestsellers = async () => {
+  const fetchAladinBestsellers = useCallback(async () => {
     setBestsellerLoading(true);
+    setErrorMsg('');
     try {
-      const url = `https://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=${ALADIN_TTB_KEY}&QueryType=Bestseller&MaxResults=20&start=1&SearchTarget=Book&output=js&Version=20131101&Cover=Big`;
-      const res = await fetch(url);
-      const data = await res.json();
+      const url = `https://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=${ALADIN_TTB_KEY}&QueryType=Bestseller&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101`;
+      const data = await fetchJsonp(url);
 
       if (data && data.item && data.item.length > 0) {
-        const parsed = parseAladinItems(data.item);
-        setBestsellerList(parsed);
+        setBestsellerList(parseAladinItems(data.item));
+      } else {
+        setErrorMsg('베스트셀러 목록이 비어있습니다.');
       }
     } catch (err) {
       console.warn('알라딘 베스트셀러 API 오류:', err);
+      setErrorMsg(err.message || '데이터를 불러오지 못했습니다.');
     } finally {
       setBestsellerLoading(false);
     }
-  };
+  }, []);
 
-  // 알라딘 한국어 도서 실시간 검색 API (국내 수백만 권 전체 DB)
+  useEffect(() => {
+    fetchAladinBestsellers();
+  }, [fetchAladinBestsellers]);
+
   const handleSearch = async (e) => {
     e.preventDefault();
     if (!query.trim()) return;
 
     setLoading(true);
+    setErrorMsg('');
     setActiveTab('search');
 
     try {
-      const url = `https://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=${ALADIN_TTB_KEY}&Query=${encodeURIComponent(query)}&MaxResults=20&start=1&SearchTarget=Book&output=js&Version=20131101&Cover=Big`;
-      const res = await fetch(url);
-      const data = await res.json();
+      const url = `https://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=${ALADIN_TTB_KEY}&Query=${encodeURIComponent(query)}&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101`;
+      const data = await fetchJsonp(url);
 
       if (data && data.item && data.item.length > 0) {
-        const parsed = parseAladinItems(data.item);
-        setSearchResults(parsed);
+        setSearchResults(parseAladinItems(data.item));
       } else {
         setSearchResults([]);
+        setErrorMsg('검색 결과가 없습니다.');
       }
     } catch (err) {
       console.warn('알라딘 검색 API 오류:', err);
+      setErrorMsg(err.message || '도서 검색 중 오류가 발생했습니다.');
       setSearchResults([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // 알라딘 API 응답 아이템 파서 (표지 고화질 변환 포함)
   const parseAladinItems = (items) => {
     return items.map((item) => {
-      // 알라딘 표지 URL을 고화질로 변환 (coversum → cover500)
       let coverUrl = item.cover || '';
       coverUrl = coverUrl.replace('/coversum/', '/cover500/');
 
@@ -102,7 +137,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
           <Search size={20} className="search-icon" />
           <input
             type="text"
-            placeholder="국내 도서를 검색하세요 (예: 클린코드, 세이노의 가르침, 트렌드 코리아, 해리포터, 소설, 주식)"
+            placeholder="국내 도서를 검색하세요 (예: 클린코드, 세이노의 가르침, 트렌드 코리아, 해리포터)"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -128,13 +163,19 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
         )}
       </div>
 
+      {errorMsg && (
+        <div className="p-3 text-warning text-center mt-3 bg-opacity-10 bg-warning rounded-lg">
+          ⚠️ {errorMsg}
+        </div>
+      )}
+
       <div className="search-grid mt-4">
         {(activeTab === 'bestseller' && bestsellerLoading) || (activeTab === 'search' && loading) ? (
           <div className="empty-search p-5 text-center w-full col-span-full">
             <RefreshCw size={32} className="animate-spin text-primary mx-auto mb-2" />
             <p>알라딘 도서 API에서 실시간 데이터를 불러오는 중입니다...</p>
           </div>
-        ) : currentList.length === 0 ? (
+        ) : currentList.length === 0 && !errorMsg ? (
           <div className="empty-search p-5 text-center col-span-full">
             {activeTab === 'search' ? '검색 결과가 없습니다. 다른 키워드로 검색해 보세요.' : '베스트셀러를 불러오지 못했습니다. 새로고침을 눌러주세요.'}
           </div>
