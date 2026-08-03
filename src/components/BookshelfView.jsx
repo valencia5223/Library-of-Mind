@@ -56,7 +56,7 @@ export default function BookshelfView({
   };
 
   // 수정 리뷰 & 별점 폼
-  const [editRating, setEditRating] = useState(5);
+  const [editRating, setEditRating] = useState(0);
   const [editReview, setEditReview] = useState('');
   const [editTotalPages, setEditTotalPages] = useState(250);
   const [editCurrentPages, setEditCurrentPages] = useState(0);
@@ -65,7 +65,7 @@ export default function BookshelfView({
   // 별점 및 정보 독립화 동기화
   React.useEffect(() => {
     if (selectedBook) {
-      setEditRating(selectedBook.rating || 5);
+      setEditRating(selectedBook.rating ?? 0);
       setEditReview(selectedBook.review || '');
       setEditTotalPages(selectedBook.total_pages || 300);
       setEditCurrentPages(selectedBook.current_pages || 0);
@@ -105,7 +105,7 @@ export default function BookshelfView({
       cover_url: newCover || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=400&q=80',
       status: newStatus,
       buy_link: newBuyLink || `https://search.shopping.naver.com/book/search?query=${encodeURIComponent(newTitle)}`,
-      rating: 5,
+      rating: 0,
       total_pages: parseInt(newTotalPages) || 300,
       current_pages: newStatus === 'READ' ? parseInt(newTotalPages) || 300 : 0
     });
@@ -340,7 +340,7 @@ export default function BookshelfView({
                           className="book-card-cover"
                         />
                         <span className="rating-pill">
-                          {renderStars(book.rating || 5.0)} <span className="ms-1" style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{(book.rating || 5.0).toFixed(1)}</span>
+                          {renderStars(book.rating ?? 0)} <span className="ms-1" style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{(book.rating ?? 0).toFixed ? (book.rating ?? 0).toFixed(1) : parseFloat(book.rating ?? 0).toFixed(1)}</span>
                         </span>
                       </div>
                       <div className="book-card-info">
@@ -439,30 +439,27 @@ export default function BookshelfView({
                           <span className="sub-text font-bold" style={{ fontSize: '0.85rem' }}>내 별점: <strong style={{ color: '#f59e0b' }}>{editRating.toFixed(1)}점</strong></span>
                           <div className="flex" style={{ display: 'flex', gap: '2px' }}>{renderStars(editRating)}</div>
                         </div>
-                        {/* 0.5 단위 직관적인 별점 선택 칩 */}
-                        <div className="flex flex-wrap gap-1 mt-1" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.4rem' }}>
-                          {[0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0].map((val) => (
-                            <button
-                              key={val}
-                              type="button"
-                              onClick={() => setEditRating(val)}
-                              className={`btn btn-sm ${editRating === val ? 'btn-primary' : 'btn-outline'}`}
-                              style={{
-                                fontSize: '0.75rem',
-                                padding: '0.2rem 0.4rem',
-                                minWidth: '33px',
-                                textAlign: 'center',
-                                borderRadius: '12px',
-                                border: editRating === val ? '1px solid var(--primary)' : '1px solid #cbd5e1',
-                                backgroundColor: editRating === val ? 'rgba(0, 120, 166, 0.1)' : '#ffffff',
-                                color: editRating === val ? 'var(--primary)' : '#475569',
-                                fontWeight: editRating === val ? 700 : 400,
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease'
-                              }}
-                            >
-                              {val}
-                            </button>
+                        {/* 0.5 단위 직관적인 별점 선택 칩 -> 대화형 반쪽/전체 클릭 별점으로 교체 */}
+                        <div className="flex align-center gap-1 mt-1 justify-center">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <div key={star} style={{ position: 'relative', width: '28px', height: '28px', cursor: 'pointer' }}>
+                              {/* 반쪽 채우기 (왼쪽 50%) */}
+                              <div 
+                                style={{ position: 'absolute', left: 0, top: 0, width: '50%', height: '100%', overflow: 'hidden', zIndex: 2 }}
+                                onClick={() => setEditRating(star === 1 && editRating === 0.5 ? 0 : (star - 0.5))}
+                                title={`${star - 0.5}점`}
+                              >
+                                <Star size={28} fill={editRating >= star - 0.5 ? "#f59e0b" : "none"} color={editRating > 0 && editRating >= star - 0.5 ? "#f59e0b" : "#cbd5e1"} strokeWidth={1.5} />
+                              </div>
+                              {/* 전체 채우기 */}
+                              <div 
+                                style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', zIndex: 1 }}
+                                onClick={() => setEditRating(star === editRating ? star - 0.5 : star)}
+                                title={`${star}점`}
+                              >
+                                <Star size={28} fill={editRating >= star ? "#f59e0b" : "none"} color={editRating > 0 && editRating >= star - 0.5 ? "#f59e0b" : "#cbd5e1"} strokeWidth={1.5} />
+                              </div>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -527,8 +524,8 @@ export default function BookshelfView({
                   ) : (
                     <div className="saved-review-view mt-2">
                       <div className="flex align-center gap-1 mb-1" style={{ display: 'flex', alignItems: 'center' }}>
-                        {renderStars(selectedBook.rating || 5.0)}
-                        <span className="ms-2 font-bold" style={{ marginLeft: '0.5rem' }}>{(selectedBook.rating || 5.0).toFixed(1)}</span>
+                        {renderStars(selectedBook.rating ?? 0)}
+                        <span className="ms-2 font-bold" style={{ marginLeft: '0.5rem' }}>{parseFloat(selectedBook.rating ?? 0).toFixed(1)}</span>
                       </div>
                       {selectedBook.status === 'READ' && selectedBook.completed_at && (
                         <p className="sub-text font-bold mb-2" style={{ color: '#16a34a', fontSize: '0.8rem' }}>

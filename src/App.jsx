@@ -116,7 +116,7 @@ export default function App() {
       total_pages: newBook.total_pages ? parseInt(newBook.total_pages) : 320,
       current_pages: newBook.current_pages ? parseInt(newBook.current_pages) : 0,
       status: newBook.status || 'TO_READ',
-      rating: newBook.rating ? Math.min(5, Math.max(0, Math.round(parseFloat(newBook.rating)))) : 0, 
+      rating: newBook.rating ? Math.min(5, Math.max(0, parseFloat((parseFloat(newBook.rating) || 0).toFixed(1)))) : 0.0, 
       buy_link: newBook.buy_link || '',
       category: newBook.category || '일반'
     };

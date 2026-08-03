@@ -1,5 +1,5 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
-@import url('https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700;900&display=swap');
 
 
 :root {
@@ -467,21 +467,23 @@ input:focus, select:focus, textarea:focus {
   z-index: 50;
 }
 
-/* 3D 책장 책등 (정면) */
+/* 3D 책장 책등 (정면) - 금장 양장본 하드커버 */
 .book-3d-spine {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  border-radius: 4px 4px 1px 1px;
+  border-radius: 4px 6px 3px 3px;
   box-shadow: 
-    -3px 0 6px rgba(0, 0, 0, 0.45), 
-    inset 2px 0 3px rgba(255, 255, 255, 0.15),
-    inset -2px 0 3px rgba(0, 0, 0, 0.45);
+    -4px 0 8px rgba(0, 0, 0, 0.5), 
+    inset 3px 0 5px rgba(255, 255, 255, 0.25),
+    inset -3px 0 5px rgba(0, 0, 0, 0.6);
   overflow: hidden;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  border-right: 1px solid rgba(0, 0, 0, 0.25);
+  border-left: 2px solid rgba(255, 255, 255, 0.15);
+  border-right: 1px solid rgba(0, 0, 0, 0.4);
+  border-top: 3px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.3);
   transform: rotateY(0deg) translateZ(0px);
   backface-visibility: hidden;
   z-index: 3;
@@ -530,38 +532,36 @@ input:focus, select:focus, textarea:focus {
 }
 
 .spine-title {
-  font-size: 0.76rem;
-  font-weight: 900;
+  font-size: 0.72rem;
+  font-weight: 700;
   color: #ffffff;
-  letter-spacing: 0.1em;
-  line-height: 1.2;
-  max-height: 70%;
-  max-width: 1.25em; /* 좁은 책등에서 타이틀 글씨가 좌우로 겹치지 않고 온전히 1줄 세로정렬되게 폭 제한 */
+  letter-spacing: 0.12em;
+  line-height: 1.25;
+  max-height: 65%;
+  max-width: 1.3em;
   overflow: hidden;
   text-shadow: 
-    1px 1px 2px #000, 
-    -1px -1px 2px #000, 
-    1.5px -1.5px 2px #000, 
-    -1.5px 1.5px 2px #000, 
-    0px 0px 5px rgba(0,0,0,0.95); /* 실물 책의 검은 가죽 불박 인쇄 느낌을 위한 뚜렷한 외곽 대조림 */
-  word-break: break-all; /* 영문 혼용 시에도 한 글자씩 끊어 떨어지도록 처리 */
+    0 1px 3px rgba(0, 0, 0, 0.7),
+    0 -1px 2px rgba(255, 255, 255, 0.2);
+  word-break: break-all;
   text-align: center;
   margin-top: 0.2rem;
-  font-family: 'Nanum Myeongjo', serif; /* 명조 서체 변경 */
+  font-family: 'Noto Serif KR', 'Gowun Batang', serif;
 }
 
 .spine-author {
   font-size: 0.58rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.9);
-  letter-spacing: 0.05em;
-  max-height: 5em; /* 3글자 이상 세로 쓰기가 잘리지 않고 충분히 노출되도록 보강 */
-  max-width: 1.5em; /* 저자명 뭉개짐 방지 */
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.1em;
+  max-height: 5em;
+  max-width: 1.5em;
   overflow: hidden;
-  text-shadow: 1px 1px 1px rgba(0,0,0,0.95);
-  margin-top: auto; /* 저자 정보는 책등 꼬리 부분으로 자연스럽게 하단 정렬 */
+  text-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.6);
+  margin-top: auto;
   word-break: break-all;
-  font-family: 'Nanum Myeongjo', serif; /* 명조 서체 변경 */
+  font-family: 'Noto Serif KR', 'Gowun Batang', serif;
 }
 
 /* 3D 책 우측 표지 (옆면에 90도 회전 배치되어 숨어 있다가 호버 시 회전 회동 노출) */
@@ -573,10 +573,10 @@ input:focus, select:focus, textarea:focus {
   transform-origin: left center;
   transform: rotateY(90deg);
   z-index: 2;
-  box-shadow: 3px 2px 10px rgba(0, 0, 0, 0.3);
+  box-shadow: 5px 3px 15px rgba(0, 0, 0, 0.4);
   background: #f8fafc;
   overflow: hidden;
-  border-radius: 0 3px 3px 0;
+  border-radius: 0 4px 4px 0;
 }
 
 .book-3d-cover img {
@@ -949,10 +949,28 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05) !important;
   transition: transform 0.2s ease, box-shadow 0.2s ease !important;
   cursor: default;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 0.25rem !important;
+}
+.stats-summary-grid .stat-card > div {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.15rem !important;
 }
 .stats-summary-grid .stat-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.08) !important;
+}
+.stat-value {
+  display: block !important;
+  white-space: nowrap !important;
+}
+.stat-label {
+  display: block !important;
+  font-size: 0.8rem !important;
+  margin-top: 0.15rem !important;
 }
 
 /* 개별 카드 칼라 테마 */
@@ -1055,8 +1073,11 @@ input:focus, select:focus, textarea:focus {
   color: #eb117b !important;
 }
 .day-chart-card .chart-wrapper {
-  height: 220px !important;
+  min-height: 180px !important;
+  height: auto !important;
   border-bottom: 2px solid #e2e8f0 !important;
+  overflow: hidden !important;
+  padding-bottom: 0.5rem !important;
 }
 
 /* 6개월 독서 결산 */
@@ -1068,8 +1089,11 @@ input:focus, select:focus, textarea:focus {
   color: #10b981 !important;
 }
 .month-chart-card .chart-wrapper {
-  height: 220px !important;
+  min-height: 180px !important;
+  height: auto !important;
   border-bottom: 2px solid #e2e8f0 !important;
+  overflow: hidden !important;
+  padding-bottom: 0.5rem !important;
 }
 
 /* 상세 페이스 분석 블록 */

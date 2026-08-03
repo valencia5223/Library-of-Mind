@@ -276,7 +276,7 @@ export default function ReadingStats({ books = [], sessions = [] }) {
               
               return (
                 <div key={idx} className="flex flex-col items-center z-10" style={{ width: `${100 / 6}%` }}>
-                  <div className="relative group flex items-end justify-center w-full" style={{ height: '150px' }}>
+                  <div className="relative group flex items-end justify-center w-full" style={{ height: '220px' }}>
                     
                     {/* 독서 페이지수 (배경 하늘색 바) */}
                     <div 
@@ -330,29 +330,29 @@ export default function ReadingStats({ books = [], sessions = [] }) {
           </h3>
           <p className="text-xs text-slate-400 mb-4">독서 진행 템포와 1회당 집중 세션을 산출한 객관적 독서 속도 관련 수치입니다.</p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div className="p-3 rounded-lg pace-box-days">
-              <span>도서 평균 완독 기간</span>
-              <strong>{avgDaysResult}</strong>
-              <small className="block mt-1">등록일부터 완독 처리일까지의 평균 일수</small>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1rem' }}>
+            <div className="p-3 rounded-lg pace-box-days" style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+              <span className="block text-slate-500 text-xs font-bold mb-1">도서 평균 완독 기간</span>
+              <strong className="block text-lg" style={{ color: '#0f172a' }}>{avgDaysResult}</strong>
+              <small className="block mt-1 text-slate-400" style={{ fontSize: '0.7rem' }}>등록부터 완독까지 소요됨</small>
             </div>
 
-            <div className="p-3 rounded-lg pace-box-time">
-              <span>1페이지당 소요 시간</span>
-              <strong>{timePerPage}분 / page</strong>
-              <small className="block mt-1">1페이지를 읽는 데 걸린 시간</small>
+            <div className="p-3 rounded-lg pace-box-time" style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5' }}>
+              <span className="block text-amber-600 text-xs font-bold mb-1">1페이지 소요 시간</span>
+              <strong className="block text-lg" style={{ color: '#9a3412' }}>{timePerPage}분</strong>
+              <small className="block mt-1 text-amber-600 opacity-60" style={{ fontSize: '0.7rem' }}>1페이지 읽는 평균 시간</small>
             </div>
 
-            <div className="p-3 rounded-lg pace-box-session">
-              <span>1회 평균 독서 집중</span>
-              <strong>{avgMinutesPerSession}분</strong>
-              <small className="block mt-1">평균적인 독서 시간</small>
+            <div className="p-3 rounded-lg pace-box-session" style={{ backgroundColor: '#f0fdf4', border: '1px solid #dcfce3' }}>
+              <span className="block text-green-600 text-xs font-bold mb-1">1회 평균 몰입 시간</span>
+              <strong className="block text-lg" style={{ color: '#166534' }}>{avgMinutesPerSession}분</strong>
+              <small className="block mt-1 text-green-600 opacity-60" style={{ fontSize: '0.7rem' }}>한 번 앉아서 읽는 시간</small>
             </div>
 
-            <div className="p-3 rounded-lg pace-box-pages">
-              <span>1회 평균 독서량</span>
-              <strong>{avgPagesPerSession}페이지</strong>
-              <small className="block mt-1">평균적으로 돌파하는 분량</small>
+            <div className="p-3 rounded-lg pace-box-pages" style={{ backgroundColor: '#eff6ff', border: '1px solid #dbeafe' }}>
+              <span className="block text-blue-600 text-xs font-bold mb-1">1회 평균 돌파량</span>
+              <strong className="block text-lg" style={{ color: '#1e40af' }}>{avgPagesPerSession}P</strong>
+              <small className="block mt-1 text-blue-600 opacity-60" style={{ fontSize: '0.7rem' }}>한 번 앉아서 넘긴 장수</small>
             </div>
           </div>
         </div>
