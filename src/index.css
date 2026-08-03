@@ -439,11 +439,13 @@ input:focus, select:focus, textarea:focus {
 .book-3d-container {
   position: relative;
   cursor: pointer;
-  perspective: 1200px;
+  perspective: 1000px;
+  perspective-origin: 50% 50%;
   transform-style: preserve-3d;
   margin-right: 0.15rem;
   transform: rotateZ(var(--tilt-angle, 0deg));
   transition: margin 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.35s ease;
+  z-index: 1;
 }
 
 .book-3d-box {
@@ -457,14 +459,14 @@ input:focus, select:focus, textarea:focus {
 
 /* 호버 시 선반 밖으로 꺼내지는(pull-out) 슬라이딩 & 3D 회전 애니메이션 */
 .book-3d-container:hover .book-3d-box {
-  transform: translateZ(90px) translateY(-20px) rotateY(-36deg) translateX(-14px);
-  z-index: 50;
+  transform: translateZ(95px) translateY(-18px) rotateY(-38deg) translateX(-12px);
+  z-index: 100;
 }
 
 .book-3d-container:hover {
-  margin-right: 3.5rem; /* 뒤에 있는 옆 칸 도서 표지에 가려지지 않게 3D 가로 간격 확보 */
+  margin-right: 4.2rem; /* 뒤에 있는 옆 칸 도서 표지에 가려지지 않게 3D 가로 간격 확보 */
   transform: rotateZ(var(--tilt-angle, 0deg)) scale(1.04);
-  z-index: 50;
+  z-index: 100;
 }
 
 /* 3D 책장 책등 (정면) - 금장 양장본 하드커버 */

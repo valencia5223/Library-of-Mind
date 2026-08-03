@@ -134,6 +134,7 @@ export default function App() {
       status: newBook.status || 'TO_READ',
       rating: newBook.rating ? Math.min(5, Math.max(0, parseFloat((parseFloat(newBook.rating) || 0).toFixed(1)))) : 0.0, 
       buy_link: newBook.buy_link || '',
+      pub_date: newBook.pub_date || '',
       category: newBook.category || '일반'
     };
 

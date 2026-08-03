@@ -261,6 +261,12 @@ export default function BookshelfView({
                           const isLeaning = charSum % 4 === 0;
                           const tiltAngle = isLeaning ? (charSum % 2 === 0 ? 5 : -5) : 0;
 
+                          const spineStyle = getSpineStyle(book.cover_url, book.id);
+                          if (book.cover_url && !coverColors[book.id]) {
+                            extractMainColor(book.id, book.cover_url);
+                          }
+                          const finalBg = coverColors[book.id] || spineStyle.bg;
+
                           return (
                             <div
                               key={book.id}
@@ -278,17 +284,14 @@ export default function BookshelfView({
                                 <div
                                   className="book-3d-spine"
                                   style={{
-                                    background: coverColors[book.id] || (() => {
-                                      extractMainColor(book.id, book.cover_url);
-                                      return getSpineThemeColor(book.cover_url, book.id);
-                                    })()
+                                    background: finalBg
                                   }}
                                 >
                                   <div className="spine-ridge"></div>
                                   <div className="spine-highlight"></div>
                                   <div className="spine-content">
-                                    <span className="spine-author">{formatAuthor(book.author)}</span>
-                                    <span className="spine-title">{book.title}</span>
+                                    <span className="spine-author" style={{ color: spineStyle.authorColor, textShadow: spineStyle.textShadow }}>{formatAuthor(book.author)}</span>
+                                    <span className="spine-title" style={{ color: spineStyle.titleColor, textShadow: spineStyle.textShadow }}>{book.title}</span>
                                   </div>
                                 </div>
 
@@ -392,7 +395,7 @@ export default function BookshelfView({
 
               <div className="detail-content">
                 <h3>{selectedBook.title}</h3>
-                <p className="detail-author">{selectedBook.author} | {selectedBook.publisher || '출판사 정보'}</p>
+                <p className="detail-author">{selectedBook.author} | {selectedBook.publisher || '출판사 정보'}{selectedBook.pub_date ? ` | 출간일: ${selectedBook.pub_date}` : ''}</p>
 
                 {/* 상태 선택 */}
                 {!viewedFriend && (
@@ -646,15 +649,43 @@ export default function BookshelfView({
   );
 }
 
-function getSpineThemeColor(coverUrl, id) {
-  if (!coverUrl) return '#334155';
+function getSpineStyle(coverUrl, id) {
+  if (!coverUrl) {
+    return {
+      bg: '#1e293b',
+      titleColor: '#fef08a',
+      authorColor: '#fde047',
+      textShadow: '0 1px 3px rgba(0, 0, 0, 0.8)'
+    };
+  }
   const source = coverUrl + (id || '');
   let hash = 0;
   for (let i = 0; i < source.length; i++) {
     hash = source.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash) % 360;
-  const saturation = 45 + (Math.abs(hash >> 2) % 20); // 45% ~ 65% 채도
-  const lightness = 20 + (Math.abs(hash >> 4) % 15);   // 20% ~ 35% 명도
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+  const saturation = 40 + (Math.abs(hash >> 2) % 25); // 40% ~ 65%
+  const lightness = 18 + (Math.abs(hash >> 4) % 20);   // 18% ~ 38%
+  
+  const bg = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+
+  let titleColor = '#ffffff';
+  let authorColor = 'rgba(255, 255, 255, 0.85)';
+  let textShadow = '0 1px 3px rgba(0, 0, 0, 0.8)';
+
+  if (lightness < 25) {
+    titleColor = '#fef08a';
+    authorColor = '#fde047';
+    textShadow = `0 1px 3px rgba(0,0,0,0.9), 0 0 4px hsl(${hue}, 80%, 70%)`;
+  } else if (lightness >= 25 && lightness < 33) {
+    titleColor = '#f8fafc';
+    authorColor = '#e2e8f0';
+    textShadow = '0 1px 3px rgba(0, 0, 0, 0.85)';
+  } else {
+    titleColor = '#0f172a';
+    authorColor = '#334155';
+    textShadow = '0 1px 2px rgba(255, 255, 255, 0.6)';
+  }
+
+  return { bg, titleColor, authorColor, textShadow };
 }

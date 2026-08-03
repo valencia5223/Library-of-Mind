@@ -176,6 +176,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
         rating: item.customerReviewRank ? (item.customerReviewRank / 2).toFixed(1) : '4.8',
         total_pages: parseInt(item.subInfo?.itemPage || item.itemPage) || generatePageCount(item.title || 'book'),
         price: item.priceSales ? `₩${item.priceSales.toLocaleString()}` : '',
+        pub_date: item.pubDate || '',
         category: item.categoryName || '',
         bestRank: item.bestRank || null
       };
@@ -412,7 +413,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
 
               <div className="detail-content">
                 <h3>{selectedBook.title}</h3>
-                <p className="detail-author">{selectedBook.author} | {selectedBook.publisher || '출판사 정보'}</p>
+                <p className="detail-author">{selectedBook.author} | {selectedBook.publisher || '출판사 정보'}{selectedBook.pub_date ? ` | 출간일: ${selectedBook.pub_date}` : ''}</p>
 
                 {/* 도서 상세 설명 */}
                 <div className="review-section mt-3 p-3 border-card" style={{ background: '#f8fafc', borderRadius: '8px', minHeight: '120px' }}>
