@@ -57,9 +57,6 @@ export default function BookshelfView({
   React.useEffect(() => {
     if (selectedBook || showDescModal) {
       document.body.style.overflow = 'hidden';
-      if (selectedBook && !showDescModal) {
-        setBookDescription(selectedBook.description || '');
-      }
     } else {
       document.body.style.overflow = '';
       setBookDescription('');
@@ -70,56 +67,92 @@ export default function BookshelfView({
     };
   }, [selectedBook, showDescModal]);
 
-  // 알라딘 API 프록시를 활용한 도서 소개 자동 수집 및 팝업 모달 표시 함수
+  // 알라딘 API 프록시 & ItemLookUp을 활용한 도서 상세 전문 및 목차 수집 함수
   const handleFetchBookDescription = async (book) => {
     if (!book) return;
 
-    if (bookDescription) {
-      setShowDescModal(true);
-      return;
-    }
-
     setLoadingDesc(true);
+    setBookDescription('');
+    setShowDescModal(true);
+
     try {
-      let response;
-      try {
-        response = await supabase.rpc('aladin_search_proxy', {
-          search_query: book.title,
-          start_page: 1,
-          sort_option: 'Accuracy'
-        });
-      } catch (err) {
-        response = await supabase.rpc('aladin_bestseller_proxy');
+      const rawIsbn = (book.isbn || '').trim().replace(/-/g, '');
+      const cleanIsbn = rawIsbn.replace(/^K/i, '');
+      let fetchedDesc = null;
+      let fetchedToc = null;
+
+      // 1단계: ISBN 또는 ItemId가 존재할 때 알라딘 ItemLookUp API 직접 호출 (전문 소개글 & 목차 획득)
+      if (cleanIsbn) {
+        const idType = rawIsbn.startsWith('K') || cleanIsbn.length < 10 ? 'ItemId' : cleanIsbn.length === 10 ? 'ISBN' : 'ISBN13';
+        const lookUpUrl = `https://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=ttbcdw2341334001&itemIdType=${idType}&ItemId=${cleanIsbn}&Cover=Big&Version=20131101&output=js&OptResult=description,fulldescription,toc,story,authors`;
+        
+        let data = await fetchAladinJsonp(lookUpUrl);
+        if (!data || !data.item) {
+          data = await fetchJsonWithProxyFallback(lookUpUrl);
+        }
+
+        if (data && data.item && data.item.length > 0) {
+          const item = data.item[0];
+          fetchedDesc = item.fullDescription || item.fulldescription || item.subInfo?.fullDescription || item.description || item.story || item.subInfo?.story;
+          fetchedToc = item.toc || item.subInfo?.toc;
+        }
       }
 
-      if (response && response.data && response.data.item && response.data.item.length > 0) {
-        const item = response.data.item.find(i => i.title && i.title.includes(book.title.slice(0, 5))) || response.data.item[0];
-        
-        // 전문 소개글, 일반 소개글, 목차(TOC) 통합 추출
-        const rawDesc = item.fullDescription || item.fulldescription || item.subInfo?.fullDescription || item.description || '';
-        let cleanDesc = rawDesc
-          .replace(/<br\s*\/?>/gi, '\n')
-          .replace(/<\/?[^>]+(>|$)/g, '')
+      // 2단계: ItemLookUp으로 부족하거나 없을 때 제목 기반 검색 프록시 수행
+      if (!fetchedDesc && book.title) {
+        const cleanTitle = (book.title || '')
+          .split('-')[0]
+          .split('(')[0]
+          .replace(/[^\w\s가-힣]/g, ' ')
+          .replace(/\s+/g, ' ')
           .trim();
 
-        if (item.toc || item.subInfo?.toc) {
-          const rawToc = item.toc || item.subInfo?.toc;
-          const cleanToc = rawToc.replace(/<br\s*\/?>/gi, '\n').replace(/<\/?[^>]+(>|$)/g, '').trim();
-          if (cleanToc) {
-            cleanDesc += `\n\n📌 [목차]\n${cleanToc}`;
+        let response;
+        try {
+          response = await supabase.rpc('aladin_search_proxy', {
+            search_query: cleanTitle,
+            start_page: 1,
+            sort_option: 'Accuracy'
+          });
+        } catch (err) {
+          console.warn('aladin_search_proxy 호출 오류, HTTP 프록시 폴백:', err);
+        }
+
+        if (!response || !response.data || !response.data.item) {
+          const searchUrl = `https://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=ttbcdw2341334001&Query=${encodeURIComponent(cleanTitle)}&QueryType=Title&MaxResults=1&SearchTarget=Book&output=js&Version=20131101&OptResult=description,fulldescription,toc,story`;
+          const sData = await fetchJsonWithProxyFallback(searchUrl);
+          if (sData && sData.item && sData.item.length > 0) {
+            response = { data: sData };
           }
         }
 
-        setBookDescription(cleanDesc || '알라딘에 등록된 상세 소개글이 없습니다.');
-        setShowDescModal(true);
-      } else {
-        setBookDescription('등록된 도서 소개글을 찾을 수 없습니다.');
-        setShowDescModal(true);
+        if (response && response.data && response.data.item && response.data.item.length > 0) {
+          const item = response.data.item.find(i => i.title && i.title.includes(cleanTitle.slice(0, 4))) || response.data.item[0];
+          fetchedDesc = item.fullDescription || item.fulldescription || item.subInfo?.fullDescription || item.description || item.story;
+          fetchedToc = item.toc || item.subInfo?.toc;
+        }
       }
+
+      // 3단계: 도서 소개 전문 및 목차 통합 정제
+      let fullText = (fetchedDesc || book.description || '알라딘에 등록된 상세 소개글이 없습니다.')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/?[^>]+(>|$)/g, '')
+        .trim();
+
+      if (fetchedToc) {
+        const cleanToc = String(fetchedToc)
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/<\/?[^>]+(>|$)/g, '')
+          .trim();
+        if (cleanToc) {
+          fullText += `\n\n📌 [목차]\n${cleanToc}`;
+        }
+      }
+
+      setBookDescription(fullText);
     } catch (e) {
-      console.warn('도서 소개 조회 오류:', e);
-      setBookDescription('도서 소개 정보를 가져오지 못했습니다.');
-      setShowDescModal(true);
+      console.warn('도서 상세 소개 조회 실패:', e);
+      setBookDescription(book.description || '도서 상세 소개 정보를 불러오는 중 오류가 발생했습니다.');
     } finally {
       setLoadingDesc(false);
     }
