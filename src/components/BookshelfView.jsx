@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { BookOpen, Star, ExternalLink, PlusCircle, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw } from 'lucide-react';
+import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 export default function BookshelfView({ 
   books, 
@@ -18,44 +19,85 @@ export default function BookshelfView({
   const [coverColors, setCoverColors] = useState({});
   const [syncingGoogleInfo, setSyncingGoogleInfo] = useState(false);
 
-  // Google Books API를 이용해 개별 책의 실제 페이지 수 & 출간일 정보 자동 동기화
-  const handleSyncGoogleInfo = async (book) => {
+  // 알라딘 ItemLookUp API를 이용해 개별 책의 실제 페이지 수 & 출간일 정보 자동 동기화
+  const handleSyncBookInfo = async (book) => {
     if (!book || syncingGoogleInfo) return;
     setSyncingGoogleInfo(true);
+    
     try {
-      const cleanTitle = (book.title || '').split('-')[0].split('(')[0].trim();
-      const query = book.isbn ? `isbn:${book.isbn}` : `intitle:${encodeURIComponent(cleanTitle)}`;
-      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${query}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.items && data.items.length > 0) {
-          let fetchedPages = null;
-          let fetchedPubDate = null;
-          for (const item of data.items) {
-            if (item.volumeInfo) {
-              if (!fetchedPages && item.volumeInfo.pageCount > 0) {
-                fetchedPages = item.volumeInfo.pageCount;
-              }
-              if (!fetchedPubDate && item.volumeInfo.publishedDate) {
-                fetchedPubDate = item.volumeInfo.publishedDate;
-              }
+      let fetchedPages = null;
+      let fetchedPubDate = null;
+      const isbn = book.isbn || '';
+      const ttbKey = 'ttbcdw2341334001';
+
+      if (isbn) {
+        // 1차: 알라딘 ItemLookUp API 직접 호출 (ISBN 기반)
+        const aladinUrl = `https://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=${ttbKey}&itemIdType=ISBN13&ItemId=${isbn}&Cover=Big&Version=20131101&output=js&OptResult=itemPage`;
+        
+        try {
+          // CORS 프록시 경유 호출
+          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(aladinUrl)}`;
+          const res = await fetch(proxyUrl);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.item && data.item.length > 0) {
+              const bookItem = data.item[0];
+              fetchedPages = bookItem.subInfo?.itemPage || null;
+              fetchedPubDate = bookItem.pubDate || null;
             }
           }
+        } catch (corsErr) {
+          console.warn('CORS 프록시 호출 실패, Supabase RPC 폴백 시도:', corsErr);
+        }
 
-          const updated = {
-            ...book,
-            total_pages: fetchedPages || book.total_pages,
-            pub_date: fetchedPubDate || book.pub_date
-          };
-
-          if (onUpdateBookDetails) {
-            await onUpdateBookDetails(book.id, updated);
+        // 2차 폴백: Supabase RPC (aladin_search_proxy를 통한 ISBN 검색)
+        if (!fetchedPages && isSupabaseConfigured()) {
+          try {
+            const { data: rpcData } = await supabase.rpc('aladin_search_proxy', { search_query: isbn });
+            if (rpcData && rpcData.item && rpcData.item.length > 0) {
+              const rpcItem = rpcData.item[0];
+              fetchedPages = rpcItem.subInfo?.itemPage || null;
+              fetchedPubDate = fetchedPubDate || rpcItem.pubDate || null;
+            }
+          } catch (rpcErr) {
+            console.warn('Supabase RPC 폴백 실패:', rpcErr);
           }
-          setSelectedBook(updated);
         }
       }
+
+      // 3차 폴백: 제목으로 검색 시도
+      if (!fetchedPages && isSupabaseConfigured()) {
+        try {
+          const cleanTitle = (book.title || '').split('-')[0].split('(')[0].trim();
+          const { data: titleData } = await supabase.rpc('aladin_search_proxy', { search_query: cleanTitle });
+          if (titleData && titleData.item && titleData.item.length > 0) {
+            const titleItem = titleData.item[0];
+            fetchedPages = titleItem.subInfo?.itemPage || null;
+            fetchedPubDate = fetchedPubDate || titleItem.pubDate || null;
+          }
+        } catch (titleErr) {
+          console.warn('제목 검색 폴백 실패:', titleErr);
+        }
+      }
+
+      if (fetchedPages || fetchedPubDate) {
+        const updated = {
+          ...book,
+          total_pages: fetchedPages ? parseInt(fetchedPages) : book.total_pages,
+          pub_date: fetchedPubDate || book.pub_date
+        };
+
+        if (onUpdateBookDetails) {
+          await onUpdateBookDetails(book.id, updated);
+        }
+        setSelectedBook(updated);
+        alert(`✅ 동기화 완료!\n페이지 수: ${fetchedPages || '변경 없음'}\n출간일: ${fetchedPubDate || '변경 없음'}`);
+      } else {
+        alert('⚠️ 해당 도서의 상세 정보를 찾지 못했습니다.\nISBN 정보가 없거나 알라딘에 등록되지 않은 도서일 수 있습니다.');
+      }
     } catch (err) {
-      console.warn('Google Books API 정보 동기화 중 오류 발생:', err);
+      console.error('도서 정보 동기화 중 오류 발생:', err);
+      alert('❌ 동기화 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
     } finally {
       setSyncingGoogleInfo(false);
     }
@@ -452,12 +494,12 @@ export default function BookshelfView({
                     <button 
                       className="btn btn-sm btn-outline flex align-center gap-1"
                       style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '6px', color: '#0078a6', borderColor: '#cbd5e1' }}
-                      onClick={() => handleSyncGoogleInfo(selectedBook)}
+                      onClick={() => handleSyncBookInfo(selectedBook)}
                       disabled={syncingGoogleInfo}
-                      title="Google Books API에서 실제 페이지 수 및 출간일 정보를 가져와 동기화합니다."
+                      title="알라딘 API에서 실제 페이지 수 및 출간일 정보를 가져와 동기화합니다."
                     >
                       <RefreshCw size={13} className={syncingGoogleInfo ? 'animate-spin' : ''} />
-                      {syncingGoogleInfo ? 'Google API 정보 동기화 중...' : 'Google API 정보(페이지 수 & 출간일) 동기화'}
+                      {syncingGoogleInfo ? '정보 동기화 중...' : '📖 페이지 수 & 출간일 동기화'}
                     </button>
                   </div>
                 )}
