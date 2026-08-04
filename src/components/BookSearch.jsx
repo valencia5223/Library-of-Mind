@@ -12,8 +12,9 @@ const BESTSELLER_CATEGORIES = [
   { id: 55890, name: '✍️ 에세이' },
   { id: 2551, name: '🎨 만화' },
   { id: 1108, name: '👶 어린이' },
-  { id: 1383, name: '✈️ 여행' },
-  { id: 1230, name: '🍳 요리/살림' }
+  { id: 1196, name: '✈️ 여행' },
+  { id: 1230, name: '🍳 요리/살림' },
+  { id: 1383, name: '📝 수험서/자격증' }
 ];
 
 export default function BookSearch({ onAddBook, existingBooks = [] }) {
