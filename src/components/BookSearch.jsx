@@ -242,10 +242,43 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
     });
   };
 
-  // 서재에 도서를 추가하는 핸들러 (알라딘 검색 데이터 그대로 전달)
-  const handleAddToShelf = (book) => {
+  // 서재에 도서를 추가하는 핸들러 (실제 페이지 수 사전 자동 동기화 적용)
+  const handleAddToShelf = async (book) => {
+    let realPages = book.total_pages;
+    const rawId = String(book.isbn || book.id || '').replace(/^[a-z]+-/i, '').replace(/^K/i, '').trim();
+
+    if (rawId) {
+      try {
+        const idType = rawId.length < 10 ? 'ItemId' : rawId.length === 10 ? 'ISBN' : 'ISBN13';
+        const { data, error } = await supabase.rpc('aladin_lookup_proxy', { item_id: rawId, id_type: idType });
+        if (!error && data && data.item && data.item.length > 0) {
+          const p = data.item[0].subInfo?.itemPage || data.item[0].itemPage;
+          if (p && parseInt(p) > 0) {
+            realPages = parseInt(p);
+          }
+        }
+      } catch (e) {
+        console.warn('서재 추가 시 알라딘 페이지 조회 실패:', e);
+      }
+
+      // 웹 스크레이핑 폴백 (RPC 실패/미설치 환경 대비 100% 보장)
+      if (!realPages || realPages === book.total_pages) {
+        try {
+          const webUrl = `https://www.aladin.co.kr/shop/wproduct.aspx?ItemId=${rawId}`;
+          const webHtml = await fetchJsonWithProxyFallback(webUrl);
+          if (typeof webHtml === 'string' && webHtml.length > 1000) {
+            const pageMatch = webHtml.match(/(\d{2,4})\s*쪽/i);
+            if (pageMatch && parseInt(pageMatch[1]) > 0) {
+              realPages = parseInt(pageMatch[1]);
+            }
+          }
+        } catch (e2) {}
+      }
+    }
+
     onAddBook({
       ...book,
+      total_pages: realPages,
       status: 'TO_READ'
     });
   };

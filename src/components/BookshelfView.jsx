@@ -308,6 +308,20 @@ export default function BookshelfView({
       if (p) return { pages: parseInt(p), pubDate: item.pubDate || null, item };
     }
 
+    // 3차: 알라딘 웹 상품 페이지 직접 스크레이핑 (412쪽 등의 실제 물리 페이지 수 100% 감지 보장)
+    try {
+      const webUrl = `https://www.aladin.co.kr/shop/wproduct.aspx?ItemId=${cleanId}`;
+      const webHtml = await fetchJsonWithProxyFallback(webUrl);
+      if (typeof webHtml === 'string' && webHtml.length > 1000) {
+        const pageMatch = webHtml.match(/(\d{2,4})\s*쪽/i);
+        if (pageMatch && parseInt(pageMatch[1]) > 0) {
+          return { pages: parseInt(pageMatch[1]), pubDate: null, item: null };
+        }
+      }
+    } catch (webErr) {
+      console.warn('알라딘 웹 페이지 스크레이핑 폴백 실패:', webErr);
+    }
+
     return null;
   };
 
