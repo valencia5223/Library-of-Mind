@@ -1637,6 +1637,83 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
+/* ============================================= */
+/* 실제 원목 3칸 책장 사진 배경 뷰 (Photo Shelf View) */
+/* ============================================= */
+.photo-shelf-container {
+  position: relative;
+  width: 100%;
+  max-width: 1050px;
+  margin: 0 auto 2.5rem auto;
+}
+
+.photo-shelf-frame {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  background: #0f172a;
+}
+
+.photo-shelf-bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  display: block;
+  filter: brightness(0.96) contrast(1.05);
+}
+
+.photo-shelf-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  box-sizing: border-box;
+  padding: 16% 9.5% 20% 9.5%;
+  gap: 3%;
+}
+
+.photo-cubby {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.35rem;
+  padding-bottom: 2.5%;
+  box-sizing: border-box;
+  position: relative;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.photo-cubby::-webkit-scrollbar {
+  display: none;
+}
+
+.photo-book-item {
+  transform-origin: bottom center;
+  filter: drop-shadow(2px 8px 12px rgba(0, 0, 0, 0.7));
+}
+
+.photo-book-item:hover {
+  z-index: 25;
+}
+
+@media (max-width: 768px) {
+  .photo-shelf-frame {
+    height: 320px;
+    border-radius: 12px;
+  }
+  .photo-shelf-overlay {
+    padding: 15% 8.5% 19% 8.5%;
+    gap: 2.5%;
+  }
+}
+
 
 
 
