@@ -95,13 +95,17 @@ export default function BookshelfView({
   // 알라딘 ItemLookUp 조회를 통한 페이지 수 파싱 (JSONP 1순위)
   const fetchPageCountFromAladin = async (itemId, idType = 'ItemId') => {
     const ttbKey = 'ttbcdw2341334001';
-    const aladinUrl = `https://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=${ttbKey}&itemIdType=${idType}&ItemId=${itemId}&Cover=Big&Version=20131101&output=js&OptResult=itemPage`;
+    // 'K' 접두어 자동 정제 (알라딘 베스트셀러 검색의 K398021172 -> 398021172 정제)
+    const cleanId = String(itemId || '').replace(/^K/i, '').trim();
+    if (!cleanId) return null;
+
+    const aladinUrl = `https://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=${ttbKey}&itemIdType=${idType}&ItemId=${cleanId}&Cover=Big&Version=20131101&output=js&OptResult=itemPage`;
     
     // 1차: 브라우저 JSONP 방식
     let data = await fetchAladinJsonp(aladinUrl);
 
     // 2차: CORS 프록시 폴백
-    if (!data) {
+    if (!data || data.errorCode) {
       data = await fetchJsonWithProxyFallback(aladinUrl);
     }
 
@@ -116,9 +120,10 @@ export default function BookshelfView({
 
   // 1차: Google Books API (무료 공공 API, Quota 제한 고려)
   const fetchGooglePageCount = async (isbn) => {
-    if (!isbn || isbn.startsWith('K')) return null;
+    const cleanIsbn = String(isbn || '').replace(/^K/i, '').trim();
+    if (!cleanIsbn) return null;
     try {
-      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}`);
+      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`);
       if (res.ok) {
         const data = await res.json();
         if (data.items && data.items.length > 0) {
@@ -134,12 +139,13 @@ export default function BookshelfView({
 
   // 2차: Open Library API (ISBN 기반)
   const fetchOpenLibraryPageCount = async (isbn) => {
-    if (!isbn || isbn.startsWith('K')) return null;
+    const cleanIsbn = String(isbn || '').replace(/^K/i, '').trim();
+    if (!cleanIsbn) return null;
     try {
-      const res = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
+      const res = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${cleanIsbn}&format=json&jscmd=data`);
       if (res.ok) {
         const data = await res.json();
-        const bookData = data[`ISBN:${isbn}`];
+        const bookData = data[`ISBN:${cleanIsbn}`];
         if (bookData && bookData.number_of_pages) {
           return parseInt(bookData.number_of_pages);
         }
@@ -180,32 +186,41 @@ export default function BookshelfView({
       let fetchedPubDate = null;
       let source = '';
       const rawIsbn = (book.isbn || '').trim().replace(/-/g, '');
+      const cleanIsbn = rawIsbn.replace(/^K/i, '');
       const ttbKey = 'ttbcdw2341334001';
 
-      // [1단계] 알라딘 API (ISBN 또는 ItemId 직접 조회)
+      // [1단계] 알라딘 API (ISBN 또는 ItemId 직접 조회) - ItemId, ISBN13, ISBN 순차 시도
       if (rawIsbn) {
-        let idType = 'ISBN13';
-        if (rawIsbn.startsWith('K') || (rawIsbn.length >= 8 && rawIsbn.length <= 10 && !/^\d+$/.test(rawIsbn))) {
-          idType = 'ItemId';
-        } else if (rawIsbn.length === 10) {
-          idType = 'ISBN';
-        }
+        const idTypesToTry = rawIsbn.startsWith('K')
+          ? ['ItemId', 'ISBN13', 'ISBN']
+          : rawIsbn.length === 10
+          ? ['ISBN', 'ItemId', 'ISBN13']
+          : ['ISBN13', 'ItemId', 'ISBN'];
 
-        const res = await fetchPageCountFromAladin(rawIsbn, idType);
-        if (res && res.pages) {
-          fetchedPages = res.pages;
-          fetchedPubDate = res.pubDate;
-          source = '알라딘 API (ItemLookUp)';
+        for (const type of idTypesToTry) {
+          const res = await fetchPageCountFromAladin(cleanIsbn, type);
+          if (res && res.pages) {
+            fetchedPages = res.pages;
+            fetchedPubDate = res.pubDate;
+            source = `알라딘 API (${type})`;
+            break;
+          }
         }
       }
 
-      // [2단계] 도서 제목으로 알라딘 ItemSearch 검색 후 ItemId 추출 및 ItemLookUp 2차 조회 ("블랙 쇼맨", "투명한 나선" 등 완벽 대응)
+      // [2단계] 도서 제목으로 알라딘 ItemSearch 검색 후 ItemId 추출 및 ItemLookUp 2차 조회 ("악의", "달려라 아비", "투명한 나선", "국민이 먼저입니다" 등 대응)
       if (!fetchedPages && book.title) {
         try {
-          const cleanTitle = (book.title || '').split('-')[0].split('(')[0].trim();
+          // 특수문자 및 마침표 제거, 깔끔한 제목 정제
+          const cleanTitle = (book.title || '')
+            .split('-')[0]
+            .split('(')[0]
+            .replace(/[^\w\s가-힣]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
           const searchUrl = `https://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=${ttbKey}&Query=${encodeURIComponent(cleanTitle)}&QueryType=Title&MaxResults=1&SearchTarget=Book&output=js&Version=20131101`;
           
-          // ItemSearch.aspx는 callback 파라미터를 지원하지 않고 RAW JSON을 반환하므로 프록시를 통해 파싱
           const sData = await fetchJsonWithProxyFallback(searchUrl);
 
           let foundItemId = null;
