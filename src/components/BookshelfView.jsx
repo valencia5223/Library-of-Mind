@@ -19,7 +19,42 @@ export default function BookshelfView({
   const [coverColors, setCoverColors] = useState({});
   const [syncingGoogleInfo, setSyncingGoogleInfo] = useState(false);
 
-  // 헬퍼: 3중 CORS 프록시 회선 및 안전한 JSON 파싱 (HTML 에러 페이지 무시)
+  // 헬퍼: 브라우저 네이티브 JSONP 스크립트 주입 (CORS 프록시 100% 우회)
+  const fetchAladinJsonp = (baseUrl) => {
+    return new Promise((resolve) => {
+      const callbackName = 'aladin_cb_' + Math.random().toString(36).substring(2, 9);
+      const script = document.createElement('script');
+      
+      const timeout = setTimeout(() => {
+        cleanup();
+        resolve(null);
+      }, 4000);
+
+      const cleanup = () => {
+        clearTimeout(timeout);
+        delete window[callbackName];
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
+        }
+      };
+
+      window[callbackName] = (data) => {
+        cleanup();
+        resolve(data);
+      };
+
+      const hasQuery = baseUrl.includes('?');
+      script.src = `${baseUrl}${hasQuery ? '&' : '?'}callback=${callbackName}`;
+      script.onerror = () => {
+        cleanup();
+        resolve(null);
+      };
+
+      document.body.appendChild(script);
+    });
+  };
+
+  // 헬퍼: 3중 CORS 프록시 회선 (JSONP 실패 시 폴백)
   const fetchJsonWithProxyFallback = async (targetUrl) => {
     const proxyList = [
       `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
@@ -44,7 +79,7 @@ export default function BookshelfView({
             text = await res.text();
           }
 
-          const cleanText = text.trim().replace(/;$/, '');
+          const cleanText = text.trim().replace(/^window\.[^(]+\(|\);?$/g, '').replace(/;$/, '');
           if (cleanText.startsWith('{') || cleanText.startsWith('[')) {
             return JSON.parse(cleanText);
           }
@@ -57,12 +92,19 @@ export default function BookshelfView({
     return null;
   };
 
-  // 알라딘 ItemLookUp 조회를 통한 페이지 수 파싱
+  // 알라딘 ItemLookUp 조회를 통한 페이지 수 파싱 (JSONP 1순위)
   const fetchPageCountFromAladin = async (itemId, idType = 'ItemId') => {
     const ttbKey = 'ttbcdw2341334001';
     const aladinUrl = `https://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=${ttbKey}&itemIdType=${idType}&ItemId=${itemId}&Cover=Big&Version=20131101&output=js&OptResult=itemPage`;
     
-    const data = await fetchJsonWithProxyFallback(aladinUrl);
+    // 1차: 브라우저 JSONP 방식
+    let data = await fetchAladinJsonp(aladinUrl);
+
+    // 2차: CORS 프록시 폴백
+    if (!data) {
+      data = await fetchJsonWithProxyFallback(aladinUrl);
+    }
+
     if (data && data.item && data.item.length > 0) {
       const item = data.item[0];
       const p = item.subInfo?.itemPage || item.itemPage || null;
@@ -128,7 +170,7 @@ export default function BookshelfView({
     }
   };
 
-  // [다중 API 연동 체인] 알라딘 -> 제목 2차 추적 -> Google Books -> Open Library 4단계 연동
+  // [다중 API 연동 체인] 알라딘 JSONP -> 알라딘 제목 2차 추적 -> Google Books -> Open Library 4단계 연동
   const handleSyncBookInfo = async (book) => {
     if (!book || syncingGoogleInfo) return;
     setSyncingGoogleInfo(true);
@@ -163,7 +205,11 @@ export default function BookshelfView({
           const cleanTitle = (book.title || '').split('-')[0].split('(')[0].trim();
           const searchUrl = `https://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=${ttbKey}&Query=${encodeURIComponent(cleanTitle)}&QueryType=Title&MaxResults=1&SearchTarget=Book&output=js&Version=20131101`;
           
-          const sData = await fetchJsonWithProxyFallback(searchUrl);
+          let sData = await fetchAladinJsonp(searchUrl);
+          if (!sData) {
+            sData = await fetchJsonWithProxyFallback(searchUrl);
+          }
+
           let foundItemId = null;
           if (sData && sData.item && sData.item.length > 0) {
             foundItemId = sData.item[0].itemId || sData.item[0].isbn13 || sData.item[0].isbn;
