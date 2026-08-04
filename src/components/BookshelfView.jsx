@@ -19,7 +19,51 @@ export default function BookshelfView({
   const [coverColors, setCoverColors] = useState({});
   const [syncingGoogleInfo, setSyncingGoogleInfo] = useState(false);
 
-  // 알라딘 ItemLookUp API를 이용해 개별 책의 실제 페이지 수 정보 자동 동기화
+  // 알라딘 API 헬퍼: ItemLookUp으로 실제 페이지 수 파싱
+  const fetchPageCountFromAladin = async (itemId, idType = 'ItemId') => {
+    const ttbKey = 'ttbcdw2341334001';
+    const aladinUrl = `https://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=${ttbKey}&itemIdType=${idType}&ItemId=${itemId}&Cover=Big&Version=20131101&output=js&OptResult=itemPage`;
+    
+    // 1차: allorigins CORS 프록시
+    try {
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(aladinUrl)}`;
+      const res = await fetch(proxyUrl);
+      if (res.ok) {
+        const wrapper = await res.json();
+        const cleanText = (wrapper.contents || '').trim().replace(/;$/, '');
+        const data = JSON.parse(cleanText);
+        if (data.item && data.item.length > 0) {
+          const item = data.item[0];
+          const p = item.subInfo?.itemPage || item.itemPage || null;
+          if (p) return { pages: parseInt(p), pubDate: item.pubDate || null };
+        }
+      }
+    } catch (e) {
+      console.warn('allorigins ItemLookUp 실패:', e);
+    }
+
+    // 2차: corsproxy.io 프록시
+    try {
+      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(aladinUrl)}`;
+      const res = await fetch(proxyUrl);
+      if (res.ok) {
+        const text = await res.text();
+        const cleanText = text.trim().replace(/;$/, '');
+        const data = JSON.parse(cleanText);
+        if (data.item && data.item.length > 0) {
+          const item = data.item[0];
+          const p = item.subInfo?.itemPage || item.itemPage || null;
+          if (p) return { pages: parseInt(p), pubDate: item.pubDate || null };
+        }
+      }
+    } catch (e) {
+      console.warn('corsproxy.io ItemLookUp 실패:', e);
+    }
+
+    return null;
+  };
+
+  // 알라딘 ItemLookUp + ItemSearch 2단계 조회를 통한 실제 페이지 수 정보 동기화
   const handleSyncBookInfo = async (book) => {
     if (!book || syncingGoogleInfo) return;
     setSyncingGoogleInfo(true);
@@ -30,62 +74,54 @@ export default function BookshelfView({
       const rawIsbn = (book.isbn || '').trim().replace(/-/g, '');
       const ttbKey = 'ttbcdw2341334001';
 
+      // 1단계: ISBN 또는 ItemId 기반 직접 조회
       if (rawIsbn) {
-        const idType = rawIsbn.length === 10 ? 'ISBN' : 'ISBN13';
-        const aladinUrl = `https://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=${ttbKey}&itemIdType=${idType}&ItemId=${rawIsbn}&Cover=Big&Version=20131101&output=js&OptResult=itemPage`;
-        
-        // 1차: allorigins CORS 프록시
-        try {
-          const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(aladinUrl)}`;
-          const res = await fetch(proxyUrl);
-          if (res.ok) {
-            const wrapper = await res.json();
-            // 알라딘 JSON 응답의 끝부분 세미콜론(;) 제거 후 파싱
-            const cleanText = (wrapper.contents || '').trim().replace(/;$/, '');
-            const data = JSON.parse(cleanText);
-            if (data.item && data.item.length > 0) {
-              const bookItem = data.item[0];
-              fetchedPages = bookItem.subInfo?.itemPage || bookItem.itemPage || null;
-              fetchedPubDate = bookItem.pubDate || null;
-            }
-          }
-        } catch (corsErr) {
-          console.warn('allorigins 프록시 실패, corsproxy.io 시도:', corsErr);
+        let idType = 'ISBN13';
+        if (rawIsbn.startsWith('K') || (rawIsbn.length >= 8 && rawIsbn.length <= 10 && !/^\d+$/.test(rawIsbn))) {
+          idType = 'ItemId';
+        } else if (rawIsbn.length === 10) {
+          idType = 'ISBN';
         }
 
-        // 2차: corsproxy.io 프록시
-        if (!fetchedPages) {
-          try {
-            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(aladinUrl)}`;
-            const res = await fetch(proxyUrl);
-            if (res.ok) {
-              const text = await res.text();
-              const cleanText = text.trim().replace(/;$/, '');
-              const data = JSON.parse(cleanText);
-              if (data.item && data.item.length > 0) {
-                const bookItem = data.item[0];
-                fetchedPages = bookItem.subInfo?.itemPage || bookItem.itemPage || null;
-                fetchedPubDate = bookItem.pubDate || null;
-              }
-            }
-          } catch (corsErr2) {
-            console.warn('corsproxy.io 프록시 실패:', corsErr2);
-          }
+        const res = await fetchPageCountFromAladin(rawIsbn, idType);
+        if (res && res.pages) {
+          fetchedPages = res.pages;
+          fetchedPubDate = res.pubDate;
         }
       }
 
-      // 3차 폴백: Supabase RPC (제목으로 검색)
-      if (!fetchedPages && isSupabaseConfigured()) {
+      // 2단계: 제목 기반 ItemSearch 검색 후 얻은 ItemId로 ItemLookUp 2차 조회 (투명한 나선 등 대응)
+      if (!fetchedPages && book.title) {
         try {
           const cleanTitle = (book.title || '').split('-')[0].split('(')[0].trim();
-          const { data: titleData } = await supabase.rpc('aladin_search_proxy', { search_query: cleanTitle });
-          if (titleData && titleData.item && titleData.item.length > 0) {
-            const titleItem = titleData.item[0];
-            fetchedPages = titleItem.subInfo?.itemPage || titleItem.itemPage || null;
-            fetchedPubDate = fetchedPubDate || titleItem.pubDate || null;
+          const searchUrl = `https://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=${ttbKey}&Query=${encodeURIComponent(cleanTitle)}&QueryType=Title&MaxResults=1&SearchTarget=Book&output=js&Version=20131101`;
+          
+          let foundItemId = null;
+          // allorigins 프록시로 검색
+          try {
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(searchUrl)}`;
+            const sRes = await fetch(proxyUrl);
+            if (sRes.ok) {
+              const wrapper = await sRes.json();
+              const cleanText = (wrapper.contents || '').trim().replace(/;$/, '');
+              const sData = JSON.parse(cleanText);
+              if (sData.item && sData.item.length > 0) {
+                foundItemId = sData.item[0].itemId || sData.item[0].isbn13 || sData.item[0].isbn;
+              }
+            }
+          } catch (se) {
+            console.warn('ItemSearch 검색 실패:', se);
+          }
+
+          if (foundItemId) {
+            const res2 = await fetchPageCountFromAladin(foundItemId, 'ItemId');
+            if (res2 && res2.pages) {
+              fetchedPages = res2.pages;
+              fetchedPubDate = res2.pubDate;
+            }
           }
         } catch (titleErr) {
-          console.warn('제목 검색 폴백 실패:', titleErr);
+          console.warn('제목 검색 2단계 동기화 실패:', titleErr);
         }
       }
 
@@ -102,7 +138,7 @@ export default function BookshelfView({
         setSelectedBook(updated);
         alert(`✅ 페이지 수 동기화 완료!\n실제 페이지 수: ${fetchedPages}p`);
       } else {
-        alert('⚠️ 해당 도서의 실제 페이지 수 정보를 찾지 못했습니다.\n알라딘 DB에 상세 페이지 수가 등록되지 않았거나 ISBN 정보가 없는 도서일 수 있습니다.');
+        alert('⚠️ 해당 도서의 실제 페이지 수 정보를 찾지 못했습니다.\n알라딘 DB에 상세 페이지 수가 등록되지 않았거나 도서 정보가 불일치할 수 있습니다.');
       }
     } catch (err) {
       console.error('도서 정보 동기화 중 오류 발생:', err);

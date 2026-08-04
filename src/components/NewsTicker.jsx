@@ -24,7 +24,7 @@ export default function NewsTicker() {
           if (data.items && data.items.length > 0) {
             const parsed = data.items.map(item => ({
               title: item.title.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'),
-              link: item.link,
+              link: item.originallink || item.link,
               pubDate: item.pubDate
             }));
             setHeadlines(parsed);
