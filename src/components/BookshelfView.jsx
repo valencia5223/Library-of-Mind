@@ -176,13 +176,13 @@ export default function BookshelfView({
     }
   };
 
-  // 1. URL로부터 실제 메인 대표 색상 및 최적 텍스트 색상을 추출하는 헬퍼 함수
+  // 1. URL로부터 표지의 가장 주류인 메인 대표 색상을 정확히 추출하는 헬퍼 함수 (평균 색상 섞기 제거)
   const extractMainColor = (bookId, coverUrl) => {
     if (!coverUrl || coverColors[bookId]) return;
 
     // CORS 우회 이미지 프록시 (weserv.nl)
     const cleanUrl = coverUrl.replace(/^https?:\/\//, '');
-    const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(cleanUrl)}&w=20&h=20`;
+    const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(cleanUrl)}&w=40&h=40`;
 
     const img = new Image();
     img.crossOrigin = "anonymous";
@@ -190,30 +190,66 @@ export default function BookshelfView({
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
-        canvas.width = 5;
-        canvas.height = 5;
+        canvas.width = 12;
+        canvas.height = 12;
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, 5, 5);
+        ctx.drawImage(img, 0, 0, 12, 12);
         
-        const imgData = ctx.getImageData(0, 0, 5, 5).data;
-        let r = 0, g = 0, b = 0, count = 0;
+        const imgData = ctx.getImageData(0, 0, 12, 12).data;
+        const colorBuckets = {};
+
         for (let i = 0; i < imgData.length; i += 4) {
-          r += imgData[i];
-          g += imgData[i + 1];
-          b += imgData[i + 2];
-          count++;
+          const r = imgData[i];
+          const g = imgData[i + 1];
+          const b = imgData[i + 2];
+
+          // 채도 계산 (가장 선명하고 주류인 메인 색상 가중치 부여)
+          const max = Math.max(r, g, b);
+          const min = Math.min(r, g, b);
+          const sat = max - min;
+
+          // 지나치게 밝은 단색 무채색(흰색)이나 극단적 무채색은 우충충함 방지를 위해 채도 높은 색상 우선
+          const satWeight = sat > 25 ? (1 + sat / 40) : 0.6;
+
+          // 24단계 색상 버킷 양자화
+          const qR = Math.round(r / 24) * 24;
+          const qG = Math.round(g / 24) * 24;
+          const qB = Math.round(b / 24) * 24;
+          const key = `${qR},${qG},${qB}`;
+
+          if (!colorBuckets[key]) {
+            colorBuckets[key] = { r: qR, g: qG, b: qB, score: 0 };
+          }
+          colorBuckets[key].score += satWeight;
         }
-        r = Math.round(r / count);
-        g = Math.round(g / count);
-        b = Math.round(b / count);
 
+        // 가장 점수가 높은 주류 메인 색상 1개 선정
+        let dominant = null;
+        let maxScore = -1;
+        Object.values(colorBuckets).forEach(bucket => {
+          if (bucket.score > maxScore) {
+            maxScore = bucket.score;
+            dominant = bucket;
+          }
+        });
+
+        if (!dominant) {
+          dominant = { r: 180, g: 30, b: 30 }; // 기본 강렬한 크림슨 레드
+        }
+
+        const { r, g, b } = dominant;
         const luminance = (r * 299 + g * 587 + b * 114) / 1000;
-        const isDark = luminance < 135;
+        const isDark = luminance < 140;
 
-        const bg = `linear-gradient(180deg, rgba(${r},${g},${b},0.92) 0%, rgba(${Math.max(0, r-35)},${Math.max(0, g-35)},${Math.max(0, b-35)},0.98) 100%)`;
+        // 선명한 단일 메인 색상 기반 단색 단일 톤 그라데이션 (탁한 색 섞기 완전 차단)
+        const darkR = Math.max(0, Math.round(r * 0.78));
+        const darkG = Math.max(0, Math.round(g * 0.78));
+        const darkB = Math.max(0, Math.round(b * 0.78));
+
+        const bg = `linear-gradient(180deg, rgb(${r},${g},${b}) 0%, rgb(${darkR},${darkG},${darkB}) 100%)`;
         const titleColor = isDark ? '#ffffff' : '#0f172a';
-        const authorColor = isDark ? '#fef08a' : '#334155';
-        const textShadow = isDark ? '0px 1px 3px rgba(0,0,0,0.9)' : '0px 1px 2px rgba(255,255,255,0.7)';
+        const authorColor = isDark ? '#fde047' : '#1e293b';
+        const textShadow = isDark ? '0px 1px 3px rgba(0,0,0,0.95)' : '0px 1px 2px rgba(255,255,255,0.85)';
 
         setCoverColors(prev => ({
           ...prev,
@@ -999,27 +1035,19 @@ function getSpineStyle(coverUrl, id) {
     hash = source.charCodeAt(i) + ((hash << 5) - hash);
   }
   const hue = Math.abs(hash) % 360;
-  const saturation = 40 + (Math.abs(hash >> 2) % 25); // 40% ~ 65%
-  const lightness = 18 + (Math.abs(hash >> 4) % 20);   // 18% ~ 38%
+  const saturation = 65 + (Math.abs(hash >> 2) % 20); // 65% ~ 85% (선명하고 선명한 단일 메인 톤)
+  const lightness = 28 + (Math.abs(hash >> 4) % 14);   // 28% ~ 42%
   
-  const bg = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+  const bg = `linear-gradient(180deg, hsl(${hue}, ${saturation}%, ${lightness}%) 0%, hsl(${hue}, ${saturation}%, ${Math.max(15, lightness - 12)}%) 100%)`;
 
   let titleColor = '#ffffff';
-  let authorColor = 'rgba(255, 255, 255, 0.85)';
-  let textShadow = '0 1px 3px rgba(0, 0, 0, 0.8)';
+  let authorColor = '#fde047';
+  let textShadow = '0 1px 3px rgba(0, 0, 0, 0.9)';
 
-  if (lightness < 25) {
-    titleColor = '#fef08a';
-    authorColor = '#fde047';
-    textShadow = `0 1px 3px rgba(0,0,0,0.9), 0 0 4px hsl(${hue}, 80%, 70%)`;
-  } else if (lightness >= 25 && lightness < 33) {
-    titleColor = '#f8fafc';
-    authorColor = '#e2e8f0';
-    textShadow = '0 1px 3px rgba(0, 0, 0, 0.85)';
-  } else {
-    titleColor = '#0f172a';
-    authorColor = '#334155';
-    textShadow = '0 1px 2px rgba(255, 255, 255, 0.6)';
+  if (lightness > 36) {
+    titleColor = '#ffffff';
+    authorColor = '#fef08a';
+    textShadow = '0 1px 3px rgba(0, 0, 0, 0.95)';
   }
 
   return { bg, titleColor, authorColor, textShadow };
