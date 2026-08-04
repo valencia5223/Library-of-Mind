@@ -186,6 +186,31 @@ END;
 $$;
 
 
+-- 4. 알라딘 도서 상세 조회 API 프록시 함수 (ItemLookUp - ItemId/ISBN 기반 100% 상세 정보)
+CREATE OR REPLACE FUNCTION public.aladin_lookup_proxy(item_id TEXT, id_type TEXT DEFAULT 'ISBN13')
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  response_record RECORD;
+  result_json JSON;
+  api_url TEXT;
+BEGIN
+  api_url := 'http://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=ttbcdw2341334001&itemIdType=' 
+             || urlencode(id_type) 
+             || '&ItemId=' || urlencode(item_id) 
+             || '&Cover=Big&Version=20131101&output=js&OptResult=description,fulldescription,toc,story,authors,itemPage';
+  
+  SELECT * FROM http_get(api_url) INTO response_record;
+  result_json := response_record.content::json;
+  RETURN result_json;
+EXCEPTION WHEN OTHERS THEN
+  RETURN json_build_object('error', SQLERRM);
+END;
+$$;
+
+
 -- ========================================================
 -- 4. 사용자 공개 프로필 테이블 생성 (이메일로 친구 매핑)
 -- ========================================================
