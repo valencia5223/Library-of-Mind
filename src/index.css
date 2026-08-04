@@ -598,9 +598,9 @@ input:focus, select:focus, textarea:focus {
   z-index: 2;
 }
 
-/* 세로 쓰기 전용 레이아웃 교정 (긴 제목의 경우 우측->좌측 2줄 자동 줄바꿈 지원) */
+/* 세로 쓰기 전용 레이아웃 교정 (1줄: 왼쪽 / 2줄: 오른쪽 순서인 vertical-lr 적용) */
 .spine-content {
-  writing-mode: vertical-rl;
+  writing-mode: vertical-lr;
   text-orientation: mixed;
   color: #ffffff;
   display: flex;
@@ -609,7 +609,7 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   height: 100%;
   width: 100%;
-  padding: 0.35rem 0.15rem 0.35rem 0.45rem;
+  padding: 0.35rem 0.35rem 0.35rem 0.55rem;
   z-index: 4;
   box-sizing: border-box;
 }
