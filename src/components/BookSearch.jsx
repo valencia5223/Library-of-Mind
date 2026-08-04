@@ -2,6 +2,20 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Search, ShoppingBag, Plus, CheckCircle2, Flame, ExternalLink, RefreshCw, BookOpen, Sparkles, Star } from 'lucide-react';
 import { supabase } from '../supabaseClient'; // Supabase 인스턴스 가져오기
 
+const BESTSELLER_CATEGORIES = [
+  { id: 0, name: '🌟 종합' },
+  { id: 1, name: '📖 소설/시' },
+  { id: 170, name: '📈 경제경영' },
+  { id: 798, name: '💡 자기계발' },
+  { id: 656, name: '🏛️ 인문학' },
+  { id: 987, name: '🔬 과학' },
+  { id: 55890, name: '✍️ 에세이' },
+  { id: 2551, name: '🎨 만화' },
+  { id: 1108, name: '👶 어린이' },
+  { id: 1383, name: '✈️ 여행' },
+  { id: 1230, name: '🍳 요리/살림' }
+];
+
 export default function BookSearch({ onAddBook, existingBooks = [] }) {
   const [activeTab, setActiveTab] = useState('bestseller');
   const [query, setQuery] = useState('');
@@ -11,47 +25,54 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
   const [bestsellerLoading, setBestsellerLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [selectedBook, setSelectedBook] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(0);
 
   // 페이지네이션 및 정렬 상태 추가
   const [page, setPage] = useState(1);
   const [sortOption, setSortOption] = useState('Accuracy');
   const [hasMore, setHasMore] = useState(false);
 
-  // 1. Supabase Database DB Proxy를 활용한 국내 베스트셀러 호출 (CORS & ORB 우회 완료)
-  const fetchAladinBestsellers = useCallback(async () => {
+  // 1. Supabase Database DB Proxy를 활용한 분야별 국내 베스트셀러 호출 (CORS & ORB 우회 완료)
+  const fetchAladinBestsellers = useCallback(async (catId = selectedCategory) => {
     setBestsellerLoading(true);
     setErrorMsg('');
     try {
-      const { data, error } = await supabase.rpc('aladin_bestseller_proxy');
+      let response;
+      try {
+        response = await supabase.rpc('aladin_bestseller_proxy', { category_id: catId });
+      } catch (rpcErr) {
+        console.warn('카테고리 매개변수 RPC 호출 실패, 기본 RPC 시도:', rpcErr);
+        response = await supabase.rpc('aladin_bestseller_proxy');
+      }
       
-      if (error) {
-        if (error.message && error.message.includes('does not exist')) {
+      if (response.error) {
+        if (response.error.message && response.error.message.includes('does not exist')) {
           setErrorMsg('Supabase DB에 프록시 함수(SQL)를 등록해야 알라딘 API 호출이 가능합니다. 대화창의 가이드를 따라 SQL을 꼭 실행해 주세요!');
           return;
         }
-        throw error;
+        throw response.error;
       }
 
-      if (data && data.error) {
-        throw new Error(data.error);
+      if (response.data && response.data.error) {
+        throw new Error(response.data.error);
       }
 
-      if (data && data.item && data.item.length > 0) {
-        setBestsellerList(parseAladinItems(data.item));
+      if (response.data && response.data.item && response.data.item.length > 0) {
+        setBestsellerList(parseAladinItems(response.data.item));
       } else {
-        setErrorMsg('베스트셀러 목록이 비어있습니다.');
+        setErrorMsg('해당 분야의 베스트셀러 목록이 비어있습니다.');
       }
     } catch (err) {
       console.warn('알라딘 베스트셀러 API 오류:', err);
-      setErrorMsg(err.message || '데이터를 불러오지 못했습니다.');
+      setErrorMsg(err.message || '베스트셀러 데이터를 불러오지 못했습니다.');
     } finally {
       setBestsellerLoading(false);
     }
-  }, []);
+  }, [selectedCategory]);
 
   useEffect(() => {
-    fetchAladinBestsellers();
-  }, [fetchAladinBestsellers]);
+    fetchAladinBestsellers(selectedCategory);
+  }, []);
 
   // 2. Supabase Database DB Proxy를 활용한 실시간 국내 도서 검색 (CORS & ORB 우회 완료)
   const handleSearch = async (e, isLoadMore = false) => {
@@ -295,12 +316,37 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
           )}
 
           {activeTab === 'bestseller' && (
-            <button className="btn btn-sm btn-outline" onClick={fetchAladinBestsellers}>
+            <button className="btn btn-sm btn-outline" onClick={() => fetchAladinBestsellers(selectedCategory)}>
               <RefreshCw size={14} className={bestsellerLoading ? 'animate-spin' : ''} /> 베스트셀러 갱신
             </button>
           )}
         </div>
       </div>
+
+      {/* 분야별 베스트셀러 카테고리 필터 탭 (종합, 소설/시, 경제경영, 자기계발, 인문학, 과학, 에세이 등) */}
+      {activeTab === 'bestseller' && (
+        <div className="bestseller-category-bar mt-3 flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+          {BESTSELLER_CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              className={`btn btn-sm ${selectedCategory === cat.id ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => {
+                setSelectedCategory(cat.id);
+                fetchAladinBestsellers(cat.id);
+              }}
+              style={{
+                borderRadius: '20px',
+                whiteSpace: 'nowrap',
+                fontSize: '0.8rem',
+                padding: '0.35rem 0.85rem',
+                flexShrink: 0
+              }}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {errorMsg && (
         <div className="p-4 text-warning text-center mt-3 bg-opacity-10 bg-warning rounded-lg border border-warning">

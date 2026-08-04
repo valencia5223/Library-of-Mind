@@ -118,8 +118,8 @@ CREATE POLICY "Users can delete their own sessions"
 -- 1. PostgreSQL HTTP 확장 기능 활성화 (Supabase 기본 제공)
 CREATE EXTENSION IF NOT EXISTS "http";
 
--- 2. 알라딘 실시간 베스트셀러 API 프록시 함수 정의
-CREATE OR REPLACE FUNCTION public.aladin_bestseller_proxy()
+-- 2. 알라딘 실시간 베스트셀러 API 프록시 함수 정의 (분야별 CategoryId 지원)
+CREATE OR REPLACE FUNCTION public.aladin_bestseller_proxy(category_id INT DEFAULT 0)
 RETURNS JSON
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -129,8 +129,11 @@ DECLARE
   result_json JSON;
   api_url TEXT;
 BEGIN
-  -- 알라딘 베스트셀러 API URL (ttbkey 하드코딩)
-  api_url := 'http://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=ttbcdw2341334001&QueryType=Bestseller&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101&output=js&OptResult=itemPage';
+  IF category_id > 0 THEN
+    api_url := 'http://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=ttbcdw2341334001&QueryType=Bestseller&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101&output=js&OptResult=itemPage&CategoryId=' || category_id;
+  ELSE
+    api_url := 'http://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=ttbcdw2341334001&QueryType=Bestseller&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101&output=js&OptResult=itemPage';
+  END IF;
   
   -- HTTP GET 수행
   SELECT * FROM http_get(api_url) INTO response_record;
