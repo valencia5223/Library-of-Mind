@@ -188,31 +188,34 @@ export default function BookDetailModal({
               </div>
             </div>
 
-            {/* 도서 상세 소개 박스 */}
+            {/* 도서 상세 소개 박스 (시원하게 확장된 칼럼) */}
             <div
               className="review-section"
               style={{
                 background: '#f8fafc',
                 borderRadius: '12px',
-                padding: '1.1rem',
+                padding: '1.25rem',
                 border: '1px solid #e2e8f0',
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                flex: 1,
+                minHeight: '340px'
               }}
             >
-              <h4 className="flex align-center gap-1 mb-2" style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--primary, #0078a6)' }}>
-                <BookOpen size={17} /> 도서 상세 소개
+              <h4 className="flex align-center gap-1 mb-3" style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--primary, #0078a6)' }}>
+                <BookOpen size={18} /> 도서 상세 소개
               </h4>
               <div
                 className="desc-text"
                 style={{
-                  fontSize: '0.94rem',
+                  fontSize: '0.96rem',
                   color: '#334155',
-                  lineHeight: 1.75,
+                  lineHeight: 1.8,
                   whiteSpace: 'pre-line',
-                  maxHeight: '300px',
+                  maxHeight: '480px',
                   overflowY: 'auto',
-                  paddingRight: '6px'
+                  paddingRight: '6px',
+                  flex: 1
                 }}
               >
                 {loadingDesc ? (
@@ -273,17 +276,7 @@ export default function BookDetailModal({
               </button>
             )}
 
-            {onSyncInfo && (
-              <button
-                className="btn btn-outline btn-sm font-bold flex align-center gap-1"
-                disabled={syncing}
-                onClick={() => onSyncInfo(book)}
-                style={{ padding: '0.5rem 0.9rem', borderRadius: '8px', borderColor: '#3b82f6', color: '#2563eb' }}
-              >
-                <RefreshCw size={15} className={syncing ? 'animate-spin' : ''} />
-                {syncing ? '페이지 동기화 중...' : '⚡ 실제 페이지 수 동기화'}
-              </button>
-            )}
+
 
             {onDeleteBook && (
               <button
