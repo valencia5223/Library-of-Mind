@@ -35,11 +35,12 @@ export default function BookshelfView({
         const aladinUrl = `https://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=${ttbKey}&itemIdType=ISBN13&ItemId=${isbn}&Cover=Big&Version=20131101&output=js&OptResult=itemPage`;
         
         try {
-          // CORS 프록시 경유 호출
-          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(aladinUrl)}`;
+          // CORS 프록시 경유 호출 (allorigins.win)
+          const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(aladinUrl)}`;
           const res = await fetch(proxyUrl);
           if (res.ok) {
-            const data = await res.json();
+            const wrapper = await res.json();
+            const data = JSON.parse(wrapper.contents);
             if (data.item && data.item.length > 0) {
               const bookItem = data.item[0];
               fetchedPages = bookItem.subInfo?.itemPage || null;

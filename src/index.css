@@ -406,11 +406,38 @@ input:focus, select:focus, textarea:focus {
   display: flex;
   align-items: flex-end;
   box-shadow: 
-    inset 0 25px 35px rgba(186, 146, 105, 0.1),
-    inset 0 -10px 20px rgba(0, 0, 0, 0.03);
+    inset 0 25px 35px rgba(186, 146, 105, 0.15),
+    inset 0 -10px 20px rgba(0, 0, 0, 0.05);
   transform-style: preserve-3d;
   perspective: 1000px;
   overflow: visible;
+}
+
+/* 선반 밑면 3D 원목 받침대 (Realistic 3D Wooden Shelf Plank) */
+.shelf-plank {
+  height: 20px;
+  background: linear-gradient(180deg, #d4a373 0%, #bc8a5f 40%, #8b5e34 100%);
+  border-radius: 0 0 4px 4px;
+  box-shadow: 
+    0 8px 16px rgba(0, 0, 0, 0.4),
+    0 2px 4px rgba(0, 0, 0, 0.25),
+    inset 0 2px 4px rgba(255, 255, 255, 0.3),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.4);
+  border-top: 3px solid #f4a261;
+  position: relative;
+  z-index: 5;
+}
+
+.shelf-plank::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: -2px;
+  right: -2px;
+  height: 6px;
+  background: linear-gradient(180deg, #6b4e2a 0%, #3a2613 100%);
+  border-radius: 0 0 5px 5px;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.35);
 }
 
 .spine-row {
@@ -1184,5 +1211,132 @@ input:focus, select:focus, textarea:focus {
   border: 1px solid #e2e8f0 !important;
   box-shadow: 0 2px 8px rgba(0,0,0,0.01) !important;
 }
+
+/* ============================================= */
+/* 뉴스 티커 (네이버 뉴스 API 기반)             */
+/* ============================================= */
+.news-ticker-container {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.45rem 1.2rem;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  position: relative;
+}
+
+.news-ticker-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #ffffff;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  flex-shrink: 0;
+  animation: ticker-badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ticker-badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.news-ticker-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  height: 1.3rem;
+}
+
+.news-ticker-headline {
+  display: block;
+  color: #e2e8f0;
+  font-size: 0.78rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: transform 0.4s ease, opacity 0.4s ease;
+  line-height: 1.3rem;
+}
+
+.news-ticker-headline:hover {
+  color: #60a5fa;
+}
+
+.news-ticker-headline.slide-out {
+  transform: translateY(-100%);
+  opacity: 0;
+}
+
+.news-ticker-headline.slide-in {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.news-ticker-dots {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.ticker-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.ticker-dot.active {
+  background: #60a5fa;
+}
+
+
+/* ============================================= */
+/* 3D 책장 리얼리스틱 선반 보드 (나무 질감)       */
+/* ============================================= */
+
+/* 선반 하단 보드 (각 줄 아래 나무판) */
+.shelf-row-wrapper {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.shelf-board {
+  position: relative;
+  height: 16px;
+  background: linear-gradient(180deg, #d4a373 0%, #bc8a5f 40%, #8b5e34 100%);
+  border-radius: 0 0 3px 3px;
+  margin: 0 -1.5rem;
+  box-shadow:
+    0 6px 12px rgba(0, 0, 0, 0.35),
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 2px 3px rgba(255, 255, 255, 0.2),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.4);
+  border-top: 2px solid #e9c46a;
+}
+
+/* 선반 보드 두께감 (전면 입체 그림자) */
+.shelf-board::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(180deg, #6b4e2a 0%, #4a341b 100%);
+  border-radius: 0 0 4px 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
 
 

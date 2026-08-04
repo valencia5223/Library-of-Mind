@@ -184,32 +184,10 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
     });
   };
 
-  // Google Books API를 통해 실제 페이지 수 조회 후 서재에 추가하는 핸들러
-  const handleAddWithGooglePageCount = async (book) => {
-    let finalPageCount = book.total_pages;
-
-    try {
-      const cleanTitle = (book.title || '').split('-')[0].split('(')[0].trim();
-      const query = book.isbn ? `isbn:${book.isbn}` : `intitle:${encodeURIComponent(cleanTitle)}`;
-      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${query}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.items && data.items.length > 0) {
-          for (const item of data.items) {
-            if (item.volumeInfo && item.volumeInfo.pageCount > 0) {
-              finalPageCount = item.volumeInfo.pageCount;
-              break;
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('Google Books API 페이지 수 조회 중 오류 발생 (폴백 연산 사용):', err);
-    }
-
+  // 서재에 도서를 추가하는 핸들러 (알라딘 검색 데이터 그대로 전달)
+  const handleAddToShelf = (book) => {
     onAddBook({
       ...book,
-      total_pages: finalPageCount,
       status: 'TO_READ'
     });
   };
@@ -371,7 +349,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
                     {added ? (
                       <button className="btn btn-sm btn-disabled" disabled><CheckCircle2 size={14} /> 내 책장에 있음</button>
                     ) : (
-                      <button className="btn btn-sm btn-primary" onClick={() => handleAddWithGooglePageCount(book)}>
+                      <button className="btn btn-sm btn-primary" onClick={() => handleAddToShelf(book)}>
                         <Plus size={14} /> 책장에 담기
                       </button>
                     )}
@@ -465,7 +443,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
                     <button
                       className="btn btn-primary"
                       onClick={() => {
-                        handleAddWithGooglePageCount(selectedBook);
+                        handleAddToShelf(selectedBook);
                         setSelectedBook(null);
                       }}
                     >

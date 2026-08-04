@@ -8,7 +8,7 @@ import FocusStudio from './components/FocusStudio';
 import ReadingStats from './components/ReadingStats';
 import FriendManager from './components/FriendManager';
 import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users } from 'lucide-react';
-import { fetchGooglePageCount } from './utils/googleBooks';
+import NewsTicker from './components/NewsTicker';
 
 
 export default function App() {
@@ -107,23 +107,17 @@ export default function App() {
 
   // CRUD 핸들러
   const handleAddBook = async (newBook) => {
-    // Google Books API를 이용해 실제 페이지 수 연동 시도
     let finalTotalPages = newBook.total_pages ? parseInt(newBook.total_pages) : 0;
     if (!finalTotalPages || finalTotalPages === 320) {
-      const googlePages = await fetchGooglePageCount(newBook.title, newBook.isbn);
-      if (googlePages) {
-        finalTotalPages = googlePages;
-      } else {
-        // 도서 제목 해시 기반 보정 (200~550p)
-        let hash = 0;
-        const str = newBook.title || 'book';
-        for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-        finalTotalPages = 200 + (Math.abs(hash) % 350);
-      }
+      // 도서 제목 해시 기반 보정 (200~550p)
+      let hash = 0;
+      const str = newBook.title || 'book';
+      for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+      finalTotalPages = 200 + (Math.abs(hash) % 350);
     }
 
-    // DB user_books 테이블 스키마에 정의된 컬럼만 안전하게 필터링하여 삽입
-    const dbSafeBook = {
+    // DB 필드 구성
+    const bookData = {
       title: newBook.title || '제목 정보 없음',
       author: newBook.author || '저자 미상',
       publisher: newBook.publisher || '',
@@ -134,12 +128,12 @@ export default function App() {
       status: newBook.status || 'TO_READ',
       rating: newBook.rating ? Math.min(5, Math.max(0, parseFloat((parseFloat(newBook.rating) || 0).toFixed(1)))) : 0.0, 
       buy_link: newBook.buy_link || '',
+      pub_date: newBook.pub_date || '',
       category: newBook.category || '일반'
     };
 
     const bookObj = {
-      ...dbSafeBook,
-      pub_date: newBook.pub_date || '',
+      ...bookData,
       id: `b-${Date.now()}`,
       created_at: new Date().toISOString()
     };
@@ -150,10 +144,12 @@ export default function App() {
     if (!isSupabaseConfigured()) {
       localStorage.setItem(`user_books_${user?.id || 'demo'}`, JSON.stringify(updated));
     } else if (user) {
-      // DB-safe 필드만으로 insert
-      const { error } = await supabase.from('user_books').insert([{ ...dbSafeBook, user_id: user.id }]);
+      // pub_date 포함하여 insert 시도, 실패 시 pub_date 제외하고 재시도
+      const { error } = await supabase.from('user_books').insert([{ ...bookData, user_id: user.id }]);
       if (error) {
-        console.error('도서 추가 실패:', error.message);
+        console.warn('Insert 실패 (pub_date 컬럼 미존재 가능), pub_date 제외 재시도:', error.message);
+        const { pub_date, ...safeData } = bookData;
+        await supabase.from('user_books').insert([{ ...safeData, user_id: user.id }]);
       }
     }
   };
@@ -352,6 +348,9 @@ export default function App() {
           {user ? (user.user_metadata?.full_name || user.email?.split('@')[0] || '내 프로필') : '로그인 / 회원가입'}
         </button>
       </header>
+
+      {/* 뉴스 티커 (탭 상단) */}
+      {user && <NewsTicker />}
 
       {/* 비로그인 시 강제 게이트키퍼 랜딩 화면 */}
       {!user ? (
