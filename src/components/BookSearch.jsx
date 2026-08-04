@@ -171,6 +171,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
         author: item.author || '저자 미상',
         publisher: item.publisher || '출판사',
         cover_url: coverUrl,
+        isbn: item.isbn13 || item.isbn || '',
         description: item.description || '',
         buy_link: item.link || `https://www.aladin.co.kr/search/wsearchresult.aspx?SearchTarget=Book&SearchWord=${encodeURIComponent(item.title)}`,
         rating: item.customerReviewRank ? (item.customerReviewRank / 2).toFixed(1) : '4.8',
@@ -180,6 +181,36 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
         category: item.categoryName || '',
         bestRank: item.bestRank || null
       };
+    });
+  };
+
+  // Google Books API를 통해 실제 페이지 수 조회 후 서재에 추가하는 핸들러
+  const handleAddWithGooglePageCount = async (book) => {
+    let finalPageCount = book.total_pages;
+
+    try {
+      const cleanTitle = (book.title || '').split('-')[0].split('(')[0].trim();
+      const query = book.isbn ? `isbn:${book.isbn}` : `intitle:${encodeURIComponent(cleanTitle)}`;
+      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${query}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.items && data.items.length > 0) {
+          for (const item of data.items) {
+            if (item.volumeInfo && item.volumeInfo.pageCount > 0) {
+              finalPageCount = item.volumeInfo.pageCount;
+              break;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Google Books API 페이지 수 조회 중 오류 발생 (폴백 연산 사용):', err);
+    }
+
+    onAddBook({
+      ...book,
+      total_pages: finalPageCount,
+      status: 'TO_READ'
     });
   };
 
@@ -340,7 +371,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
                     {added ? (
                       <button className="btn btn-sm btn-disabled" disabled><CheckCircle2 size={14} /> 내 책장에 있음</button>
                     ) : (
-                      <button className="btn btn-sm btn-primary" onClick={() => onAddBook({ ...book, status: 'TO_READ' })}>
+                      <button className="btn btn-sm btn-primary" onClick={() => handleAddWithGooglePageCount(book)}>
                         <Plus size={14} /> 책장에 담기
                       </button>
                     )}
@@ -434,7 +465,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
                     <button
                       className="btn btn-primary"
                       onClick={() => {
-                        onAddBook({ ...selectedBook, status: 'TO_READ' });
+                        handleAddWithGooglePageCount(selectedBook);
                         setSelectedBook(null);
                       }}
                     >
