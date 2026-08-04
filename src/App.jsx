@@ -21,6 +21,7 @@ export default function App() {
   // 데이터 상태 (사용자별 개별 데이터)
   const [books, setBooks] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [sessions, setSessions] = useState([]);
   // 인증 및 세션 확인
   useEffect(() => {
     if (isSupabaseConfigured()) {
