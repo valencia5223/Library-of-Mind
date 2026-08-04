@@ -679,14 +679,25 @@ export default function BookshelfView({
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  <option value="classic">🪵 클래식 원목</option>
-                  <option value="dark">🌙 미드나잇 다크</option>
-                  <option value="sepia">📜 빈티지 세피아</option>
-                  <option value="forest">🍃 세이지 그리너리</option>
-                  <option value="cherry">🏺 고대 체리목</option>
-                  <option value="rose">🎨 모던 로즈골드</option>
-                  <option value="ocean">🌊 마린 브리즈</option>
-                  <option value="violet">💜 로얄 바이올렛</option>
+                  <optgroup label="☀️ 밝고 산뜻한 파스텔 테마">
+                    <option value="maple">🥛 화이트 메이플</option>
+                    <option value="blossom">🌸 체리블라썸 핑크</option>
+                    <option value="vanilla">🍦 바닐라 샌드</option>
+                    <option value="sky">🧊 파스텔 스카이</option>
+                    <option value="mint">🌱 마일드 민트</option>
+                  </optgroup>
+                  <optgroup label="🪵 클래식 & 내추럴 원목">
+                    <option value="classic">🪵 클래식 원목</option>
+                    <option value="sepia">📜 빈티지 세피아</option>
+                    <option value="cherry">🏺 고대 체리목</option>
+                  </optgroup>
+                  <optgroup label="🌙 딥 & 무드 분위기">
+                    <option value="dark">🌙 미드나잇 다크</option>
+                    <option value="rose">🎨 모던 로즈골드</option>
+                    <option value="forest">🍃 세이지 그리너리</option>
+                    <option value="ocean">🌊 마린 브리즈</option>
+                    <option value="violet">💜 로얄 바이올렛</option>
+                  </optgroup>
                 </select>
               </div>
             )}

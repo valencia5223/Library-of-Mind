@@ -139,6 +139,77 @@ body {
   border-top: 3px solid #c084fc !important;
 }
 
+/* --- [ ☀️ 밝고 산뜻한 파스텔 & 라이트 테마 라인업 ] --- */
+/* 8. 화이트 메이플 (White Birch & Champagne Gold) */
+.shelf-theme-maple .shelf-surface {
+  background: 
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.02) 0px, rgba(0, 0, 0, 0.02) 45px, rgba(0, 0, 0, 0.05) 46px, rgba(0, 0, 0, 0.05) 47px),
+    linear-gradient(180deg, #fbf9f5 0%, #f3eee6 40%, #e5ddd0 100%) !important;
+  border-left: 18px solid #ded5c7 !important;
+  border-right: 18px solid #ded5c7 !important;
+  border-top: 10px solid #f3eee6 !important;
+}
+.shelf-theme-maple .shelf-plank {
+  background: linear-gradient(180deg, #f5efe6 0%, #e6ded2 40%, #d8cdbc 100%) !important;
+  border-top: 3px solid #d4af37 !important;
+}
+
+/* 9. 체리블라썸 핑크 (Cherry Blossom & Soft Pearl) */
+.shelf-theme-blossom .shelf-surface {
+  background: 
+    repeating-linear-gradient(90deg, rgba(244, 63, 94, 0.03) 0px, rgba(244, 63, 94, 0.03) 45px, rgba(244, 63, 94, 0.06) 46px, rgba(244, 63, 94, 0.06) 47px),
+    linear-gradient(180deg, #fff5f7 0%, #fde2e8 40%, #fbcfe8 100%) !important;
+  border-left: 18px solid #f9a8d4 !important;
+  border-right: 18px solid #f9a8d4 !important;
+  border-top: 10px solid #fde2e8 !important;
+}
+.shelf-theme-blossom .shelf-plank {
+  background: linear-gradient(180deg, #fbcfe8 0%, #f472b6 40%, #db2777 100%) !important;
+  border-top: 3px solid #fb7185 !important;
+}
+
+/* 10. 바닐라 샌드 (Sunny Vanilla & Warm Beach Oak) */
+.shelf-theme-vanilla .shelf-surface {
+  background: 
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.02) 0px, rgba(0, 0, 0, 0.02) 45px, rgba(0, 0, 0, 0.05) 46px, rgba(0, 0, 0, 0.05) 47px),
+    linear-gradient(180deg, #fffbeb 0%, #fef3c7 40%, #fde68a 100%) !important;
+  border-left: 18px solid #fcd34d !important;
+  border-right: 18px solid #fcd34d !important;
+  border-top: 10px solid #fef3c7 !important;
+}
+.shelf-theme-vanilla .shelf-plank {
+  background: linear-gradient(180deg, #fde68a 0%, #f59e0b 40%, #d97706 100%) !important;
+  border-top: 3px solid #fbbf24 !important;
+}
+
+/* 11. 파스텔 스카이 (Pastel Sky Blue & Ice) */
+.shelf-theme-sky .shelf-surface {
+  background: 
+    repeating-linear-gradient(90deg, rgba(2, 132, 199, 0.03) 0px, rgba(2, 132, 199, 0.03) 45px, rgba(2, 132, 199, 0.06) 46px, rgba(2, 132, 199, 0.06) 47px),
+    linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 40%, #bae6fd 100%) !important;
+  border-left: 18px solid #7dd3fc !important;
+  border-right: 18px solid #7dd3fc !important;
+  border-top: 10px solid #e0f2fe !important;
+}
+.shelf-theme-sky .shelf-plank {
+  background: linear-gradient(180deg, #bae6fd 0%, #38bdf8 40%, #0284c7 100%) !important;
+  border-top: 3px solid #38bdf8 !important;
+}
+
+/* 12. 마일드 민트 (Spring Mint Green & Birch) */
+.shelf-theme-mint .shelf-surface {
+  background: 
+    repeating-linear-gradient(90deg, rgba(16, 185, 129, 0.03) 0px, rgba(16, 185, 129, 0.03) 45px, rgba(16, 185, 129, 0.06) 46px, rgba(16, 185, 129, 0.06) 47px),
+    linear-gradient(180deg, #f0fdf4 0%, #dcfce7 40%, #bbf7d0 100%) !important;
+  border-left: 18px solid #86efac !important;
+  border-right: 18px solid #86efac !important;
+  border-top: 10px solid #dcfce7 !important;
+}
+.shelf-theme-mint .shelf-plank {
+  background: linear-gradient(180deg, #bbf7d0 0%, #4ade80 40%, #16a34a 100%) !important;
+  border-top: 3px solid #34d399 !important;
+}
+
 /* 유틸리티 */
 .text-center { text-align: center; }
 .text-primary { color: var(--primary) !important; }
