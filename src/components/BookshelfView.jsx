@@ -50,8 +50,34 @@ export default function BookshelfView({
 
   // 책 상세 모달 내 도서 소개 연동 상태
   const [bookDescription, setBookDescription] = useState('');
+  const [bookToc, setBookToc] = useState('');
   const [showDescModal, setShowDescModal] = useState(false);
   const [loadingDesc, setLoadingDesc] = useState(false);
+
+  // 저자 및 옮긴이(역자) 분리 파싱 헬퍼 함수
+  const parseAuthorAndTranslator = (authorStr = '') => {
+    if (!authorStr) return { author: '저자 미상', translator: null };
+
+    const parts = authorStr.split(',');
+    let authorList = [];
+    let translatorList = [];
+
+    parts.forEach(part => {
+      const trimmed = part.trim();
+      if (trimmed.includes('(옮긴이)') || trimmed.includes('(역자)')) {
+        translatorList.push(trimmed.replace(/\((옮긴이|역자)\)/g, '').trim());
+      } else if (trimmed.includes('(지은이)') || trimmed.includes('(저자)') || trimmed.includes('(글)')) {
+        authorList.push(trimmed.replace(/\((지은이|저자|글)\)/g, '').trim());
+      } else {
+        authorList.push(trimmed);
+      }
+    });
+
+    return {
+      author: authorList.join(', ') || authorStr,
+      translator: translatorList.length > 0 ? translatorList.join(', ') : null
+    };
+  };
 
   // 모달 팝업 오픈 시 배경 스크롤을 100% 잠그고, 닫히면 원래대로 복구
   React.useEffect(() => {
@@ -60,6 +86,7 @@ export default function BookshelfView({
     } else {
       document.body.style.overflow = '';
       setBookDescription('');
+      setBookToc('');
       setShowDescModal(false);
     }
     return () => {
@@ -187,9 +214,9 @@ export default function BookshelfView({
           .replace(/<br\s*\/?>/gi, '\n')
           .replace(/<\/?[^>]+(>|$)/g, '')
           .trim();
-        if (cleanToc) {
-          fullText += `\n\n📌 [목차]\n${cleanToc}`;
-        }
+        setBookToc(cleanToc);
+      } else {
+        setBookToc('');
       }
 
       setBookDescription(fullText);
@@ -1335,20 +1362,60 @@ export default function BookshelfView({
                 )}
               </div>
 
-              <div className="detail-content" style={{ display: 'flex', flexDirection: 'column' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.4rem' }}>{selectedBook?.title}</h3>
-                <p className="detail-author mb-3" style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                  {selectedBook?.author} | {selectedBook?.publisher || '출판사 정보'}{selectedBook?.pub_date ? ` | 출간일: ${selectedBook.pub_date}` : ''}
-                </p>
+              <div className="detail-content" style={{ display: 'flex', flexDirection: 'column', flex: 1, maxHeight: '80vh', overflowY: 'auto', paddingRight: '6px' }}>
+                <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.6rem' }}>{selectedBook?.title}</h3>
 
-                <div className="review-section p-4 border-card" style={{ background: '#f8fafc', borderRadius: '12px', minHeight: '260px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                {/* 메타 정보 뱃지 태그 그리드 (저자, 역자, 출판사, 출간일, 페이지 수) */}
+                {(() => {
+                  const info = parseAuthorAndTranslator(selectedBook?.author);
+                  return (
+                    <div className="book-meta-badges flex flex-wrap gap-2 mb-3" style={{ fontSize: '0.85rem' }}>
+                      <span className="px-2 py-1 rounded bg-slate-100 font-semibold text-slate-700" style={{ background: '#f1f5f9', color: '#334155', borderRadius: '6px', padding: '4px 10px' }}>
+                        ✍️ <b>지은이:</b> {info.author}
+                      </span>
+                      {info.translator && (
+                        <span className="px-2 py-1 rounded bg-blue-50 font-semibold text-blue-700" style={{ background: '#eff6ff', color: '#1d4ed8', borderRadius: '6px', padding: '4px 10px' }}>
+                          🌐 <b>옮긴이:</b> {info.translator}
+                        </span>
+                      )}
+                      <span className="px-2 py-1 rounded bg-slate-100 font-semibold text-slate-700" style={{ background: '#f1f5f9', color: '#334155', borderRadius: '6px', padding: '4px 10px' }}>
+                        🏢 <b>출판사:</b> {selectedBook?.publisher || '정보 없음'}
+                      </span>
+                      {selectedBook?.pub_date && (
+                        <span className="px-2 py-1 rounded bg-slate-100 font-semibold text-slate-700" style={{ background: '#f1f5f9', color: '#334155', borderRadius: '6px', padding: '4px 10px' }}>
+                          📅 <b>출간일:</b> {selectedBook.pub_date}
+                        </span>
+                      )}
+                      {selectedBook?.total_pages && (
+                        <span className="px-2 py-1 rounded bg-emerald-50 font-semibold text-emerald-700" style={{ background: '#ecfdf5', color: '#047857', borderRadius: '6px', padding: '4px 10px' }}>
+                          📄 <b>분량:</b> {selectedBook.total_pages}쪽
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* 도서 상세 소개 세션 */}
+                <div className="review-section p-4 border-card mb-3" style={{ background: '#f8fafc', borderRadius: '12px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                   <h4 className="flex align-center gap-1" style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.65rem' }}>
-                    📖 도서 상세 소개 (알라딘)
+                    📖 도서 상세 소개
                   </h4>
-                  <p className="desc-text" style={{ fontSize: '0.95rem', color: '#334155', lineHeight: 1.7, maxHeight: '340px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
+                  <p className="desc-text" style={{ fontSize: '0.95rem', color: '#334155', lineHeight: 1.75, whiteSpace: 'pre-line' }}>
                     {bookDescription || '도서 소개 정보를 불러오는 중입니다...'}
                   </p>
                 </div>
+
+                {/* 목차 (TOC) 세션 (존재 시에만 표시) */}
+                {bookToc && (
+                  <div className="toc-section p-4 border-card" style={{ background: '#fffbe3', borderRadius: '12px', border: '1px solid #fef08a' }}>
+                    <h4 className="flex align-center gap-1" style={{ fontSize: '1.02rem', fontWeight: 700, color: '#854d0e', marginBottom: '0.5rem' }}>
+                      📜 목차 (Table of Contents)
+                    </h4>
+                    <p className="toc-text" style={{ fontSize: '0.9rem', color: '#713f12', lineHeight: 1.6, whiteSpace: 'pre-line', maxHeight: '220px', overflowY: 'auto' }}>
+                      {bookToc}
+                    </p>
+                  </div>
+                )}
 
                 <div className="mt-4 pt-3 flex justify-between align-center" style={{ borderTop: '1px solid #e2e8f0' }}>
                   {viewedFriend ? (
