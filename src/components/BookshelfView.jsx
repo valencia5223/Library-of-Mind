@@ -1375,7 +1375,7 @@ export default function BookshelfView({
           onSyncInfo={async (bookToSync) => {
             await fetchPageCountFromAladin(bookToSync);
           }}
-          syncing={syncingBookId === selectedBook.id}
+          syncing={syncingGoogleInfo}
         />
       )}
 
