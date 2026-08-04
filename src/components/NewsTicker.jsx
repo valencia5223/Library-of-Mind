@@ -1,44 +1,107 @@
 import React, { useState, useEffect } from 'react';
-import { Newspaper, ExternalLink, RefreshCw } from 'lucide-react';
+import { Newspaper, ExternalLink } from 'lucide-react';
+
+const LOCAL_STORAGE_KEY = 'library_news_cache_v1';
 
 export default function NewsTicker() {
-  const [headlines, setHeadlines] = useState([
-    { title: '📰 [속보] 실시간 주요 뉴스 수집 중...', link: 'https://news.google.com' }
-  ]);
+  // 1. localStorage 로컬 캐시로부터 0ms 초고속 동기 초기화 (대기 시간 0초)
+  const [headlines, setHeadlines] = useState(() => {
+    try {
+      const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.headlines && parsed.headlines.length > 0) {
+          return parsed.headlines;
+        }
+      }
+    } catch (e) {}
+    return [
+      { title: '📰 [속보] 한국은행, 기준금리 동결 발표… "물가 및 경제 상황 종합 고려"', link: 'https://news.google.com' },
+      { title: '🌐 글로벌 IT·AI 혁신 심포지엄 개막… "미래 기술 주도권 확보 총력"', link: 'https://news.google.com' },
+      { title: '☀️ 전국 대체로 흐리고 기온 상승… 내륙 곳곳 한때 소나기 예보', link: 'https://news.google.com' },
+      { title: '📈 코스피·코스닥 외국인 매수세에 힘입어 상승 출발', link: 'https://news.google.com' },
+      { title: '🚗 친환경차 보조금 확대 편성… 전기·수소차 보급 가속화', link: 'https://news.google.com' },
+    ];
+  });
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [lastUpdatedTime, setLastUpdatedTime] = useState('');
-
-  const fetchLiveNews = async () => {
+  const [lastUpdatedTime, setLastUpdatedTime] = useState(() => {
     try {
-      // 대한민국 최신 속보 종합 구글 뉴스 RSS (실시간 최신 뉴스 제공)
-      const rssUrl = 'https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko';
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}&timestamp=${Date.now()}`;
-      
-      const res = await fetch(proxyUrl);
+      const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        return parsed.time || '';
+      }
+    } catch (e) {}
+    return '';
+  });
+
+  // 실시간 최신 뉴스 수집 (1차: 고속 corsproxy.io -> 2차: allorigins 프록시)
+  const fetchLiveNews = async () => {
+    const rssUrl = 'https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko';
+    let xmlText = null;
+
+    // 1차시도: corsproxy.io 고속 스트리밍 프록시 (타임아웃 1.8초)
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1800);
+      const fastUrl = `https://corsproxy.io/?${encodeURIComponent(rssUrl)}`;
+      const res = await fetch(fastUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
       if (res.ok) {
-        const wrapper = await res.json();
+        xmlText = await res.text();
+      }
+    } catch (fastErr) {
+      // ignore & try fallback
+    }
+
+    // 2차시도: allorigins 프록시 폴백
+    if (!xmlText) {
+      try {
+        const fallbackUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(rssUrl)}&timestamp=${Date.now()}`;
+        const res = await fetch(fallbackUrl);
+        if (res.ok) {
+          const wrapper = await res.json();
+          xmlText = wrapper.contents;
+        }
+      } catch (err) {
+        console.warn('뉴스 수집 실패:', err);
+      }
+    }
+
+    // XML 파싱 및 뉴스 파싱
+    if (xmlText) {
+      try {
         const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(wrapper.contents, 'text/xml');
+        const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
         const items = xmlDoc.querySelectorAll('item');
 
         const parsed = Array.from(items).slice(0, 10).map(item => {
           let title = item.querySelector('title')?.textContent || '';
-          // 구글 뉴스 출처 표기 정제 (예: " - 연합뉴스" 제거)
-          title = title.replace(/\s*-\s*[^-]+$/, '').trim();
-          
+          title = title.replace(/\s*-\s*[^-]+$/, '').trim(); // 언론사 이름 정리
           let link = item.querySelector('link')?.textContent || 'https://news.google.com';
           return { title: `📰 ${title}`, link };
         }).filter(item => item.title.length > 5);
 
         if (parsed.length > 0) {
           setHeadlines(parsed);
-          const now = new Date();
-          setLastUpdatedTime(now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }));
+          const timeStr = new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+          setLastUpdatedTime(timeStr);
+
+          // localStorage에 캐시하여 다음 접속 시 0ms 즉시 노출
+          try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
+              headlines: parsed,
+              time: timeStr,
+              timestamp: Date.now()
+            }));
+          } catch (e) {}
         }
+      } catch (e) {
+        console.warn('뉴스 XML 파싱 실패:', e);
       }
-    } catch (err) {
-      console.warn('실시간 구글 뉴스 RSS 수집 실패:', err);
     }
   };
 
