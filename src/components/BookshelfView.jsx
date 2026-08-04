@@ -26,6 +26,71 @@ export default function BookshelfView({
   });
   const [syncingGoogleInfo, setSyncingGoogleInfo] = useState(false);
 
+  // 책 상세 모달 내 도서 소개 연동 상태
+  const [bookDescription, setBookDescription] = useState('');
+  const [showDescription, setShowDescription] = useState(false);
+  const [loadingDesc, setLoadingDesc] = useState(false);
+
+  // 모달 팝업 오픈 시 배경 스크롤을 100% 잠그고, 닫히면 원래대로 복구
+  React.useEffect(() => {
+    if (selectedBook) {
+      document.body.style.overflow = 'hidden';
+      setBookDescription(selectedBook.description || '');
+      setShowDescription(!!selectedBook.description);
+    } else {
+      document.body.style.overflow = '';
+      setBookDescription('');
+      setShowDescription(false);
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedBook]);
+
+  // 알라딘 API 프록시를 활용한 도서 소개 자동 수집 함수
+  const handleFetchBookDescription = async (book) => {
+    if (!book) return;
+    if (showDescription && bookDescription) {
+      setShowDescription(false);
+      return;
+    }
+
+    if (bookDescription) {
+      setShowDescription(true);
+      return;
+    }
+
+    setLoadingDesc(true);
+    try {
+      let response;
+      try {
+        response = await supabase.rpc('aladin_search_proxy', {
+          search_query: book.title,
+          start_page: 1,
+          sort_option: 'Accuracy'
+        });
+      } catch (err) {
+        response = await supabase.rpc('aladin_bestseller_proxy');
+      }
+
+      if (response && response.data && response.data.item && response.data.item.length > 0) {
+        const item = response.data.item.find(i => i.title && i.title.includes(book.title.slice(0, 5))) || response.data.item[0];
+        const desc = item.description || '알라딘에 등록된 소개글이 없습니다.';
+        setBookDescription(desc);
+        setShowDescription(true);
+      } else {
+        setBookDescription('등록된 도서 소개글을 찾을 수 없습니다.');
+        setShowDescription(true);
+      }
+    } catch (e) {
+      console.warn('도서 소개 조회 오류:', e);
+      setBookDescription('도서 소개 정보를 가져오지 못했습니다.');
+      setShowDescription(true);
+    } finally {
+      setLoadingDesc(false);
+    }
+  };
+
   // 헬퍼: 브라우저 네이티브 JSONP 스크립트 주입 (CORS 프록시 100% 우회)
   const fetchAladinJsonp = (baseUrl) => {
     return new Promise((resolve) => {
@@ -755,7 +820,43 @@ export default function BookshelfView({
                       · 📅 출간일: {selectedBook.pub_date}
                     </span>
                   ) : ''}
+                  <button 
+                    className="btn btn-sm btn-outline inline-flex align-center gap-1"
+                    style={{ 
+                      fontSize: '0.75rem', 
+                      padding: '0.15rem 0.55rem', 
+                      borderRadius: '6px', 
+                      marginLeft: '0.5rem', 
+                      color: 'var(--primary)', 
+                      borderColor: 'rgba(0, 120, 166, 0.3)',
+                      background: 'rgba(0, 120, 166, 0.05)',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => handleFetchBookDescription(selectedBook)}
+                    title="알라딘 API에서 이 책의 도서 소개글을 가져옵니다."
+                  >
+                    📖 도서소개 {loadingDesc ? <RefreshCw size={12} className="animate-spin" /> : (showDescription ? '닫기 ✕' : '보기')}
+                  </button>
                 </p>
+
+                {/* 알라딘 도서 소개 정보 카드 */}
+                {showDescription && (
+                  <div className="review-section mt-3 p-3.5 border-card animate-fade-in" style={{ background: '#f8fafc', borderRadius: '10px', borderLeft: '4px solid var(--primary)' }}>
+                    <h4 className="flex align-center justify-between" style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.5rem' }}>
+                      <span className="flex align-center gap-1">📖 도서 소개 (알라딘)</span>
+                      <button 
+                        onClick={() => setShowDescription(false)}
+                        style={{ background: 'none', border: 'none', fontSize: '0.8rem', color: '#64748b', cursor: 'pointer' }}
+                      >
+                        ✕ 닫기
+                      </button>
+                    </h4>
+                    <p className="desc-text" style={{ fontSize: '0.9rem', color: '#334155', lineHeight: 1.65, maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
+                      {bookDescription || '도서 소개 정보를 불러오는 중입니다...'}
+                    </p>
+                  </div>
+                )}
 
                 {!viewedFriend && (
                   <div className="mt-2 flex align-center gap-2 flex-wrap">

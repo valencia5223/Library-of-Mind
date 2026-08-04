@@ -617,16 +617,16 @@ input:focus, select:focus, textarea:focus {
 .spine-title {
   position: absolute;
   top: 8px;
-  left: 7px;
-  right: 18px;
-  bottom: 50px;
+  left: 5px;
+  right: 15px;
+  bottom: 48px;
   writing-mode: vertical-lr;
   text-orientation: mixed;
-  font-size: 0.7rem;
+  font-size: 0.63rem; /* 10% 축소하여 긴 제목의 좌우 잘림 현상 전면 해결 */
   font-weight: 800;
   color: #ffffff;
-  letter-spacing: 0.04em;
-  line-height: 1.25;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
   overflow: hidden;
   text-shadow: 
     0 1px 3px rgba(0, 0, 0, 0.85),
@@ -638,15 +638,15 @@ input:focus, select:focus, textarea:focus {
 
 .spine-author {
   position: absolute;
-  bottom: 8px;
-  right: 5px;
+  bottom: 6px;
+  right: 4px;
   max-height: 110px;
   writing-mode: vertical-rl;
   text-orientation: mixed;
-  font-size: 0.58rem;
+  font-size: 0.53rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
   overflow: hidden;
   text-shadow: 
     0 1px 3px rgba(0, 0, 0, 0.75);
