@@ -78,9 +78,10 @@ export default function NewsTicker() {
     return () => clearInterval(timer);
   }, [headlines]);
 
-  if (headlines.length === 0) return null;
+  if (!headlines || headlines.length === 0) return null;
 
-  const current = headlines[currentIndex];
+  const current = headlines[currentIndex] || headlines[0];
+  if (!current) return null;
 
   const handleNewsClick = (e, url) => {
     e.preventDefault();
@@ -97,14 +98,14 @@ export default function NewsTicker() {
       </div>
       <div className="news-ticker-content">
         <a 
-          href={current.link} 
+          href={current.link || '#'} 
           onClick={(e) => handleNewsClick(e, current.link)}
           target="_blank" 
           rel="noopener noreferrer"
           className={`news-ticker-headline ${isAnimating ? 'slide-out' : 'slide-in'}`}
           title="클릭 시 해당 뉴스 기사 원문 페이지로 이동합니다."
         >
-          {current.title}
+          {current.title || '뉴스 헤드라인'}
           <ExternalLink size={10} style={{ marginLeft: '6px', opacity: 0.7 }} />
         </a>
       </div>
