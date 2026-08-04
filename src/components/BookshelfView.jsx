@@ -16,7 +16,14 @@ export default function BookshelfView({
   const [showAddModal, setShowAddModal] = useState(false);
   const [isEditingReview, setIsEditingReview] = useState(false);
 
-  const [coverColors, setCoverColors] = useState({});
+  const [coverColors, setCoverColors] = useState(() => {
+    try {
+      const cached = localStorage.getItem('library_book_cover_colors');
+      return cached ? JSON.parse(cached) : {};
+    } catch (e) {
+      return {};
+    }
+  });
   const [syncingGoogleInfo, setSyncingGoogleInfo] = useState(false);
 
   // 헬퍼: 브라우저 네이티브 JSONP 스크립트 주입 (CORS 프록시 100% 우회)
@@ -251,10 +258,16 @@ export default function BookshelfView({
         const authorColor = isDark ? '#fde047' : '#1e293b';
         const textShadow = isDark ? '0px 1px 3px rgba(0,0,0,0.95)' : '0px 1px 2px rgba(255,255,255,0.85)';
 
-        setCoverColors(prev => ({
-          ...prev,
-          [bookId]: { bg, titleColor, authorColor, textShadow }
-        }));
+        setCoverColors(prev => {
+          const updated = {
+            ...prev,
+            [bookId]: { bg, titleColor, authorColor, textShadow }
+          };
+          try {
+            localStorage.setItem('library_book_cover_colors', JSON.stringify(updated));
+          } catch (e) {}
+          return updated;
+        });
       } catch (err) {
         console.warn("표지 대표색 획득 실패:", err);
       }
@@ -1021,34 +1034,11 @@ export default function BookshelfView({
 }
 
 function getSpineStyle(coverUrl, id) {
-  if (!coverUrl) {
-    return {
-      bg: '#1e293b',
-      titleColor: '#fef08a',
-      authorColor: '#fde047',
-      textShadow: '0 1px 3px rgba(0, 0, 0, 0.8)'
-    };
-  }
-  const source = coverUrl + (id || '');
-  let hash = 0;
-  for (let i = 0; i < source.length; i++) {
-    hash = source.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const hue = Math.abs(hash) % 360;
-  const saturation = 65 + (Math.abs(hash >> 2) % 20); // 65% ~ 85% (선명하고 선명한 단일 메인 톤)
-  const lightness = 28 + (Math.abs(hash >> 4) % 14);   // 28% ~ 42%
-  
-  const bg = `linear-gradient(180deg, hsl(${hue}, ${saturation}%, ${lightness}%) 0%, hsl(${hue}, ${saturation}%, ${Math.max(15, lightness - 12)}%) 100%)`;
-
-  let titleColor = '#ffffff';
-  let authorColor = '#fde047';
-  let textShadow = '0 1px 3px rgba(0, 0, 0, 0.9)';
-
-  if (lightness > 36) {
-    titleColor = '#ffffff';
-    authorColor = '#fef08a';
-    textShadow = '0 1px 3px rgba(0, 0, 0, 0.95)';
-  }
-
-  return { bg, titleColor, authorColor, textShadow };
+  // 표지 색상 로딩 전 플래시 현상 차단을 위한 품격 있는 차콜 세일트 톤 폴백
+  return {
+    bg: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+    titleColor: '#ffffff',
+    authorColor: '#fde047',
+    textShadow: '0 1px 3px rgba(0, 0, 0, 0.9)'
+  };
 }
