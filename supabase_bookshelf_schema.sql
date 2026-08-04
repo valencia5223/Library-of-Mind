@@ -132,9 +132,9 @@ DECLARE
   api_url TEXT;
 BEGIN
   IF category_id > 0 THEN
-    api_url := 'http://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=ttbcdw2341334001&QueryType=Bestseller&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101&output=js&OptResult=description,fulldescription,toc,itemPage&CategoryId=' || category_id;
+    api_url := 'https://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=ttbcdw2341334001&QueryType=Bestseller&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101&output=js&OptResult=description,fulldescription,toc,itemPage&CategoryId=' || category_id;
   ELSE
-    api_url := 'http://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=ttbcdw2341334001&QueryType=Bestseller&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101&output=js&OptResult=description,fulldescription,toc,itemPage';
+    api_url := 'https://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=ttbcdw2341334001&QueryType=Bestseller&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101&output=js&OptResult=description,fulldescription,toc,itemPage';
   END IF;
   
   -- HTTP GET 수행
@@ -166,7 +166,7 @@ DECLARE
   api_url TEXT;
 BEGIN
   -- MaxResults=30으로 고정하고 start, Sort 파라미터를 동적으로 바인딩
-  api_url := 'http://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=ttbcdw2341334001&Query=' 
+  api_url := 'https://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=ttbcdw2341334001&Query=' 
              || urlencode(search_query) 
              || '&MaxResults=30' 
              || '&start=' || start_page 
@@ -197,7 +197,7 @@ DECLARE
   result_json JSON;
   api_url TEXT;
 BEGIN
-  api_url := 'http://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=ttbcdw2341334001&itemIdType=' 
+  api_url := 'https://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=ttbcdw2341334001&itemIdType=' 
              || urlencode(id_type) 
              || '&ItemId=' || urlencode(item_id) 
              || '&Cover=Big&Version=20131101&output=js&OptResult=description,fulldescription,toc,story,authors,itemPage';
