@@ -40,6 +40,58 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* 4대 서재 테마 시스템 */
+html[data-theme="dark"] body {
+  background: radial-gradient(circle at top left, #0b0f19 0%, #050811 50%, #020408 100%) !important;
+  color: #f8fafc !important;
+}
+html[data-theme="dark"] .app-header {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border-bottom: 1px solid rgba(56, 189, 248, 0.2) !important;
+}
+html[data-theme="dark"] .wood-shelf {
+  background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%) !important;
+  border-color: #312e81 !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6) !important;
+}
+html[data-theme="dark"] .shelf-badge {
+  background: rgba(15, 23, 42, 0.85) !important;
+}
+
+html[data-theme="sepia"] body {
+  background: radial-gradient(circle at top left, #342c23 0%, #251f18 50%, #1a1510 100%) !important;
+  color: #fdf6e3 !important;
+}
+html[data-theme="sepia"] .app-header {
+  background: rgba(44, 35, 27, 0.95) !important;
+  border-bottom: 1px solid rgba(217, 119, 6, 0.3) !important;
+}
+html[data-theme="sepia"] .wood-shelf {
+  background: linear-gradient(180deg, #443527 0%, #2a1f16 100%) !important;
+  border-color: #584433 !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+}
+html[data-theme="sepia"] .shelf-badge {
+  background: rgba(44, 35, 27, 0.85) !important;
+}
+
+html[data-theme="forest"] body {
+  background: radial-gradient(circle at top left, #11261c 0%, #0b1a13 50%, #050d09 100%) !important;
+  color: #ecfdf5 !important;
+}
+html[data-theme="forest"] .app-header {
+  background: rgba(19, 42, 30, 0.95) !important;
+  border-bottom: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+html[data-theme="forest"] .wood-shelf {
+  background: linear-gradient(180deg, #143826 0%, #0a2116 100%) !important;
+  border-color: #1e5238 !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+}
+html[data-theme="forest"] .shelf-badge {
+  background: rgba(19, 42, 30, 0.85) !important;
+}
+
 /* 유틸리티 */
 .text-center { text-align: center; }
 .text-primary { color: var(--primary) !important; }

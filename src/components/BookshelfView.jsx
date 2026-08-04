@@ -848,35 +848,6 @@ export default function BookshelfView({
               </div>
 
               <div className="detail-content">
-                {viewedFriend && (
-                  <div className="alert alert-info mb-3 p-3 rounded flex justify-between align-center" style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af' }}>
-                    <span className="text-xs font-bold">🤝 친구 서재의 책입니다. 내 서재로 담으시겠습니까?</span>
-                    <button
-                      className="btn btn-primary btn-sm font-extrabold flex align-center gap-1 shadow-sm"
-                      style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem' }}
-                      onClick={async () => {
-                        if (onAddManualBook) {
-                          await onAddManualBook({
-                            title: selectedBook.title,
-                            author: selectedBook.author,
-                            publisher: selectedBook.publisher,
-                            cover_url: selectedBook.cover_url,
-                            isbn: selectedBook.isbn,
-                            total_pages: selectedBook.total_pages,
-                            status: 'TO_READ',
-                            buy_link: selectedBook.buy_link,
-                            pub_date: selectedBook.pub_date,
-                            description: selectedBook.description
-                          });
-                          alert(`✅ '${selectedBook.title}' 도서가 내 서재에 추가되었습니다!`);
-                          setSelectedBook(null);
-                        }
-                      }}
-                    >
-                      <Plus size={15} /> 내 서재에 추가하기
-                    </button>
-                  </div>
-                )}
                 <h3>{selectedBook.title}</h3>
                 <p className="detail-author">
                   {selectedBook.author} | {selectedBook.publisher || '출판사 정보'}
@@ -942,7 +913,12 @@ export default function BookshelfView({
                       </button>
                       <button
                         className={`btn btn-sm ${selectedBook.status === 'READ' ? 'btn-success' : 'btn-outline'}`}
-                        onClick={() => { onUpdateStatus(selectedBook.id, 'READ'); setSelectedBook({ ...selectedBook, status: 'READ' }); }}
+                        onClick={() => {
+                          const totalP = parseInt(selectedBook.total_pages) || 300;
+                          onUpdateStatus(selectedBook.id, 'READ');
+                          setSelectedBook({ ...selectedBook, status: 'READ', current_pages: totalP });
+                          setEditCurrentPages(totalP);
+                        }}
                       >
                         <CheckCircle size={14} /> 완독함
                       </button>
