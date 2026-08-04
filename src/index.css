@@ -307,12 +307,12 @@ img {
 }
 
 .book-detail-modal {
-  max-width: 750px;
+  max-width: 820px;
 }
 
 .detail-grid {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 220px 1fr;
   gap: 2rem;
 }
 

@@ -488,17 +488,18 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
                 <h3>{selectedBook.title}</h3>
                 <p className="detail-author">{selectedBook.author} | {selectedBook.publisher || '출판사 정보'}{selectedBook.pub_date ? ` | 출간일: ${selectedBook.pub_date}` : ''}</p>
 
-                {/* 도서 상세 설명 */}
-                <div className="review-section mt-3 p-3 border-card" style={{ background: '#f8fafc', borderRadius: '8px', minHeight: '120px' }}>
-                  <h4 className="flex align-center gap-1" style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.5rem' }}>
+                {/* 도서 상세 설명 - 시원하고 가독성 높은 확장 도서 소개 카드 */}
+                <div className="review-section mt-3 p-4 border-card" style={{ background: '#f8fafc', borderRadius: '12px', minHeight: '240px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <h4 className="flex align-center gap-1" style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.65rem' }}>
                     📖 도서 소개
                   </h4>
-                  <p className="desc-text" style={{ fontSize: '0.9rem', color: '#334155', lineHeight: 1.6, maxHeight: '200px', overflowY: 'auto' }}>
+                  <p className="desc-text" style={{ fontSize: '0.95rem', color: '#334155', lineHeight: 1.7, maxHeight: '360px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
                     {selectedBook.description || '알라딘에 등록된 소개글 설명이 없습니다.'}
                   </p>
                 </div>
 
-                <div className="action-row mt-4 flex justify-between align-center">
+                {/* 구매 & 책장 담기 버튼 - 도서 소개글 하단에 여백을 두고 분리 배치 */}
+                <div className="action-row mt-4 pt-3 flex justify-between align-center" style={{ borderTop: '1px solid #e2e8f0' }}>
                   {isAlreadyInShelf(selectedBook.title) ? (
                     <button className="btn btn-disabled" disabled>
                       <CheckCircle2 size={16} /> 이미 내 책장에 있음
