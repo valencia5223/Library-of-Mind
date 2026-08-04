@@ -344,12 +344,12 @@ export default function BookshelfView({
 
 
 
-  // 2. 저자 포맷터 (최대 7~8자 보장으로 '히가시노 게이고' 등 실명 전체 표시)
+  // 2. 저자 포맷터 (최대 14자 보장으로 '히가시노 게이고' 등 저자 풀네임 완전 노출)
   const formatAuthor = (author) => {
     if (!author) return '';
     const clean = author.split('(')[0].split('지음')[0].split('옮김')[0].split('저')[0].trim();
-    if (clean.length > 7) {
-      return clean.substring(0, 7) + '..';
+    if (clean.length > 14) {
+      return clean.substring(0, 14) + '..';
     }
     return clean;
   };
