@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Star, ExternalLink, PlusCircle, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw, Image as ImageIcon } from 'lucide-react';
+import { BookOpen, Star, ExternalLink, PlusCircle, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 export default function BookshelfView({ 
@@ -11,7 +11,7 @@ export default function BookshelfView({
   viewedFriend = null, 
   onBackToMyBookshelf 
 }) {
-  const [viewMode, setViewMode] = useState('photo'); // 'photo' | '3d' | 'grid'
+  const [viewMode, setViewMode] = useState('3d'); // '3d' | 'grid'
   const [selectedBook, setSelectedBook] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isEditingReview, setIsEditingReview] = useState(false);
@@ -502,12 +502,6 @@ export default function BookshelfView({
         <div className="flex gap-2 align-center">
           <div className="toggle-group">
             <button
-              className={`toggle-btn ${viewMode === 'photo' ? 'active' : ''}`}
-              onClick={() => setViewMode('photo')}
-            >
-              <ImageIcon size={16} /> 📸 원목 3칸 사진 책장
-            </button>
-            <button
               className={`toggle-btn ${viewMode === '3d' ? 'active' : ''}`}
               onClick={() => setViewMode('3d')}
             >
@@ -550,85 +544,7 @@ export default function BookshelfView({
               <span className="shelf-count">{catBooks.length}권</span>
             </div>
 
-            {viewMode === 'photo' ? (
-              chunks.map((shelfBooks, chunkIdx) => {
-                const cubby0 = shelfBooks.slice(0, 4);
-                const cubby1 = shelfBooks.slice(4, 8);
-                const cubby2 = shelfBooks.slice(8, 12);
-                const cubbies = [cubby0, cubby1, cubby2];
-
-                return (
-                  <div key={`${cat.key}-photo-${chunkIdx}`} className="photo-shelf-container mb-4">
-                    <div className="photo-shelf-frame">
-                      <img
-                        src="/real_bookshelf_bg.png"
-                        alt="원목 3칸 책장 배경"
-                        className="photo-shelf-bg-img"
-                      />
-                      <div className="photo-shelf-overlay">
-                        {cubbies.map((cubbyBooks, cubbyIdx) => (
-                          <div key={cubbyIdx} className={`photo-cubby photo-cubby-${cubbyIdx}`}>
-                            {cubbyBooks.map((book) => {
-                              const spineHeight = Math.min(145, Math.max(110, 100 + ((book.total_pages || 300) / 12)));
-                              const spineWidth = Math.min(46, Math.max(34, 28 + ((book.total_pages || 300) / 22)));
-
-                              const charSum = (book.id || 'abc').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                              const isLeaning = charSum % 4 === 0;
-                              const tiltAngle = isLeaning ? (charSum % 2 === 0 ? 4 : -4) : 0;
-
-                              const spineStyle = getSpineStyle(book.cover_url, book.id);
-                              if (book.cover_url && !coverColors[book.id]) {
-                                extractMainColor(book.id, book.cover_url);
-                              }
-                              
-                              const extracted = coverColors[book.id];
-                              const finalBg = (extracted && extracted.bg) ? extracted.bg : (typeof extracted === 'string' ? extracted : spineStyle.bg);
-                              const titleColor = (extracted && extracted.titleColor) ? extracted.titleColor : spineStyle.titleColor;
-                              const authorColor = (extracted && extracted.authorColor) ? extracted.authorColor : spineStyle.authorColor;
-                              const textShadow = (extracted && extracted.textShadow) ? extracted.textShadow : spineStyle.textShadow;
-
-                              return (
-                                <div
-                                  key={book.id}
-                                  className="book-3d-container photo-book-item"
-                                  onClick={() => handleOpenDetail(book)}
-                                  title={`${book.title} - ${book.author}`}
-                                  style={{
-                                    height: `${spineHeight}px`,
-                                    width: `${spineWidth}px`,
-                                    '--tilt-angle': `${tiltAngle}deg`
-                                  }}
-                                >
-                                  <div className="book-3d-box">
-                                    <div className="book-3d-spine" style={{ background: finalBg }}>
-                                      <div className="spine-ridge"></div>
-                                      <div className="spine-highlight"></div>
-                                      <div className="spine-content">
-                                        <span className="spine-author" style={{ color: authorColor, textShadow: textShadow }}>{formatAuthor(book.author)}</span>
-                                        <span className="spine-title" style={{ color: titleColor, textShadow: textShadow }}>{book.title}</span>
-                                      </div>
-                                    </div>
-                                    <div className="book-3d-cover" style={{ width: `${spineHeight * 0.72}px` }}>
-                                      <img
-                                        src={book.cover_url}
-                                        alt={book.title}
-                                        referrerPolicy="no-referrer"
-                                        onError={(e) => handleImgError(e, book.fallback_cover)}
-                                      />
-                                    </div>
-                                    <div className="book-3d-pages" style={{ width: `${spineHeight * 0.7}px` }}></div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            ) : viewMode === '3d' ? (
+            {viewMode === '3d' ? (
               chunks.map((shelfBooks, chunkIdx) => (
                 <div key={`${cat.key}-shelf-${chunkIdx}`} className="wood-shelf" style={{ marginBottom: '2rem' }}>
                   <div className="shelf-surface">
