@@ -40,7 +40,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 3D 서재 책장 전용 테마 에디션 (3D Bookshelf Wood Themes Only) */
+/* 3D 서재 책장 전용 8대 테마 에디션 (3D Bookshelf Wood Themes) */
 /* 1. 미드나잇 다크 (Midnight Obsidian) */
 .shelf-theme-dark .shelf-surface {
   background: 
@@ -81,6 +81,62 @@ body {
 .shelf-theme-forest .shelf-plank {
   background: linear-gradient(180deg, #1e5238 0%, #143826 40%, #0a2116 100%) !important;
   border-top: 3px solid #10b981 !important;
+}
+
+/* 4. 고대 체리목 (Ancient Red Cherrywood & Gold) */
+.shelf-theme-cherry .shelf-surface {
+  background: 
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0px, rgba(255, 255, 255, 0.04) 45px, rgba(0, 0, 0, 0.2) 46px, rgba(0, 0, 0, 0.2) 47px),
+    linear-gradient(180deg, #621414 0%, #450a0a 40%, #290505 100%) !important;
+  border-left: 18px solid #360707 !important;
+  border-right: 18px solid #360707 !important;
+  border-top: 10px solid #581010 !important;
+}
+.shelf-theme-cherry .shelf-plank {
+  background: linear-gradient(180deg, #881e1e 0%, #621414 40%, #360707 100%) !important;
+  border-top: 3px solid #fbbf24 !important;
+}
+
+/* 5. 모던 로즈골드 (Modern Rosewood & Blush Velvet) */
+.shelf-theme-rose .shelf-surface {
+  background: 
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0px, rgba(255, 255, 255, 0.05) 45px, rgba(0, 0, 0, 0.15) 46px, rgba(0, 0, 0, 0.15) 47px),
+    linear-gradient(180deg, #57122a 0%, #3d0a1c 40%, #260511 100%) !important;
+  border-left: 18px solid #300716 !important;
+  border-right: 18px solid #300716 !important;
+  border-top: 10px solid #4d0e24 !important;
+}
+.shelf-theme-rose .shelf-plank {
+  background: linear-gradient(180deg, #7c1a3e 0%, #57122a 40%, #300716 100%) !important;
+  border-top: 3px solid #fb7185 !important;
+}
+
+/* 6. 마린 브리즈 (Nordic Ocean Teal) */
+.shelf-theme-ocean .shelf-surface {
+  background: 
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0px, rgba(255, 255, 255, 0.04) 45px, rgba(0, 0, 0, 0.2) 46px, rgba(0, 0, 0, 0.2) 47px),
+    linear-gradient(180deg, #0f3d4c 0%, #0a2a36 40%, #051a22 100%) !important;
+  border-left: 18px solid #07212b !important;
+  border-right: 18px solid #07212b !important;
+  border-top: 10px solid #0d3543 !important;
+}
+.shelf-theme-ocean .shelf-plank {
+  background: linear-gradient(180deg, #16566b 0%, #0f3d4c 40%, #07212b 100%) !important;
+  border-top: 3px solid #38bdf8 !important;
+}
+
+/* 7. 로얄 바이올렛 (Royal Amethyst Velvet) */
+.shelf-theme-violet .shelf-surface {
+  background: 
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0px, rgba(255, 255, 255, 0.04) 45px, rgba(0, 0, 0, 0.2) 46px, rgba(0, 0, 0, 0.2) 47px),
+    linear-gradient(180deg, #32104e 0%, #220938 40%, #150424 100%) !important;
+  border-left: 18px solid #1a062c !important;
+  border-right: 18px solid #1a062c !important;
+  border-top: 10px solid #2d0d46 !important;
+}
+.shelf-theme-violet .shelf-plank {
+  background: linear-gradient(180deg, #4c1a74 0%, #32104e 40%, #1a062c 100%) !important;
+  border-top: 3px solid #c084fc !important;
 }
 
 /* 유틸리티 */

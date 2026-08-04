@@ -662,8 +662,8 @@ export default function BookshelfView({
             </div>
 
             {viewMode === '3d' && (
-              <div className="flex align-center gap-1 mt-1 justify-end" style={{ fontSize: '0.78rem' }}>
-                <span className="sub-text font-bold" style={{ fontSize: '0.75rem' }}>🪵 책장 테마:</span>
+              <div className="flex align-center gap-1 mt-1 justify-end" style={{ fontSize: '0.78rem', whiteSpace: 'nowrap', flexWrap: 'nowrap' }}>
+                <span className="sub-text font-bold" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>🪵 책장 테마:</span>
                 <select
                   value={shelfTheme}
                   onChange={(e) => handleShelfThemeChange(e.target.value)}
@@ -675,13 +675,18 @@ export default function BookshelfView({
                     backgroundColor: '#ffffff',
                     color: '#1e293b',
                     fontWeight: 700,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap'
                   }}
                 >
                   <option value="classic">🪵 클래식 원목</option>
                   <option value="dark">🌙 미드나잇 다크</option>
                   <option value="sepia">📜 빈티지 세피아</option>
                   <option value="forest">🍃 세이지 그리너리</option>
+                  <option value="cherry">🏺 고대 체리목</option>
+                  <option value="rose">🎨 모던 로즈골드</option>
+                  <option value="ocean">🌊 마린 브리즈</option>
+                  <option value="violet">💜 로얄 바이올렛</option>
                 </select>
               </div>
             )}
