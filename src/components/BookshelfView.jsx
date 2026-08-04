@@ -553,8 +553,8 @@ export default function BookshelfView({
                     ) : (
                       <div className="spine-row">
                         {shelfBooks.map((book) => {
-                          const spineHeight = Math.min(170, Math.max(130, 120 + ((book.total_pages || 300) / 10)));
-                          const spineWidth = Math.min(54, Math.max(38, 32 + ((book.total_pages || 300) / 20)));
+                          const spineHeight = Math.min(190, Math.max(145, 135 + ((book.total_pages || 300) / 10)));
+                          const spineWidth = Math.min(56, Math.max(40, 34 + ((book.total_pages || 300) / 20)));
 
                           const charSum = (book.id || 'abc').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
                           const isLeaning = charSum % 4 === 0;
