@@ -475,14 +475,26 @@ export default function BookshelfView({
   // 별점 및 정보 독립화 동기화
   React.useEffect(() => {
     if (selectedBook) {
-      setEditRating(selectedBook.rating ?? 0);
-      setEditReview(selectedBook.review || '');
-      setEditTotalPages(selectedBook.total_pages || 300);
-      setEditCurrentPages(selectedBook.current_pages || 0);
+      const safeRating = parseFloat(selectedBook.rating);
+      setEditRating(isNaN(safeRating) ? 0 : Math.min(5, Math.max(0, safeRating)));
+      setEditReview(typeof selectedBook.review === 'string' ? selectedBook.review : '');
+      setEditTotalPages(parseInt(selectedBook.total_pages) || 300);
+      setEditCurrentPages(parseInt(selectedBook.current_pages) || 0);
 
       const todayISO = new Date().toISOString().split('T')[0];
-      if (selectedBook.completed_at) {
-        setEditCompletedAt(selectedBook.completed_at.split('T')[0]);
+      if (selectedBook.completed_at && typeof selectedBook.completed_at === 'string') {
+        setEditCompletedAt(selectedBook.completed_at.split('T')[0] || todayISO);
+      } else if (selectedBook.completed_at) {
+        try {
+          const parsed = new Date(selectedBook.completed_at);
+          if (!isNaN(parsed.getTime())) {
+            setEditCompletedAt(parsed.toISOString().split('T')[0]);
+          } else {
+            setEditCompletedAt(todayISO);
+          }
+        } catch {
+          setEditCompletedAt(todayISO);
+        }
       } else {
         setEditCompletedAt(todayISO);
       }
@@ -1046,11 +1058,20 @@ export default function BookshelfView({
                     <div className="saved-review-view mt-2">
                       <div className="flex align-center gap-1 mb-1" style={{ display: 'flex', alignItems: 'center' }}>
                         {renderStars(selectedBook.rating ?? 0)}
-                        <span className="ms-2 font-bold" style={{ marginLeft: '0.5rem' }}>{parseFloat(selectedBook.rating ?? 0).toFixed(1)}</span>
+                        <span className="ms-2 font-bold" style={{ marginLeft: '0.5rem' }}>
+                          {isNaN(parseFloat(selectedBook.rating)) ? '0.0' : parseFloat(selectedBook.rating).toFixed(1)}
+                        </span>
                       </div>
                       {selectedBook.status === 'READ' && selectedBook.completed_at && (
                         <p className="sub-text font-bold mb-2" style={{ color: '#16a34a', fontSize: '0.8rem' }}>
-                          🏆 완독 일자: {new Date(selectedBook.completed_at).toLocaleDateString()}
+                          🏆 완독 일자: {(() => {
+                            try {
+                              const d = new Date(selectedBook.completed_at);
+                              return isNaN(d.getTime()) ? String(selectedBook.completed_at) : d.toLocaleDateString();
+                            } catch {
+                              return String(selectedBook.completed_at);
+                            }
+                          })()}
                         </p>
                       )}
                       <p className="review-text">{selectedBook.review || '아직 남긴 감상평이 없습니다. 수정 버튼을 눌러 적어보세요!'}</p>
