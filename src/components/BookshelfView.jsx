@@ -99,6 +99,7 @@ export default function BookshelfView({
       }
 
       // 2단계: ItemLookUp으로 부족하거나 없을 때 제목 기반 검색 프록시 수행
+      let targetItemId = cleanIsbn;
       if (!fetchedDesc && book.title) {
         const cleanTitle = (book.title || '')
           .split('-')[0]
@@ -130,6 +131,47 @@ export default function BookshelfView({
           const item = response.data.item.find(i => i.title && i.title.includes(cleanTitle.slice(0, 4))) || response.data.item[0];
           fetchedDesc = item.fullDescription || item.fulldescription || item.subInfo?.fullDescription || item.description || item.story;
           fetchedToc = item.toc || item.subInfo?.toc;
+          targetItemId = item.itemId || item.isbn13 || targetItemId;
+        }
+      }
+
+      // 2.5단계: 웹 상품 페이지에서 풍부한 전체 줄거리/소개글(편집장의 선택 등) 보완 추출
+      if (targetItemId) {
+        try {
+          const webUrl = `https://www.aladin.co.kr/shop/wproduct.aspx?ItemId=${targetItemId}`;
+          const webHtml = await fetchJsonWithProxyFallback(webUrl);
+          if (typeof webHtml === 'string' && webHtml.length > 1000) {
+            const extraBlocks = [];
+            const regexBox = /<div[^>]*class="[^"]*Ere_prod_mconts_box[^"]*"[^>]*>([\s\S]*?)<div[^>]*class="Ere_clear"[^>]*><\/div>\s*<\/div>/gi;
+            let matchBox;
+            while ((matchBox = regexBox.exec(webHtml)) !== null) {
+              const boxContent = matchBox[1];
+              if (boxContent.includes('편집장의 선택') || boxContent.includes('카드리뷰') || boxContent.includes('책소개') || boxContent.includes('출판사 서평')) {
+                const text = boxContent
+                  .replace(/<div[^>]*class="Ere_prod_mconts_LL[^"]*"[\s\S]*?<\/div>/gi, '')
+                  .replace(/<div[^>]*class="Ere_prod_mconts_LS[^"]*"[\s\S]*?<\/div>/gi, '')
+                  .replace(/<br\s*\/?>/gi, '\n')
+                  .replace(/<\/?[^>]+(>|$)/g, '')
+                  .replace(/&nbsp;/gi, ' ')
+                  .replace(/&quot;/gi, '"')
+                  .replace(/&gt;/gi, '>')
+                  .replace(/&lt;/gi, '<')
+                  .replace(/&amp;/gi, '&')
+                  .trim();
+                if (text.length > 50 && !text.includes('알라딘 소설 MD')) {
+                  extraBlocks.push(text);
+                }
+              }
+            }
+            if (extraBlocks.length > 0) {
+              const fullWebText = extraBlocks.join('\n\n');
+              if (fullWebText.length > (fetchedDesc || '').length) {
+                fetchedDesc = fullWebText;
+              }
+            }
+          }
+        } catch (webErr) {
+          console.warn('알라딘 웹 전체 소개글 추출 실패:', webErr);
         }
       }
 
