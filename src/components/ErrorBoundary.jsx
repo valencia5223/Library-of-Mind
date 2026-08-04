@@ -50,6 +50,16 @@ export default class ErrorBoundary extends React.Component {
             <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
               서비스 연결 또는 데이터 동기화 과정에서 일시적 문제가 발생했습니다. 아래 버튼을 눌러 새로고침해 주세요.
             </p>
+            {this.state.error && (
+              <details style={{ textAlign: 'left', marginBottom: '1.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: '8px', fontSize: '0.75rem', color: '#fca5a5' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 'bold', outline: 'none' }}>🔍 상세 오류 메세지 확인 (개발용)</summary>
+                <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', marginTop: '0.5rem', fontFamily: 'monospace' }}>
+                  {this.state.error.toString()}
+                  {'\n'}
+                  {this.state.error.stack}
+                </pre>
+              </details>
+            )}
             <button
               onClick={this.handleReload}
               style={{

@@ -679,16 +679,17 @@ export default function BookshelfView({
                           const spineHeight = Math.min(190, Math.max(145, 135 + ((book.total_pages || 300) / 10)));
                           const spineWidth = Math.min(64, Math.max(44, 38 + ((book.total_pages || 300) / 18)));
 
-                          const charSum = (book.id || 'abc').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                          const bookIdStr = String(book.id || 'abc');
+                          const charSum = bookIdStr.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
                           const isLeaning = charSum % 4 === 0;
                           const tiltAngle = isLeaning ? (charSum % 2 === 0 ? 5 : -5) : 0;
 
-                          const spineStyle = getSpineStyle(book.cover_url, book.id);
-                          if (book.cover_url && !coverColors[book.id]) {
-                            extractMainColor(book.id, book.cover_url);
+                          const spineStyle = getSpineStyle(book.cover_url, bookIdStr);
+                          if (book.cover_url && !coverColors[bookIdStr]) {
+                            extractMainColor(bookIdStr, book.cover_url);
                           }
                           
-                          const extracted = coverColors[book.id];
+                          const extracted = coverColors[bookIdStr];
                           const finalBg = (extracted && extracted.bg) ? extracted.bg : (typeof extracted === 'string' ? extracted : spineStyle.bg);
                           const titleColor = (extracted && extracted.titleColor) ? extracted.titleColor : spineStyle.titleColor;
                           const authorColor = (extracted && extracted.authorColor) ? extracted.authorColor : spineStyle.authorColor;
