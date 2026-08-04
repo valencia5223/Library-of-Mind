@@ -28,35 +28,32 @@ export default function BookshelfView({
 
   // 책 상세 모달 내 도서 소개 연동 상태
   const [bookDescription, setBookDescription] = useState('');
-  const [showDescription, setShowDescription] = useState(false);
+  const [showDescModal, setShowDescModal] = useState(false);
   const [loadingDesc, setLoadingDesc] = useState(false);
 
   // 모달 팝업 오픈 시 배경 스크롤을 100% 잠그고, 닫히면 원래대로 복구
   React.useEffect(() => {
-    if (selectedBook) {
+    if (selectedBook || showDescModal) {
       document.body.style.overflow = 'hidden';
-      setBookDescription(selectedBook.description || '');
-      setShowDescription(!!selectedBook.description);
+      if (selectedBook && !showDescModal) {
+        setBookDescription(selectedBook.description || '');
+      }
     } else {
       document.body.style.overflow = '';
       setBookDescription('');
-      setShowDescription(false);
+      setShowDescModal(false);
     }
     return () => {
       document.body.style.overflow = '';
     };
-  }, [selectedBook]);
+  }, [selectedBook, showDescModal]);
 
-  // 알라딘 API 프록시를 활용한 도서 소개 자동 수집 함수
+  // 알라딘 API 프록시를 활용한 도서 소개 자동 수집 및 팝업 모달 표시 함수
   const handleFetchBookDescription = async (book) => {
     if (!book) return;
-    if (showDescription && bookDescription) {
-      setShowDescription(false);
-      return;
-    }
 
     if (bookDescription) {
-      setShowDescription(true);
+      setShowDescModal(true);
       return;
     }
 
@@ -77,15 +74,15 @@ export default function BookshelfView({
         const item = response.data.item.find(i => i.title && i.title.includes(book.title.slice(0, 5))) || response.data.item[0];
         const desc = item.description || '알라딘에 등록된 소개글이 없습니다.';
         setBookDescription(desc);
-        setShowDescription(true);
+        setShowDescModal(true);
       } else {
         setBookDescription('등록된 도서 소개글을 찾을 수 없습니다.');
-        setShowDescription(true);
+        setShowDescModal(true);
       }
     } catch (e) {
       console.warn('도서 소개 조회 오류:', e);
       setBookDescription('도서 소개 정보를 가져오지 못했습니다.');
-      setShowDescription(true);
+      setShowDescModal(true);
     } finally {
       setLoadingDesc(false);
     }
@@ -834,29 +831,11 @@ export default function BookshelfView({
                       cursor: 'pointer'
                     }}
                     onClick={() => handleFetchBookDescription(selectedBook)}
-                    title="알라딘 API에서 이 책의 도서 소개글을 가져옵니다."
+                    title="클릭 시 도서 상세 소개글 팝업창을 엽니다."
                   >
-                    📖 도서소개 {loadingDesc ? <RefreshCw size={12} className="animate-spin" /> : (showDescription ? '닫기 ✕' : '보기')}
+                    📖 도서소개 팝업 {loadingDesc ? <RefreshCw size={12} className="animate-spin" /> : '🔍'}
                   </button>
                 </p>
-
-                {/* 알라딘 도서 소개 정보 카드 */}
-                {showDescription && (
-                  <div className="review-section mt-3 p-3.5 border-card animate-fade-in" style={{ background: '#f8fafc', borderRadius: '10px', borderLeft: '4px solid var(--primary)' }}>
-                    <h4 className="flex align-center justify-between" style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.5rem' }}>
-                      <span className="flex align-center gap-1">📖 도서 소개 (알라딘)</span>
-                      <button 
-                        onClick={() => setShowDescription(false)}
-                        style={{ background: 'none', border: 'none', fontSize: '0.8rem', color: '#64748b', cursor: 'pointer' }}
-                      >
-                        ✕ 닫기
-                      </button>
-                    </h4>
-                    <p className="desc-text" style={{ fontSize: '0.9rem', color: '#334155', lineHeight: 1.65, maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
-                      {bookDescription || '도서 소개 정보를 불러오는 중입니다...'}
-                    </p>
-                  </div>
-                )}
 
                 {!viewedFriend && (
                   <div className="mt-2 flex align-center gap-2 flex-wrap">
@@ -1047,6 +1026,55 @@ export default function BookshelfView({
                       <Trash2 size={16} /> 서재에서 삭제
                     </button>
                   )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 알라딘 도서 소개 전용 독립 팝업 모달 */}
+      {showDescModal && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShowDescModal(false)}>
+          <div className="modal-card book-detail-modal animate-scale-in" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '780px' }}>
+            <button className="modal-close" onClick={() => setShowDescModal(false)}>✕</button>
+
+            <div className="detail-grid">
+              <div className="detail-cover-side">
+                <img
+                  src={selectedBook?.cover_url}
+                  alt={selectedBook?.title}
+                  referrerPolicy="no-referrer"
+                  className="detail-cover"
+                />
+                {selectedBook?.price && (
+                  <div className="mt-3 text-center">
+                    <span className="small-tag font-bold" style={{ fontSize: '0.85rem', padding: '0.3rem 0.7rem', background: 'rgba(0, 120, 166, 0.05)', color: 'var(--primary)', borderColor: 'rgba(0, 120, 166, 0.2)' }}>
+                      판매가: {selectedBook.price}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="detail-content" style={{ display: 'flex', flexDirection: 'column' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.4rem' }}>{selectedBook?.title}</h3>
+                <p className="detail-author mb-3" style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                  {selectedBook?.author} | {selectedBook?.publisher || '출판사 정보'}{selectedBook?.pub_date ? ` | 출간일: ${selectedBook.pub_date}` : ''}
+                </p>
+
+                <div className="review-section p-4 border-card" style={{ background: '#f8fafc', borderRadius: '12px', minHeight: '260px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <h4 className="flex align-center gap-1" style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.65rem' }}>
+                    📖 도서 상세 소개 (알라딘)
+                  </h4>
+                  <p className="desc-text" style={{ fontSize: '0.95rem', color: '#334155', lineHeight: 1.7, maxHeight: '340px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
+                    {bookDescription || '도서 소개 정보를 불러오는 중입니다...'}
+                  </p>
+                </div>
+
+                <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: '1px solid #e2e8f0' }}>
+                  <button className="btn btn-primary btn-sm" onClick={() => setShowDescModal(false)}>
+                    확인 닫기
+                  </button>
                 </div>
               </div>
             </div>
