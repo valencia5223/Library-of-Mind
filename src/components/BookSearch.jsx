@@ -92,6 +92,18 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
     fetchAladinBestsellers(selectedCategory);
   }, []);
 
+  // 모달 팝업 오픈 시 배경 스크롤을 100% 잠그고, 닫히면 원래대로 복구
+  useEffect(() => {
+    if (selectedBook) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedBook]);
+
   // 2. Supabase Database DB Proxy를 활용한 실시간 국내 도서 검색 (CORS & ORB 우회 완료)
   const handleSearch = async (e, isLoadMore = false) => {
     if (e) e.preventDefault();
