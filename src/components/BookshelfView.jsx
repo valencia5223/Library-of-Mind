@@ -205,10 +205,8 @@ export default function BookshelfView({
           const cleanTitle = (book.title || '').split('-')[0].split('(')[0].trim();
           const searchUrl = `https://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=${ttbKey}&Query=${encodeURIComponent(cleanTitle)}&QueryType=Title&MaxResults=1&SearchTarget=Book&output=js&Version=20131101`;
           
-          let sData = await fetchAladinJsonp(searchUrl);
-          if (!sData) {
-            sData = await fetchJsonWithProxyFallback(searchUrl);
-          }
+          // ItemSearch.aspx는 callback 파라미터를 지원하지 않고 RAW JSON을 반환하므로 프록시를 통해 파싱
+          const sData = await fetchJsonWithProxyFallback(searchUrl);
 
           let foundItemId = null;
           if (sData && sData.item && sData.item.length > 0) {
