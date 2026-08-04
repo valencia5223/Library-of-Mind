@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Star, ExternalLink, PlusCircle, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw, Image } from 'lucide-react';
+import { BookOpen, Star, ExternalLink, PlusCircle, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw, Image as ImageIcon } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 export default function BookshelfView({ 
@@ -505,7 +505,7 @@ export default function BookshelfView({
               className={`toggle-btn ${viewMode === 'photo' ? 'active' : ''}`}
               onClick={() => setViewMode('photo')}
             >
-              <Image size={16} /> 📸 원목 3칸 사진 책장
+              <ImageIcon size={16} /> 📸 원목 3칸 사진 책장
             </button>
             <button
               className={`toggle-btn ${viewMode === '3d' ? 'active' : ''}`}
