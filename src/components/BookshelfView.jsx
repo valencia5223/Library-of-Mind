@@ -19,7 +19,7 @@ export default function BookshelfView({
   const [coverColors, setCoverColors] = useState({});
   const [syncingGoogleInfo, setSyncingGoogleInfo] = useState(false);
 
-  // 알라딘 ItemLookUp API를 이용해 개별 책의 실제 페이지 수 & 출간일 정보 자동 동기화
+  // 알라딘 ItemLookUp API를 이용해 개별 책의 실제 페이지 수 정보 자동 동기화
   const handleSyncBookInfo = async (book) => {
     if (!book || syncingGoogleInfo) return;
     setSyncingGoogleInfo(true);
@@ -27,53 +27,61 @@ export default function BookshelfView({
     try {
       let fetchedPages = null;
       let fetchedPubDate = null;
-      const isbn = book.isbn || '';
+      const rawIsbn = (book.isbn || '').trim().replace(/-/g, '');
       const ttbKey = 'ttbcdw2341334001';
 
-      if (isbn) {
-        // 1차: 알라딘 ItemLookUp API 직접 호출 (ISBN 기반)
-        const aladinUrl = `https://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=${ttbKey}&itemIdType=ISBN13&ItemId=${isbn}&Cover=Big&Version=20131101&output=js&OptResult=itemPage`;
+      if (rawIsbn) {
+        const idType = rawIsbn.length === 10 ? 'ISBN' : 'ISBN13';
+        const aladinUrl = `https://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=${ttbKey}&itemIdType=${idType}&ItemId=${rawIsbn}&Cover=Big&Version=20131101&output=js&OptResult=itemPage`;
         
+        // 1차: allorigins CORS 프록시
         try {
-          // CORS 프록시 경유 호출 (allorigins.win)
           const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(aladinUrl)}`;
           const res = await fetch(proxyUrl);
           if (res.ok) {
             const wrapper = await res.json();
-            const data = JSON.parse(wrapper.contents);
+            // 알라딘 JSON 응답의 끝부분 세미콜론(;) 제거 후 파싱
+            const cleanText = (wrapper.contents || '').trim().replace(/;$/, '');
+            const data = JSON.parse(cleanText);
             if (data.item && data.item.length > 0) {
               const bookItem = data.item[0];
-              fetchedPages = bookItem.subInfo?.itemPage || null;
+              fetchedPages = bookItem.subInfo?.itemPage || bookItem.itemPage || null;
               fetchedPubDate = bookItem.pubDate || null;
             }
           }
         } catch (corsErr) {
-          console.warn('CORS 프록시 호출 실패, Supabase RPC 폴백 시도:', corsErr);
+          console.warn('allorigins 프록시 실패, corsproxy.io 시도:', corsErr);
         }
 
-        // 2차 폴백: Supabase RPC (aladin_search_proxy를 통한 ISBN 검색)
-        if (!fetchedPages && isSupabaseConfigured()) {
+        // 2차: corsproxy.io 프록시
+        if (!fetchedPages) {
           try {
-            const { data: rpcData } = await supabase.rpc('aladin_search_proxy', { search_query: isbn });
-            if (rpcData && rpcData.item && rpcData.item.length > 0) {
-              const rpcItem = rpcData.item[0];
-              fetchedPages = rpcItem.subInfo?.itemPage || null;
-              fetchedPubDate = fetchedPubDate || rpcItem.pubDate || null;
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(aladinUrl)}`;
+            const res = await fetch(proxyUrl);
+            if (res.ok) {
+              const text = await res.text();
+              const cleanText = text.trim().replace(/;$/, '');
+              const data = JSON.parse(cleanText);
+              if (data.item && data.item.length > 0) {
+                const bookItem = data.item[0];
+                fetchedPages = bookItem.subInfo?.itemPage || bookItem.itemPage || null;
+                fetchedPubDate = bookItem.pubDate || null;
+              }
             }
-          } catch (rpcErr) {
-            console.warn('Supabase RPC 폴백 실패:', rpcErr);
+          } catch (corsErr2) {
+            console.warn('corsproxy.io 프록시 실패:', corsErr2);
           }
         }
       }
 
-      // 3차 폴백: 제목으로 검색 시도
+      // 3차 폴백: Supabase RPC (제목으로 검색)
       if (!fetchedPages && isSupabaseConfigured()) {
         try {
           const cleanTitle = (book.title || '').split('-')[0].split('(')[0].trim();
           const { data: titleData } = await supabase.rpc('aladin_search_proxy', { search_query: cleanTitle });
           if (titleData && titleData.item && titleData.item.length > 0) {
             const titleItem = titleData.item[0];
-            fetchedPages = titleItem.subInfo?.itemPage || null;
+            fetchedPages = titleItem.subInfo?.itemPage || titleItem.itemPage || null;
             fetchedPubDate = fetchedPubDate || titleItem.pubDate || null;
           }
         } catch (titleErr) {
@@ -81,10 +89,10 @@ export default function BookshelfView({
         }
       }
 
-      if (fetchedPages || fetchedPubDate) {
+      if (fetchedPages) {
         const updated = {
           ...book,
-          total_pages: fetchedPages ? parseInt(fetchedPages) : book.total_pages,
+          total_pages: parseInt(fetchedPages),
           pub_date: fetchedPubDate || book.pub_date
         };
 
@@ -92,9 +100,9 @@ export default function BookshelfView({
           await onUpdateBookDetails(book.id, updated);
         }
         setSelectedBook(updated);
-        alert(`✅ 동기화 완료!\n페이지 수: ${fetchedPages || '변경 없음'}\n출간일: ${fetchedPubDate || '변경 없음'}`);
+        alert(`✅ 페이지 수 동기화 완료!\n실제 페이지 수: ${fetchedPages}p`);
       } else {
-        alert('⚠️ 해당 도서의 상세 정보를 찾지 못했습니다.\nISBN 정보가 없거나 알라딘에 등록되지 않은 도서일 수 있습니다.');
+        alert('⚠️ 해당 도서의 실제 페이지 수 정보를 찾지 못했습니다.\n알라딘 DB에 상세 페이지 수가 등록되지 않았거나 ISBN 정보가 없는 도서일 수 있습니다.');
       }
     } catch (err) {
       console.error('도서 정보 동기화 중 오류 발생:', err);
@@ -497,10 +505,10 @@ export default function BookshelfView({
                       style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '6px', color: '#0078a6', borderColor: '#cbd5e1' }}
                       onClick={() => handleSyncBookInfo(selectedBook)}
                       disabled={syncingGoogleInfo}
-                      title="알라딘 API에서 실제 페이지 수 및 출간일 정보를 가져와 동기화합니다."
+                      title="알라딘 API에서 실제 페이지 수 정보를 가져와 동기화합니다."
                     >
                       <RefreshCw size={13} className={syncingGoogleInfo ? 'animate-spin' : ''} />
-                      {syncingGoogleInfo ? '정보 동기화 중...' : '📖 페이지 수 & 출간일 동기화'}
+                      {syncingGoogleInfo ? '페이지 수 동기화 중...' : '📖 실제 페이지 수 동기화'}
                     </button>
                   </div>
                 )}

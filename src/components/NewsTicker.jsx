@@ -9,8 +9,8 @@ export default function NewsTicker() {
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        // 네이버 뉴스 검색 API (CORS 프록시 경유)
-        const query = encodeURIComponent('독서 OR 베스트셀러 OR 신간');
+        // 네이버 뉴스 검색 API - 주요 뉴스/속보 (CORS 프록시 경유)
+        const query = encodeURIComponent('속보 OR 주요뉴스 OR 종합');
         const naverUrl = `https://openapi.naver.com/v1/search/news.json?query=${query}&display=10&sort=date`;
         
         // allorigins CORS 프록시 사용
@@ -35,13 +35,13 @@ export default function NewsTicker() {
         console.warn('네이버 뉴스 API 호출 실패, 정적 헤드라인 사용:', err);
       }
 
-      // 폴백: 정적 독서 관련 헤드라인
+      // 폴백: 주요 헤드라인 뉴스
       setHeadlines([
-        { title: '📚 올해의 베스트셀러 트렌드: 자기계발서와 에세이가 강세', link: 'https://www.aladin.co.kr' },
-        { title: '📖 독서의 힘 — 하루 30분 독서가 뇌 건강에 미치는 영향', link: 'https://www.aladin.co.kr' },
-        { title: '🏆 2026 상반기 도서 판매량 TOP 10 발표', link: 'https://www.aladin.co.kr' },
-        { title: '⭐ 서울국제도서전 개막 — 올해 주목할 신간 도서 라인업', link: 'https://www.aladin.co.kr' },
-        { title: '💡 AI 시대, 읽어야 할 필독서 5선', link: 'https://www.aladin.co.kr' },
+        { title: '📰 [속보] 한국은행, 기준금리 동결 발표… "물가 및 경제 상황 종합 고려"', link: 'https://news.naver.com' },
+        { title: '🌐 글로벌 IT·AI 혁신 심포지엄 개막… "미래 기술 주도권 확보 총력"', link: 'https://news.naver.com' },
+        { title: '☀️ 전국 대체로 흐리고 기온 상승… 내륙 곳곳 한때 소나기 예보', link: 'https://news.naver.com' },
+        { title: '📈 코스피·코스닥 외국인 매수세에 힘입어 상승 출발', link: 'https://news.naver.com' },
+        { title: '🚗 친환경차 보조금 확대 편성… 전기·수소차 보급 가속화', link: 'https://news.naver.com' },
       ]);
     };
 

@@ -9,6 +9,7 @@ import ReadingStats from './components/ReadingStats';
 import FriendManager from './components/FriendManager';
 import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users } from 'lucide-react';
 import NewsTicker from './components/NewsTicker';
+import WeatherWidget from './components/WeatherWidget';
 
 
 export default function App() {
@@ -343,10 +344,13 @@ export default function App() {
           </nav>
         )}
 
-        <button className="btn btn-secondary" onClick={() => setIsAuthOpen(true)}>
-          <User size={18} />
-          {user ? (user.user_metadata?.full_name || user.email?.split('@')[0] || '내 프로필') : '로그인 / 회원가입'}
-        </button>
+        <div className="flex align-center gap-3">
+          <WeatherWidget />
+          <button className="btn btn-secondary" onClick={() => setIsAuthOpen(true)}>
+            <User size={18} />
+            {user ? (user.user_metadata?.full_name || user.email?.split('@')[0] || '내 프로필') : '로그인 / 회원가입'}
+          </button>
+        </div>
       </header>
 
       {/* 뉴스 티커 (탭 상단) */}
