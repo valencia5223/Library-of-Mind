@@ -55,48 +55,62 @@ export default function BookshelfView({
     return null;
   };
 
-  // 3차: 알라딘 ItemLookUp API 헬퍼
+  // 3차: 알라딘 ItemLookUp API 헬퍼 (3중 CORS 프록시)
   const fetchPageCountFromAladin = async (itemId, idType = 'ItemId') => {
     const ttbKey = 'ttbcdw2341334001';
     const aladinUrl = `https://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=${ttbKey}&itemIdType=${idType}&ItemId=${itemId}&Cover=Big&Version=20131101&output=js&OptResult=itemPage`;
     
-    // corsproxy.io 프록시 (고속)
-    try {
-      const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(aladinUrl)}`;
-      const res = await fetch(proxyUrl);
-      if (res.ok) {
-        const text = await res.text();
-        const cleanText = text.trim().replace(/;$/, '');
-        const data = JSON.parse(cleanText);
-        if (data.item && data.item.length > 0) {
-          const item = data.item[0];
-          const p = item.subInfo?.itemPage || item.itemPage || null;
-          if (p) return { pages: parseInt(p), pubDate: item.pubDate || null };
-        }
-      }
-    } catch (e) {
-      console.warn('corsproxy.io ItemLookUp 실패:', e);
-    }
+    const proxies = [
+      `https://corsproxy.io/?${encodeURIComponent(aladinUrl)}`,
+      `https://api.allorigins.win/get?url=${encodeURIComponent(aladinUrl)}`,
+      `https://thingproxy.freeboard.io/fetch/${aladinUrl}`
+    ];
 
-    // allorigins 프록시 폴백
-    try {
-      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(aladinUrl)}`;
-      const res = await fetch(proxyUrl);
-      if (res.ok) {
-        const wrapper = await res.json();
-        const cleanText = (wrapper.contents || '').trim().replace(/;$/, '');
-        const data = JSON.parse(cleanText);
-        if (data.item && data.item.length > 0) {
-          const item = data.item[0];
-          const p = item.subInfo?.itemPage || item.itemPage || null;
-          if (p) return { pages: parseInt(p), pubDate: item.pubDate || null };
+    for (const proxyUrl of proxies) {
+      try {
+        const res = await fetch(proxyUrl);
+        if (res.ok) {
+          let cleanText = '';
+          if (proxyUrl.includes('allorigins')) {
+            const wrapper = await res.json();
+            cleanText = (wrapper.contents || '').trim().replace(/;$/, '');
+          } else {
+            const text = await res.text();
+            cleanText = text.trim().replace(/;$/, '');
+          }
+          const data = JSON.parse(cleanText);
+          if (data.item && data.item.length > 0) {
+            const item = data.item[0];
+            const p = item.subInfo?.itemPage || item.itemPage || null;
+            if (p) return { pages: parseInt(p), pubDate: item.pubDate || null };
+          }
         }
+      } catch (e) {
+        console.warn(`프록시 ${proxyUrl} 실패:`, e);
       }
-    } catch (e) {
-      console.warn('allorigins ItemLookUp 실패:', e);
     }
 
     return null;
+  };
+
+  // 페이지 수 수동 직관적 수정 함수
+  const handleManualPageEdit = async () => {
+    if (!selectedBook) return;
+    const input = window.prompt('해당 도서의 실제 전체 페이지 수를 입력해주세요:', selectedBook.total_pages || 320);
+    if (input !== null) {
+      const pageNum = parseInt(input.trim());
+      if (isNaN(pageNum) || pageNum <= 0) {
+        alert('올바른 페이지 숫자를 입력해 주세요.');
+        return;
+      }
+
+      const updated = { ...selectedBook, total_pages: pageNum };
+      if (onUpdateBookDetails) {
+        await onUpdateBookDetails(selectedBook.id, updated);
+      }
+      setSelectedBook(updated);
+      alert(`✅ 페이지 수가 ${pageNum}p로 변경되었습니다!`);
+    }
   };
 
   // [다중 API 연동 체인] Google Books -> Open Library -> Aladin 3단계 페이지 수 동기화
@@ -603,16 +617,25 @@ export default function BookshelfView({
                 </p>
 
                 {!viewedFriend && (
-                  <div className="mt-2">
+                  <div className="mt-2 flex align-center gap-2 flex-wrap">
                     <button 
                       className="btn btn-sm btn-outline flex align-center gap-1"
                       style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '6px', color: '#0078a6', borderColor: '#cbd5e1' }}
                       onClick={() => handleSyncBookInfo(selectedBook)}
                       disabled={syncingGoogleInfo}
-                      title="알라딘 API에서 실제 페이지 수 정보를 가져와 동기화합니다."
+                      title="알라딘 API에서 실제 페이지 수 정보를 가져와 자동 동기화합니다."
                     >
                       <RefreshCw size={13} className={syncingGoogleInfo ? 'animate-spin' : ''} />
-                      {syncingGoogleInfo ? '페이지 수 동기화 중...' : '📖 실제 페이지 수 동기화'}
+                      {syncingGoogleInfo ? '페이지 수 동기화 중...' : '📖 자동 페이지 수 동기화'}
+                    </button>
+
+                    <button 
+                      className="btn btn-sm btn-outline flex align-center gap-1"
+                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '6px', color: '#475569', borderColor: '#cbd5e1' }}
+                      onClick={handleManualPageEdit}
+                      title="전체 페이지 수를 직접 숫자로 입력하여 수정합니다."
+                    >
+                      ✏️ 페이지 수 수동 입력
                     </button>
                   </div>
                 )}
