@@ -99,8 +99,9 @@ export default function BookshelfView({
   const handleFetchBookDescription = async (book) => {
     if (!book) return;
 
-    setLoadingDesc(true);
-    setBookDescription('');
+    // 즉시 기존 도서 소개글이 존재하면 먼저 보여주고, 로딩바는 소개글이 없을 때만 표시
+    setBookDescription(book.description || '');
+    setLoadingDesc(!book.description);
     setShowDescModal(true);
 
     try {
