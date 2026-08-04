@@ -344,11 +344,11 @@ export default function App() {
           </nav>
         )}
 
-        <div className="flex align-center gap-3">
+        <div className="flex align-center gap-2" style={{ flexWrap: 'nowrap', flexShrink: 0 }}>
           <WeatherWidget />
-          <button className="btn btn-secondary" onClick={() => setIsAuthOpen(true)}>
-            <User size={18} />
-            {user ? (user.user_metadata?.full_name || user.email?.split('@')[0] || '내 프로필') : '로그인 / 회원가입'}
+          <button className="btn btn-secondary user-profile-btn" onClick={() => setIsAuthOpen(true)}>
+            <User size={16} style={{ flexShrink: 0 }} />
+            <span className="user-email-text">{user ? (user.user_metadata?.full_name || user.email?.split('@')[0] || '내 프로필') : '로그인 / 회원가입'}</span>
           </button>
         </div>
       </header>

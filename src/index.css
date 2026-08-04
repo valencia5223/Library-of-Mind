@@ -698,14 +698,21 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* PC 그리드 레이아웃 최적화 */
-.book-grid, .search-grid, .note-cards-grid {
+.book-grid, .note-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 1.5rem;
 }
 
+/* 베스트셀러 및 도서 검색 전용 아담하고 세련된 카드 그리드 레이아웃 */
+.search-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1.25rem;
+}
+
 /* 카드 백색 테마 변환 */
-.book-card, .search-card, .thought-card {
+.book-card, .thought-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -713,26 +720,97 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 4px 15px rgba(0,0,0,0.03);
   transition: all 0.2s ease;
 }
+
+/* 아담하고 예쁜 베스트셀러/도서 검색 카드 */
+.search-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 0.9rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  transition: all 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .book-card:hover, .search-card:hover, .thought-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-4px);
   background: var(--bg-card-hover);
   border-color: var(--primary);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 10px 25px rgba(0, 120, 166, 0.12);
 }
 
 .book-card-cover-wrapper, .search-card-img-wrapper {
   position: relative;
-  aspect-ratio: 3/4;
-  border-radius: 6px;
+  aspect-ratio: 1 / 1.42;
+  border-radius: 8px;
   overflow: hidden;
-  margin-bottom: 0.85rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  margin-bottom: 0.75rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
 }
 
 .book-card-cover, .search-card-img-wrapper img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.search-card:hover .search-card-img-wrapper img {
+  transform: scale(1.04);
+}
+
+.search-card-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.search-card-info h4 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.35;
+  margin-bottom: 0.25rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.author-text {
+  font-size: 0.78rem;
+  color: var(--text-sub);
+  margin-bottom: 0.15rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.desc-text {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.4rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-btn-group {
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+.card-btn-group .btn {
+  width: 100%;
+  font-size: 0.78rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 8px;
 }
 
 .rating-tag, .rating-pill {
@@ -1358,11 +1436,13 @@ input:focus, select:focus, textarea:focus {
 /* 선반 보드 두께감 (전면 입체 그림자) */
 
 /* ============================================= */
-/* 실시간 날씨 위젯                              */
+/* 실시간 날씨 위젯 & 프로필 버튼 (1줄 유지)      */
 /* ============================================= */
 .weather-widget {
   display: flex;
   align-items: center;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
   gap: 0.4rem;
   padding: 0.35rem 0.75rem;
   background: rgba(255, 255, 255, 0.85);
@@ -1373,27 +1453,49 @@ input:focus, select:focus, textarea:focus {
   font-weight: 600;
   color: #334155;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  flex-shrink: 0 !important;
 }
 
 .weather-location {
   color: #64748b;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
+  white-space: nowrap !important;
 }
 
 .weather-icon-box {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .weather-temp {
   color: #0f172a;
   font-weight: 800;
+  white-space: nowrap !important;
 }
 
 .weather-desc {
   color: #475569;
   font-size: 0.72rem;
+  white-space: nowrap !important;
+}
+
+.user-profile-btn {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.4rem !important;
+}
+
+.user-email-text {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 140px;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 
