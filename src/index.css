@@ -492,11 +492,11 @@ input:focus, select:focus, textarea:focus {
   z-index: 10;
 }
 
-/* 3D 책상 입체 3D 공간 컨테이너 (좌측/우측 모든 위치에서 동일한 3D 표지 펼침 각도 보장) */
+/* 3D 책상 입체 3D 공간 컨테이너 (정면을 바라보는 명확한 표지 각도 보장) */
 .book-3d-container {
   position: relative;
   cursor: pointer;
-  perspective: 1400px;
+  perspective: 1200px;
   perspective-origin: 50% 50%;
   transform-style: preserve-3d;
   margin-right: 0.15rem;
@@ -514,14 +514,14 @@ input:focus, select:focus, textarea:focus {
   transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-/* 호버 시 선반 밖으로 나와 좌/우 어느 위치든 동일하게 시원하게 표지가 펼쳐지는 3D 회전 각도 */
+/* 호버 시 선반 밖으로 나오며 표지가 정면 사용자를 향해 100% 또렷하게 펼쳐지는 3D 회전 각도 */
 .book-3d-container:hover .book-3d-box {
-  transform: translateZ(105px) translateY(-18px) rotateY(-26deg) translateX(-10px);
+  transform: translateZ(105px) translateY(-18px) rotateY(-54deg) translateX(-8px);
   z-index: 100;
 }
 
 .book-3d-container:hover {
-  margin-right: 4.8rem; /* 우측 도서가 통일된 각도로 펼쳐질 수 있는 가로 공간 확보 */
+  margin-right: 6.8rem; /* 우측 도서도 표지 전체가 100% 온전히 잘림 없이 노출될 수 있는 가로 공간 확보 */
   transform: rotateZ(var(--tilt-angle, 0deg)) scale(1.04);
   z-index: 100;
 }
