@@ -94,8 +94,23 @@ export default function BookshelfView({
 
       if (response && response.data && response.data.item && response.data.item.length > 0) {
         const item = response.data.item.find(i => i.title && i.title.includes(book.title.slice(0, 5))) || response.data.item[0];
-        const desc = item.description || '알라딘에 등록된 소개글이 없습니다.';
-        setBookDescription(desc);
+        
+        // 전문 소개글, 일반 소개글, 목차(TOC) 통합 추출
+        const rawDesc = item.fullDescription || item.fulldescription || item.subInfo?.fullDescription || item.description || '';
+        let cleanDesc = rawDesc
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/<\/?[^>]+(>|$)/g, '')
+          .trim();
+
+        if (item.toc || item.subInfo?.toc) {
+          const rawToc = item.toc || item.subInfo?.toc;
+          const cleanToc = rawToc.replace(/<br\s*\/?>/gi, '\n').replace(/<\/?[^>]+(>|$)/g, '').trim();
+          if (cleanToc) {
+            cleanDesc += `\n\n📌 [목차]\n${cleanToc}`;
+          }
+        }
+
+        setBookDescription(cleanDesc || '알라딘에 등록된 상세 소개글이 없습니다.');
         setShowDescModal(true);
       } else {
         setBookDescription('등록된 도서 소개글을 찾을 수 없습니다.');

@@ -216,6 +216,13 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
         return 200 + (Math.abs(hash) % 350);
       };
 
+      // 알라딘 전문 소개글(fullDescription) 우선 적용 및 HTML 태그 정제
+      const rawDesc = item.fullDescription || item.fulldescription || item.subInfo?.fullDescription || item.description || '';
+      const cleanDesc = rawDesc
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/?[^>]+(>|$)/g, '')
+        .trim();
+
       return {
         id: `aladin-${item.itemId}`,
         title: item.title || '제목 정보 없음',
@@ -223,7 +230,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
         publisher: item.publisher || '출판사',
         cover_url: coverUrl,
         isbn: item.isbn13 || item.isbn || '',
-        description: item.description || '',
+        description: cleanDesc,
         buy_link: item.link || `https://www.aladin.co.kr/search/wsearchresult.aspx?SearchTarget=Book&SearchWord=${encodeURIComponent(item.title)}`,
         rating: item.customerReviewRank ? (item.customerReviewRank / 2).toFixed(1) : '4.8',
         total_pages: parseInt(item.subInfo?.itemPage || item.itemPage) || generatePageCount(item.title || 'book'),

@@ -132,9 +132,9 @@ DECLARE
   api_url TEXT;
 BEGIN
   IF category_id > 0 THEN
-    api_url := 'http://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=ttbcdw2341334001&QueryType=Bestseller&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101&output=js&OptResult=itemPage&CategoryId=' || category_id;
+    api_url := 'http://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=ttbcdw2341334001&QueryType=Bestseller&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101&output=js&OptResult=description,fulldescription,toc,itemPage&CategoryId=' || category_id;
   ELSE
-    api_url := 'http://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=ttbcdw2341334001&QueryType=Bestseller&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101&output=js&OptResult=itemPage';
+    api_url := 'http://www.aladin.co.kr/ttb/api/ItemList.aspx?ttbkey=ttbcdw2341334001&QueryType=Bestseller&MaxResults=20&start=1&SearchTarget=Book&Cover=Big&Version=20131101&output=js&OptResult=description,fulldescription,toc,itemPage';
   END IF;
   
   -- HTTP GET 수행
@@ -171,7 +171,7 @@ BEGIN
              || '&MaxResults=30' 
              || '&start=' || start_page 
              || '&Sort=' || urlencode(sort_option) 
-             || '&SearchTarget=Book&Cover=Big&Version=20131101&output=js&OptResult=itemPage';
+             || '&SearchTarget=Book&Cover=Big&Version=20131101&output=js&OptResult=description,fulldescription,toc,itemPage';
   
   -- HTTP GET 수행
   SELECT * FROM http_get(api_url) INTO response_record;
