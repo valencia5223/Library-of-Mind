@@ -275,6 +275,22 @@ export default function App() {
     } else if (user) {
       await supabase.from('reading_sessions').insert([{ ...sessionData, user_id: user.id }]);
     }
+
+    // [핵심 기능] 몰입스튜디오에서 누적 읽은 페이지(cumulative_pages)를 입력하면 내 서재 도서의 current_pages와 % 진행률이 자동 갱신됨
+    if (sessionData.book_id && sessionData.cumulative_pages !== undefined && sessionData.cumulative_pages > 0) {
+      const targetBook = books.find(b => b.id === sessionData.book_id);
+      if (targetBook) {
+        const newCurrent = Math.min(targetBook.total_pages || 300, sessionData.cumulative_pages);
+        const isRead = newCurrent >= (targetBook.total_pages || 300);
+        const updatedBookData = {
+          ...targetBook,
+          current_pages: newCurrent,
+          status: isRead ? 'READ' : targetBook.status,
+          completed_at: isRead ? (targetBook.completed_at || new Date().toISOString()) : targetBook.completed_at
+        };
+        await handleUpdateBookDetails(targetBook.id, updatedBookData);
+      }
+    }
   };
 
   if (loading) {

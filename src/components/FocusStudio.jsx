@@ -141,12 +141,22 @@ export default function FocusStudio({ books = [], onSaveSession }) {
     return `${hrs > 0 ? `${hrs}:` : ''}${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  const selectedBook = books.find(b => b.id === selectedBookId);
+  const currentProgress = selectedBook ? (selectedBook.current_pages || 0) : 0;
+  const totalPages = selectedBook ? (selectedBook.total_pages || 300) : 300;
+  const progressPercent = selectedBook ? Math.min(100, Math.round((currentProgress / totalPages) * 100)) : 0;
+
   const handleSave = () => {
     const minutes = timerMode === 'pomodoro' ? 25 : Math.max(1, Math.round(seconds / 60));
+    const cumulativePages = parseInt(pagesReadInput) || 0;
+    const prevPages = selectedBook ? (selectedBook.current_pages || 0) : 0;
+    const sessionPagesRead = selectedBook && cumulativePages > prevPages ? (cumulativePages - prevPages) : cumulativePages;
+
     onSaveSession({
       book_id: selectedBookId || null,
       duration_minutes: minutes,
-      pages_read: parseInt(pagesReadInput) || 0
+      pages_read: sessionPagesRead,
+      cumulative_pages: cumulativePages
     });
     setSessionSaved(true);
     setTimeout(() => setSessionSaved(false), 3000);
@@ -216,23 +226,41 @@ export default function FocusStudio({ books = [], onSaveSession }) {
               <label>읽은 책 선택</label>
               <select
                 value={selectedBookId}
-                onChange={(e) => setSelectedBookId(e.target.value)}
+                onChange={(e) => {
+                  setSelectedBookId(e.target.value);
+                  const b = books.find(item => item.id === e.target.value);
+                  if (b && b.current_pages) {
+                    setPagesReadInput(b.current_pages.toString());
+                  }
+                }}
               >
                 <option value="">책 선택 안함 (일반 독서)</option>
                 {books.map((b) => (
-                  <option key={b.id} value={b.id}>{b.title}</option>
+                  <option key={b.id} value={b.id}>
+                    {b.title} (현재 {b.current_pages || 0}/{b.total_pages || 300}p)
+                  </option>
                 ))}
               </select>
             </div>
 
             <div className="form-group mt-2">
-              <label>읽은 페이지 수</label>
+              <div className="flex justify-between align-center mb-1">
+                <label style={{ fontSize: '0.88rem', fontWeight: 700 }}>어디까지 읽으셨나요? (누적 페이지 입력)</label>
+                {selectedBook && (
+                  <span className="text-primary font-bold" style={{ fontSize: '0.78rem' }}>
+                    진행률: {progressPercent}% ({currentProgress}/{totalPages}p)
+                  </span>
+                )}
+              </div>
               <input
                 type="number"
-                placeholder="예: 25"
+                placeholder={selectedBook ? `현재 ${currentProgress}p -> 읽은 최종 페이지 입력 (예: ${Math.min(totalPages, currentProgress + 30)})` : "예: 150"}
                 value={pagesReadInput}
                 onChange={(e) => setPagesReadInput(e.target.value)}
               />
+              <p className="sub-text mt-1" style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                💡 누적 페이지를 입력하고 저장하면 내 서재 도서의 진행률(%)이 자동으로 올라갑니다.
+              </p>
             </div>
 
             <button
@@ -244,8 +272,8 @@ export default function FocusStudio({ books = [], onSaveSession }) {
             </button>
 
             {sessionSaved && (
-              <div className="text-success text-center mt-2 flex align-center justify-center gap-1">
-                <CheckCircle2 size={16} /> 독서 시간이 성공적으로 저장되었습니다!
+              <div className="text-success text-center mt-2 flex align-center justify-center gap-1 font-bold" style={{ fontSize: '0.85rem' }}>
+                <CheckCircle2 size={16} /> 독서 기록 & 서재 진행률이 성공적으로 업데이트되었습니다!
               </div>
             )}
           </div>
