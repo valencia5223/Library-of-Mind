@@ -598,15 +598,14 @@ input:focus, select:focus, textarea:focus {
   z-index: 2;
 }
 
-/* 세로 쓰기 전용 레이아웃 교정 (1줄: 왼쪽 / 2줄: 오른쪽 순서인 vertical-lr 적용) */
+/* 세로 쓰기 전용 레이아웃 교정 (제목: 1열 왼쪽/2열 오른쪽, 저자: 무조건 우측 밀착) */
 .spine-content {
-  writing-mode: vertical-lr;
-  text-orientation: mixed;
+  position: relative;
   color: #ffffff;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
   height: 100%;
   width: 100%;
   padding: 0.35rem 0.35rem 0.35rem 0.55rem;
@@ -615,6 +614,8 @@ input:focus, select:focus, textarea:focus {
 }
 
 .spine-title {
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
   font-size: 0.7rem;
   font-weight: 800;
   color: #ffffff;
@@ -633,16 +634,19 @@ input:focus, select:focus, textarea:focus {
 }
 
 .spine-author {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
   font-size: 0.58rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
   letter-spacing: 0.04em;
   max-height: 14em;
-  max-width: 2.8em;
+  max-width: 1.35em;
   overflow: hidden;
   text-shadow: 
     0 1px 3px rgba(0, 0, 0, 0.75);
   margin-top: auto;
+  align-self: flex-end;
   word-break: break-all;
   font-family: 'Noto Serif KR', 'Gowun Batang', serif;
 }
