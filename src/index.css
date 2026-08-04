@@ -40,56 +40,47 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 4대 서재 테마 시스템 */
-html[data-theme="dark"] body {
-  background: radial-gradient(circle at top left, #0b0f19 0%, #050811 50%, #020408 100%) !important;
-  color: #f8fafc !important;
+/* 3D 서재 책장 전용 테마 에디션 (3D Bookshelf Wood Themes Only) */
+/* 1. 미드나잇 다크 (Midnight Obsidian) */
+.shelf-theme-dark .shelf-surface {
+  background: 
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0px, rgba(255, 255, 255, 0.03) 45px, rgba(0, 0, 0, 0.25) 46px, rgba(0, 0, 0, 0.25) 47px),
+    linear-gradient(180deg, #1e293b 0%, #0f172a 40%, #020617 100%) !important;
+  border-left: 18px solid #0f172a !important;
+  border-right: 18px solid #0f172a !important;
+  border-top: 10px solid #1e293b !important;
 }
-html[data-theme="dark"] .app-header {
-  background: rgba(15, 23, 42, 0.95) !important;
-  border-bottom: 1px solid rgba(56, 189, 248, 0.2) !important;
-}
-html[data-theme="dark"] .wood-shelf {
-  background: linear-gradient(180deg, #1e1b4b 0%, #0f172a 100%) !important;
-  border-color: #312e81 !important;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6) !important;
-}
-html[data-theme="dark"] .shelf-badge {
-  background: rgba(15, 23, 42, 0.85) !important;
+.shelf-theme-dark .shelf-plank {
+  background: linear-gradient(180deg, #334155 0%, #1e293b 40%, #0f172a 100%) !important;
+  border-top: 3px solid #38bdf8 !important;
 }
 
-html[data-theme="sepia"] body {
-  background: radial-gradient(circle at top left, #342c23 0%, #251f18 50%, #1a1510 100%) !important;
-  color: #fdf6e3 !important;
+/* 2. 빈티지 세피아 (Vintage Paper & Leather Sepia) */
+.shelf-theme-sepia .shelf-surface {
+  background: 
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0px, rgba(255, 255, 255, 0.05) 45px, rgba(0, 0, 0, 0.15) 46px, rgba(0, 0, 0, 0.15) 47px),
+    linear-gradient(180deg, #5c3a21 0%, #442a17 40%, #2a190d 100%) !important;
+  border-left: 18px solid #382110 !important;
+  border-right: 18px solid #382110 !important;
+  border-top: 10px solid #4a2d17 !important;
 }
-html[data-theme="sepia"] .app-header {
-  background: rgba(44, 35, 27, 0.95) !important;
-  border-bottom: 1px solid rgba(217, 119, 6, 0.3) !important;
-}
-html[data-theme="sepia"] .wood-shelf {
-  background: linear-gradient(180deg, #443527 0%, #2a1f16 100%) !important;
-  border-color: #584433 !important;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
-}
-html[data-theme="sepia"] .shelf-badge {
-  background: rgba(44, 35, 27, 0.85) !important;
+.shelf-theme-sepia .shelf-plank {
+  background: linear-gradient(180deg, #7c4e2d 0%, #5c3a21 40%, #382110 100%) !important;
+  border-top: 3px solid #f59e0b !important;
 }
 
-html[data-theme="forest"] body {
-  background: radial-gradient(circle at top left, #11261c 0%, #0b1a13 50%, #050d09 100%) !important;
-  color: #ecfdf5 !important;
+/* 3. 세이지 그리너리 (Sage Forest & Cypress) */
+.shelf-theme-forest .shelf-surface {
+  background: 
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0px, rgba(255, 255, 255, 0.04) 45px, rgba(0, 0, 0, 0.2) 46px, rgba(0, 0, 0, 0.2) 47px),
+    linear-gradient(180deg, #143826 0%, #0e291c 40%, #071910 100%) !important;
+  border-left: 18px solid #0a2116 !important;
+  border-right: 18px solid #0a2116 !important;
+  border-top: 10px solid #143826 !important;
 }
-html[data-theme="forest"] .app-header {
-  background: rgba(19, 42, 30, 0.95) !important;
-  border-bottom: 1px solid rgba(16, 185, 129, 0.3) !important;
-}
-html[data-theme="forest"] .wood-shelf {
-  background: linear-gradient(180deg, #143826 0%, #0a2116 100%) !important;
-  border-color: #1e5238 !important;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
-}
-html[data-theme="forest"] .shelf-badge {
-  background: rgba(19, 42, 30, 0.85) !important;
+.shelf-theme-forest .shelf-plank {
+  background: linear-gradient(180deg, #1e5238 0%, #143826 40%, #0a2116 100%) !important;
+  border-top: 3px solid #10b981 !important;
 }
 
 /* 유틸리티 */

@@ -9,12 +9,34 @@ export default function BookshelfView({
   onAddManualBook, 
   onUpdateBookDetails, 
   viewedFriend = null, 
-  onBackToMyBookshelf 
+  onBackToMyBookshelf,
+  userId = null
 }) {
   const [viewMode, setViewMode] = useState('3d'); // '3d' | 'grid'
   const [selectedBook, setSelectedBook] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isEditingReview, setIsEditingReview] = useState(false);
+
+  // 유저별 책장 테마 상태 (classic, dark, sepia, forest)
+  const [shelfTheme, setShelfTheme] = useState(() => {
+    const key = `user_shelf_theme_${userId || 'demo'}`;
+    return localStorage.getItem(key) || 'classic';
+  });
+
+  // 유저 변경 시 해당 유저의 서재 테마 불러오기
+  React.useEffect(() => {
+    const key = `user_shelf_theme_${userId || 'demo'}`;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      setShelfTheme(saved);
+    }
+  }, [userId]);
+
+  const handleShelfThemeChange = (newTheme) => {
+    setShelfTheme(newTheme);
+    const key = `user_shelf_theme_${userId || 'demo'}`;
+    localStorage.setItem(key, newTheme);
+  };
 
   const [coverColors, setCoverColors] = useState(() => {
     try {
@@ -623,19 +645,46 @@ export default function BookshelfView({
           </p>
         </div>
         <div className="flex gap-2 align-center">
-          <div className="toggle-group">
-            <button
-              className={`toggle-btn ${viewMode === '3d' ? 'active' : ''}`}
-              onClick={() => setViewMode('3d')}
-            >
-              <Layers size={16} /> 3D 클래식 서재
-            </button>
-            <button
-              className={`toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
-              onClick={() => setViewMode('grid')}
-            >
-              <Grid size={16} /> 그리드 뷰
-            </button>
+          <div className="flex flex-col gap-1 align-end">
+            <div className="toggle-group">
+              <button
+                className={`toggle-btn ${viewMode === '3d' ? 'active' : ''}`}
+                onClick={() => setViewMode('3d')}
+              >
+                <Layers size={16} /> 3D 클래식 서재
+              </button>
+              <button
+                className={`toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                onClick={() => setViewMode('grid')}
+              >
+                <Grid size={16} /> 그리드 뷰
+              </button>
+            </div>
+
+            {viewMode === '3d' && (
+              <div className="flex align-center gap-1 mt-1 justify-end" style={{ fontSize: '0.78rem' }}>
+                <span className="sub-text font-bold" style={{ fontSize: '0.75rem' }}>🪵 책장 테마:</span>
+                <select
+                  value={shelfTheme}
+                  onChange={(e) => handleShelfThemeChange(e.target.value)}
+                  style={{
+                    padding: '0.15rem 0.45rem',
+                    fontSize: '0.75rem',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    backgroundColor: '#ffffff',
+                    color: '#1e293b',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="classic">🪵 클래식 원목</option>
+                  <option value="dark">🌙 미드나잇 다크</option>
+                  <option value="sepia">📜 빈티지 세피아</option>
+                  <option value="forest">🍃 세이지 그리너리</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {!viewedFriend && (
@@ -669,7 +718,7 @@ export default function BookshelfView({
 
             {viewMode === '3d' ? (
               chunks.map((shelfBooks, chunkIdx) => (
-                <div key={`${cat.key}-shelf-${chunkIdx}`} className="wood-shelf" style={{ marginBottom: '2rem' }}>
+                <div key={`${cat.key}-shelf-${chunkIdx}`} className={`wood-shelf shelf-theme-${shelfTheme}`} style={{ marginBottom: '2rem' }}>
                   <div className="shelf-surface">
                     {shelfBooks.length === 0 ? (
                       <div className="empty-shelf-text">이 책장은 비어 있습니다. 탐색 탭에서 책을 찾아 꽂아보세요!</div>

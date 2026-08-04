@@ -21,18 +21,6 @@ export default function App() {
   // 데이터 상태 (사용자별 개별 데이터)
   const [books, setBooks] = useState([]);
   const [notes, setNotes] = useState([]);
-  const [sessions, setSessions] = useState([]);
-
-  // 4대 서재 테마 선택 상태 (classic, dark, sepia, forest)
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('library_app_theme') || 'classic';
-  });
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('library_app_theme', theme);
-  }, [theme]);
-
   // 인증 및 세션 확인
   useEffect(() => {
     if (isSupabaseConfigured()) {
@@ -385,32 +373,6 @@ export default function App() {
         )}
 
         <div className="flex align-center gap-2" style={{ flexWrap: 'nowrap', flexShrink: 0 }}>
-          {/* 4대 서재 테마 셀렉터 */}
-          <div className="theme-selector-box flex align-center">
-            <select
-              value={theme}
-              onChange={(e) => setTheme(e.target.value)}
-              title="서재 분위기 테마 변경"
-              style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                color: 'inherit',
-                border: '1px solid rgba(203, 213, 225, 0.3)',
-                borderRadius: '8px',
-                padding: '0.35rem 0.55rem',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                outline: 'none',
-                backdropFilter: 'blur(6px)'
-              }}
-            >
-              <option value="classic" style={{ background: '#1e293b', color: '#ffffff' }}>🪵 클래식 원목</option>
-              <option value="dark" style={{ background: '#0f172a', color: '#38bdf8' }}>🌙 미드나잇 다크</option>
-              <option value="sepia" style={{ background: '#382e24', color: '#f59e0b' }}>📜 빈티지 세피아</option>
-              <option value="forest" style={{ background: '#132a1e', color: '#10b981' }}>🍃 세이지 그리너리</option>
-            </select>
-          </div>
-
           <WeatherWidget />
           <button className="btn btn-secondary user-profile-btn" onClick={() => setIsAuthOpen(true)}>
             <User size={16} style={{ flexShrink: 0 }} />
@@ -457,6 +419,7 @@ export default function App() {
               onUpdateBookDetails={handleUpdateBookDetails}
               viewedFriend={viewedFriend}
               onBackToMyBookshelf={() => setViewedFriend(null)}
+              userId={user?.id}
             />
           )}
 
