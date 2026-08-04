@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BookOpen, Star, ExternalLink, PlusCircle, Plus, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
+import BookDetailModal from './BookDetailModal';
 
 export default function BookshelfView({ 
   books, 
@@ -1339,119 +1340,43 @@ export default function BookshelfView({
         </div>
       )}
 
-      {/* 알라딘 도서 소개 전용 독립 팝업 모달 */}
-      {showDescModal && (
-        <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShowDescModal(false)}>
-          <div className="modal-card book-detail-modal animate-scale-in" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '780px' }}>
-            <button className="modal-close" onClick={() => setShowDescModal(false)}>✕</button>
-
-            <div className="detail-grid">
-              <div className="detail-cover-side">
-                <img
-                  src={selectedBook?.cover_url}
-                  alt={selectedBook?.title}
-                  referrerPolicy="no-referrer"
-                  className="detail-cover"
-                />
-                {selectedBook?.price && (
-                  <div className="mt-3 text-center">
-                    <span className="small-tag font-bold" style={{ fontSize: '0.85rem', padding: '0.3rem 0.7rem', background: 'rgba(0, 120, 166, 0.05)', color: 'var(--primary)', borderColor: 'rgba(0, 120, 166, 0.2)' }}>
-                      판매가: {selectedBook.price}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="detail-content" style={{ display: 'flex', flexDirection: 'column', flex: 1, maxHeight: '80vh', overflowY: 'auto', paddingRight: '6px' }}>
-                <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.6rem' }}>{selectedBook?.title}</h3>
-
-                {/* 메타 정보 뱃지 태그 그리드 (저자, 역자, 출판사, 출간일, 페이지 수) */}
-                {(() => {
-                  const info = parseAuthorAndTranslator(selectedBook?.author);
-                  return (
-                    <div className="book-meta-badges flex flex-wrap gap-2 mb-3" style={{ fontSize: '0.85rem' }}>
-                      <span className="px-2 py-1 rounded bg-slate-100 font-semibold text-slate-700" style={{ background: '#f1f5f9', color: '#334155', borderRadius: '6px', padding: '4px 10px' }}>
-                        ✍️ <b>지은이:</b> {info.author}
-                      </span>
-                      {info.translator && (
-                        <span className="px-2 py-1 rounded bg-blue-50 font-semibold text-blue-700" style={{ background: '#eff6ff', color: '#1d4ed8', borderRadius: '6px', padding: '4px 10px' }}>
-                          🌐 <b>옮긴이:</b> {info.translator}
-                        </span>
-                      )}
-                      <span className="px-2 py-1 rounded bg-slate-100 font-semibold text-slate-700" style={{ background: '#f1f5f9', color: '#334155', borderRadius: '6px', padding: '4px 10px' }}>
-                        🏢 <b>출판사:</b> {selectedBook?.publisher || '정보 없음'}
-                      </span>
-                      {selectedBook?.pub_date && (
-                        <span className="px-2 py-1 rounded bg-slate-100 font-semibold text-slate-700" style={{ background: '#f1f5f9', color: '#334155', borderRadius: '6px', padding: '4px 10px' }}>
-                          📅 <b>출간일:</b> {selectedBook.pub_date}
-                        </span>
-                      )}
-                      {selectedBook?.total_pages && (
-                        <span className="px-2 py-1 rounded bg-emerald-50 font-semibold text-emerald-700" style={{ background: '#ecfdf5', color: '#047857', borderRadius: '6px', padding: '4px 10px' }}>
-                          📄 <b>분량:</b> {selectedBook.total_pages}쪽
-                        </span>
-                      )}
-                    </div>
-                  );
-                })()}
-
-                {/* 도서 상세 소개 세션 */}
-                <div className="review-section p-4 border-card mb-3" style={{ background: '#f8fafc', borderRadius: '12px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <h4 className="flex align-center gap-1" style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.65rem' }}>
-                    📖 도서 상세 소개
-                  </h4>
-                  <p className="desc-text" style={{ fontSize: '0.95rem', color: '#334155', lineHeight: 1.75, whiteSpace: 'pre-line' }}>
-                    {bookDescription || '도서 소개 정보를 불러오는 중입니다...'}
-                  </p>
-                </div>
-
-                {/* 목차 (TOC) 세션 (존재 시에만 표시) */}
-                {bookToc && (
-                  <div className="toc-section p-4 border-card" style={{ background: '#fffbe3', borderRadius: '12px', border: '1px solid #fef08a' }}>
-                    <h4 className="flex align-center gap-1" style={{ fontSize: '1.02rem', fontWeight: 700, color: '#854d0e', marginBottom: '0.5rem' }}>
-                      📜 목차 (Table of Contents)
-                    </h4>
-                    <p className="toc-text" style={{ fontSize: '0.9rem', color: '#713f12', lineHeight: 1.6, whiteSpace: 'pre-line', maxHeight: '220px', overflowY: 'auto' }}>
-                      {bookToc}
-                    </p>
-                  </div>
-                )}
-
-                <div className="mt-4 pt-3 flex justify-between align-center" style={{ borderTop: '1px solid #e2e8f0' }}>
-                  {viewedFriend ? (
-                    <button
-                      className="btn btn-primary btn-sm font-bold flex align-center gap-1"
-                      onClick={async () => {
-                        if (onAddManualBook && selectedBook) {
-                          await onAddManualBook({
-                            title: selectedBook.title,
-                            author: selectedBook.author,
-                            publisher: selectedBook.publisher,
-                            cover_url: selectedBook.cover_url,
-                            isbn: selectedBook.isbn,
-                            total_pages: selectedBook.total_pages,
-                            status: 'TO_READ',
-                            buy_link: selectedBook.buy_link,
-                            pub_date: selectedBook.pub_date,
-                            description: selectedBook.description || bookDescription
-                          });
-                          alert(`✅ '${selectedBook.title}' 도서가 내 서재에 추가되었습니다!`);
-                          setShowDescModal(false);
-                          setSelectedBook(null);
-                        }
-                      }}
-                    >
-                      <Plus size={15} /> 내 서재에 추가하기
-                    </button>
-                  ) : <div />}
-                  <button className="btn btn-secondary btn-sm" onClick={() => setShowDescModal(false)}>
-                    확인 닫기
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* 알라딘 도서 소개 전용 단일 공통 팝업 모달 */}
+      {showDescModal && selectedBook && (
+        <BookDetailModal
+          book={selectedBook}
+          onClose={() => setShowDescModal(false)}
+          description={bookDescription}
+          toc={bookToc}
+          loadingDesc={loadingDesc}
+          onAddBook={viewedFriend ? (async () => {
+            if (onAddManualBook && selectedBook) {
+              await onAddManualBook({
+                title: selectedBook.title,
+                author: selectedBook.author,
+                publisher: selectedBook.publisher,
+                cover_url: selectedBook.cover_url,
+                isbn: selectedBook.isbn,
+                total_pages: selectedBook.total_pages,
+                status: 'TO_READ',
+                buy_link: selectedBook.buy_link,
+                pub_date: selectedBook.pub_date,
+                description: selectedBook.description || bookDescription
+              });
+              alert(`✅ '${selectedBook.title}' 도서가 내 서재에 추가되었습니다!`);
+              setShowDescModal(false);
+              setSelectedBook(null);
+            }
+          }) : null}
+          onDeleteBook={!viewedFriend && selectedBook.id ? ((id) => {
+            onDeleteBook(id);
+            setShowDescModal(false);
+            setSelectedBook(null);
+          }) : null}
+          onSyncInfo={async (bookToSync) => {
+            await fetchPageCountFromAladin(bookToSync);
+          }}
+          syncing={syncingBookId === selectedBook.id}
+        />
       )}
 
       {/* 수동 추가 모달 */}

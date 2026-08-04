@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, ShoppingBag, Plus, CheckCircle2, Flame, ExternalLink, RefreshCw, BookOpen, Sparkles, Star } from 'lucide-react';
 import { supabase } from '../supabaseClient'; // Supabase 인스턴스 가져오기
+import BookDetailModal from './BookDetailModal';
 
 const BESTSELLER_CATEGORIES = [
   { id: 0, name: '🌟 종합' },
@@ -506,83 +507,15 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
         </div>
       )}
 
-      {/* 검색 및 베스트셀러 도서 상세 정보 모달 */}
+      {/* 검색 및 베스트셀러 도서 상세 정보 모달 (공통 단일 모달 적용) */}
       {selectedBook && (
-        <div className="modal-overlay" onClick={() => setSelectedBook(null)}>
-          <div className="modal-card book-detail-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setSelectedBook(null)}>✕</button>
-
-            <div className="detail-grid">
-              <div className="detail-cover-side">
-                <img
-                  src={selectedBook.cover_url}
-                  alt={selectedBook.title}
-                  referrerPolicy="no-referrer"
-                  className="detail-cover"
-                />
-                
-                {selectedBook.price && (
-                  <div className="mt-3 text-center">
-                    <span className="small-tag font-bold" style={{ fontSize: '0.9rem', padding: '0.35rem 0.8rem', background: 'rgba(0, 120, 166, 0.05)', color: 'var(--primary)', borderColor: 'rgba(0, 120, 166, 0.2)' }}>
-                      판매가: {selectedBook.price}
-                    </span>
-                  </div>
-                )}
-                {selectedBook.rating && (
-                  <div className="mt-2 text-center text-warning flex align-center justify-center gap-1 font-bold">
-                    <Star size={16} fill="#f59e0b" color="#f59e0b" />
-                    <span>평점 {selectedBook.rating} / 5.0</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="detail-content">
-                <h3>{selectedBook.title}</h3>
-                <p className="detail-author">{selectedBook.author} | {selectedBook.publisher || '출판사 정보'}{selectedBook.pub_date ? ` | 출간일: ${selectedBook.pub_date}` : ''}</p>
-
-                {/* 도서 상세 설명 - 시원하고 가독성 높은 확장 도서 소개 카드 */}
-                <div className="review-section mt-3 p-4 border-card" style={{ background: '#f8fafc', borderRadius: '12px', minHeight: '240px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <h4 className="flex align-center gap-1" style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--primary)', marginBottom: '0.65rem' }}>
-                    📖 도서 소개
-                  </h4>
-                  <p className="desc-text" style={{ fontSize: '0.95rem', color: '#334155', lineHeight: 1.7, maxHeight: '360px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
-                    {selectedBook.description || '알라딘에 등록된 소개글 설명이 없습니다.'}
-                  </p>
-                </div>
-
-                {/* 구매 & 책장 담기 버튼 - 도서 소개글 하단에 여백을 두고 분리 배치 */}
-                <div className="action-row mt-4 pt-3 flex justify-between align-center" style={{ borderTop: '1px solid #e2e8f0' }}>
-                  {isAlreadyInShelf(selectedBook.title) ? (
-                    <button className="btn btn-disabled" disabled>
-                      <CheckCircle2 size={16} /> 이미 내 책장에 있음
-                    </button>
-                  ) : (
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => {
-                        handleAddToShelf(selectedBook);
-                        setSelectedBook(null);
-                      }}
-                    >
-                      <Plus size={16} /> 내 책장에 담기
-                    </button>
-                  )}
-
-                  {selectedBook.buy_link && (
-                    <a
-                      href={selectedBook.buy_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-secondary text-decoration-none"
-                    >
-                      <ShoppingBag size={16} /> 알라딘 구매 <ExternalLink size={12} />
-                    </a>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <BookDetailModal
+          book={selectedBook}
+          onClose={() => setSelectedBook(null)}
+          description={selectedBook.description}
+          isAlreadyInShelf={isAlreadyInShelf(selectedBook.title)}
+          onAddBook={handleAddToShelf}
+        />
       )}
     </div>
   );
