@@ -123,7 +123,7 @@ export default function App() {
     }
 
     // DB user_books 테이블 스키마에 정의된 컬럼만 안전하게 필터링하여 삽입
-    const cleanBook = {
+    const dbSafeBook = {
       title: newBook.title || '제목 정보 없음',
       author: newBook.author || '저자 미상',
       publisher: newBook.publisher || '',
@@ -134,12 +134,12 @@ export default function App() {
       status: newBook.status || 'TO_READ',
       rating: newBook.rating ? Math.min(5, Math.max(0, parseFloat((parseFloat(newBook.rating) || 0).toFixed(1)))) : 0.0, 
       buy_link: newBook.buy_link || '',
-      pub_date: newBook.pub_date || '',
       category: newBook.category || '일반'
     };
 
     const bookObj = {
-      ...cleanBook,
+      ...dbSafeBook,
+      pub_date: newBook.pub_date || '',
       id: `b-${Date.now()}`,
       created_at: new Date().toISOString()
     };
@@ -150,7 +150,11 @@ export default function App() {
     if (!isSupabaseConfigured()) {
       localStorage.setItem(`user_books_${user?.id || 'demo'}`, JSON.stringify(updated));
     } else if (user) {
-      await supabase.from('user_books').insert([{ ...cleanBook, user_id: user.id }]);
+      // DB-safe 필드만으로 insert
+      const { error } = await supabase.from('user_books').insert([{ ...dbSafeBook, user_id: user.id }]);
+      if (error) {
+        console.error('도서 추가 실패:', error.message);
+      }
     }
   };
 
@@ -168,7 +172,8 @@ export default function App() {
   };
 
   const handleUpdateBookDetails = async (bookId, updatedBookData) => {
-    let cleanData = {
+    // Supabase user_books 테이블에 실제 존재하는 안전한 컬럼만 분리
+    let dbSafeData = {
       title: updatedBookData.title || '제목 정보 없음',
       author: updatedBookData.author || '저자 미상',
       publisher: updatedBookData.publisher || '',
@@ -178,22 +183,44 @@ export default function App() {
       current_pages: updatedBookData.current_pages ? parseInt(updatedBookData.current_pages) : 0,
       status: updatedBookData.status || 'TO_READ',
       rating: parseFloat(updatedBookData.rating) || 0,
-      review: updatedBookData.review || '',
       buy_link: updatedBookData.buy_link || '',
-      pub_date: updatedBookData.pub_date || '',
       category: updatedBookData.category || '일반',
       completed_at: updatedBookData.status === 'READ' 
         ? (updatedBookData.completed_at || new Date().toISOString()) 
         : null
     };
+
+    // 로컬 전용 필드 (Supabase에 존재하지 않을 수 있는 컬럼)
+    const localOnlyData = {
+      pub_date: updatedBookData.pub_date || '',
+      review: updatedBookData.review || ''
+    };
     
-    const updated = books.map(b => b.id === bookId ? { ...b, ...cleanData } : b);
+    const mergedData = { ...dbSafeData, ...localOnlyData };
+    const updated = books.map(b => b.id === bookId ? { ...b, ...mergedData } : b);
     setBooks(updated);
 
     if (!isSupabaseConfigured()) {
       localStorage.setItem(`user_books_${user?.id || 'demo'}`, JSON.stringify(updated));
     } else if (user) {
-      await supabase.from('user_books').update(cleanData).eq('id', bookId);
+      // 먼저 DB-safe 필드만으로 업데이트 시도
+      const { error } = await supabase.from('user_books').update(dbSafeData).eq('id', bookId);
+      
+      // DB-safe 필드 업데이트 성공 후, pub_date 등 추가 칼럼도 시도 (컬럼이 있으면 반영됨)
+      if (!error) {
+        const extraFields = {};
+        if (updatedBookData.pub_date) extraFields.pub_date = updatedBookData.pub_date;
+        if (updatedBookData.review) extraFields.review = updatedBookData.review;
+        
+        if (Object.keys(extraFields).length > 0) {
+          const { error: extraError } = await supabase.from('user_books').update(extraFields).eq('id', bookId);
+          if (extraError) {
+            console.warn('추가 컬럼 업데이트 실패 (컬럼 미존재 가능):', extraError.message);
+          }
+        }
+      } else {
+        console.error('도서 정보 업데이트 실패:', error.message);
+      }
     }
   };
 

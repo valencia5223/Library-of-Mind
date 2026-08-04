@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS public.user_books (
   completed_at TIMESTAMPTZ, -- 완독 달성 시각
   status TEXT NOT NULL DEFAULT 'TO_READ', -- 'TO_READ' (읽고싶은), 'READING' (읽는중), 'READ' (완독)
   rating NUMERIC(2,1) DEFAULT 0.0, -- 0.5 단위 지원 (예: 4.5점)
+  review TEXT, -- 독서 리뷰/감상문
+  pub_date TEXT, -- 출간일 (YYYY-MM-DD 형식)
   buy_link TEXT,
   category TEXT DEFAULT '일반',
   created_at TIMESTAMPTZ DEFAULT NOW(),
