@@ -174,12 +174,13 @@ export default function App() {
       publisher: updatedBookData.publisher || '',
       cover_url: updatedBookData.cover_url || '',
       isbn: updatedBookData.isbn || '',
-      total_pages: updatedBookData.total_pages ? parseInt(updatedBookData.total_pages) : 320,
+      total_pages: updatedBookData.total_pages ? parseInt(updatedBookData.total_pages) : 0,
       current_pages: updatedBookData.current_pages ? parseInt(updatedBookData.current_pages) : 0,
       status: updatedBookData.status || 'TO_READ',
       rating: parseFloat(updatedBookData.rating) || 0,
       review: updatedBookData.review || '',
       buy_link: updatedBookData.buy_link || '',
+      pub_date: updatedBookData.pub_date || '',
       category: updatedBookData.category || '일반',
       completed_at: updatedBookData.status === 'READ' 
         ? (updatedBookData.completed_at || new Date().toISOString()) 

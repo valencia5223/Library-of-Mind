@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Star, ExternalLink, PlusCircle, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare } from 'lucide-react';
+import { BookOpen, Star, ExternalLink, PlusCircle, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw } from 'lucide-react';
 
 export default function BookshelfView({ 
   books, 
@@ -15,8 +15,51 @@ export default function BookshelfView({
   const [showAddModal, setShowAddModal] = useState(false);
   const [isEditingReview, setIsEditingReview] = useState(false);
 
-  // 책 커버의 실제 메인 대표 색상을 수집하기 위한 상태 캐시
   const [coverColors, setCoverColors] = useState({});
+  const [syncingGoogleInfo, setSyncingGoogleInfo] = useState(false);
+
+  // Google Books API를 이용해 개별 책의 실제 페이지 수 & 출간일 정보 자동 동기화
+  const handleSyncGoogleInfo = async (book) => {
+    if (!book || syncingGoogleInfo) return;
+    setSyncingGoogleInfo(true);
+    try {
+      const cleanTitle = (book.title || '').split('-')[0].split('(')[0].trim();
+      const query = book.isbn ? `isbn:${book.isbn}` : `intitle:${encodeURIComponent(cleanTitle)}`;
+      const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${query}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.items && data.items.length > 0) {
+          let fetchedPages = null;
+          let fetchedPubDate = null;
+          for (const item of data.items) {
+            if (item.volumeInfo) {
+              if (!fetchedPages && item.volumeInfo.pageCount > 0) {
+                fetchedPages = item.volumeInfo.pageCount;
+              }
+              if (!fetchedPubDate && item.volumeInfo.publishedDate) {
+                fetchedPubDate = item.volumeInfo.publishedDate;
+              }
+            }
+          }
+
+          const updated = {
+            ...book,
+            total_pages: fetchedPages || book.total_pages,
+            pub_date: fetchedPubDate || book.pub_date
+          };
+
+          if (onUpdateBookDetails) {
+            await onUpdateBookDetails(book.id, updated);
+          }
+          setSelectedBook(updated);
+        }
+      }
+    } catch (err) {
+      console.warn('Google Books API 정보 동기화 중 오류 발생:', err);
+    } finally {
+      setSyncingGoogleInfo(false);
+    }
+  };
 
   // 1. URL로부터 실제 메인 대표 색상을 CORS 우회 추출하는 헬퍼 함수
   const extractMainColor = (bookId, coverUrl) => {
@@ -395,7 +438,29 @@ export default function BookshelfView({
 
               <div className="detail-content">
                 <h3>{selectedBook.title}</h3>
-                <p className="detail-author">{selectedBook.author} | {selectedBook.publisher || '출판사 정보'}{selectedBook.pub_date ? ` | 출간일: ${selectedBook.pub_date}` : ''}</p>
+                <p className="detail-author">
+                  {selectedBook.author} | {selectedBook.publisher || '출판사 정보'}
+                  {selectedBook.pub_date ? (
+                    <span className="ml-2 font-bold text-slate-600" style={{ marginLeft: '0.4rem', color: '#475569' }}>
+                      · 📅 출간일: {selectedBook.pub_date}
+                    </span>
+                  ) : ''}
+                </p>
+
+                {!viewedFriend && (
+                  <div className="mt-2">
+                    <button 
+                      className="btn btn-sm btn-outline flex align-center gap-1"
+                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '6px', color: '#0078a6', borderColor: '#cbd5e1' }}
+                      onClick={() => handleSyncGoogleInfo(selectedBook)}
+                      disabled={syncingGoogleInfo}
+                      title="Google Books API에서 실제 페이지 수 및 출간일 정보를 가져와 동기화합니다."
+                    >
+                      <RefreshCw size={13} className={syncingGoogleInfo ? 'animate-spin' : ''} />
+                      {syncingGoogleInfo ? 'Google API 정보 동기화 중...' : 'Google API 정보(페이지 수 & 출간일) 동기화'}
+                    </button>
+                  </div>
+                )}
 
                 {/* 상태 선택 */}
                 {!viewedFriend && (
