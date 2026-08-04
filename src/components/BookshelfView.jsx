@@ -135,34 +135,35 @@ export default function BookshelfView({
         }
       }
 
-      // 2.5단계: 웹 상품 페이지에서 풍부한 전체 줄거리/소개글(편집장의 선택 등) 보완 추출
+      // 2.5단계: 웹 상품 페이지에서 풍부한 전체 줄거리/소개글(편집장의 선택/출판사 서평 등) 보완 추출
       if (targetItemId) {
         try {
           const webUrl = `https://www.aladin.co.kr/shop/wproduct.aspx?ItemId=${targetItemId}`;
           const webHtml = await fetchJsonWithProxyFallback(webUrl);
           if (typeof webHtml === 'string' && webHtml.length > 1000) {
             const extraBlocks = [];
-            const regexBox = /<div[^>]*class="[^"]*Ere_prod_mconts_box[^"]*"[^>]*>([\s\S]*?)<div[^>]*class="Ere_clear"[^>]*><\/div>\s*<\/div>/gi;
-            let matchBox;
-            while ((matchBox = regexBox.exec(webHtml)) !== null) {
-              const boxContent = matchBox[1];
-              if (boxContent.includes('편집장의 선택') || boxContent.includes('카드리뷰') || boxContent.includes('책소개') || boxContent.includes('출판사 서평')) {
-                const text = boxContent
-                  .replace(/<div[^>]*class="Ere_prod_mconts_LL[^"]*"[\s\S]*?<\/div>/gi, '')
-                  .replace(/<div[^>]*class="Ere_prod_mconts_LS[^"]*"[\s\S]*?<\/div>/gi, '')
-                  .replace(/<br\s*\/?>/gi, '\n')
-                  .replace(/<\/?[^>]+(>|$)/g, '')
-                  .replace(/&nbsp;/gi, ' ')
-                  .replace(/&quot;/gi, '"')
-                  .replace(/&gt;/gi, '>')
-                  .replace(/&lt;/gi, '<')
-                  .replace(/&amp;/gi, '&')
-                  .trim();
-                if (text.length > 50 && !text.includes('알라딘 소설 MD')) {
-                  extraBlocks.push(text);
-                }
+            const regexR = /<div[^>]*class="[^"]*Ere_prod_mconts_R[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
+            let matchR;
+            while ((matchR = regexR.exec(webHtml)) !== null) {
+              let text = matchR[1]
+                .replace(/<script[\s\S]*?<\/script>/gi, '')
+                .replace(/<style[\s\S]*?<\/style>/gi, '')
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<\/?[^>]+(>|$)/g, '')
+                .replace(/&nbsp;/gi, ' ')
+                .replace(/&quot;/gi, '"')
+                .replace(/&gt;/gi, '>')
+                .replace(/&lt;/gi, '<')
+                .replace(/&amp;/gi, '&')
+                .trim();
+
+              text = text.split('$j(')[0].split('var swiper')[0].trim();
+
+              if (text.length > 50 && !text.startsWith('- 알라딘')) {
+                extraBlocks.push(text);
               }
             }
+
             if (extraBlocks.length > 0) {
               const fullWebText = extraBlocks.join('\n\n');
               if (fullWebText.length > (fetchedDesc || '').length) {
@@ -262,7 +263,12 @@ export default function BookshelfView({
 
           const cleanText = text.trim().replace(/^window\.[^(]+\(|\);?$/g, '').replace(/;$/, '');
           if (cleanText.startsWith('{') || cleanText.startsWith('[')) {
-            return JSON.parse(cleanText);
+            try {
+              return JSON.parse(cleanText);
+            } catch (e) {}
+          }
+          if (cleanText.length > 0) {
+            return cleanText;
           }
         }
       } catch (e) {
