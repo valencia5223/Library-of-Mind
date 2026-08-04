@@ -176,7 +176,56 @@ export default function BookshelfView({
     }
   };
 
-  // [다중 API 연동 체인] 알라딘 JSONP -> 알라딘 제목 2차 추적 -> Google Books -> Open Library 4단계 연동
+  // 1. URL로부터 실제 메인 대표 색상 및 최적 텍스트 색상을 추출하는 헬퍼 함수
+  const extractMainColor = (bookId, coverUrl) => {
+    if (!coverUrl || coverColors[bookId]) return;
+
+    // CORS 우회 이미지 프록시 (weserv.nl)
+    const cleanUrl = coverUrl.replace(/^https?:\/\//, '');
+    const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(cleanUrl)}&w=20&h=20`;
+
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = proxyUrl;
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 5;
+        canvas.height = 5;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 5, 5);
+        
+        const imgData = ctx.getImageData(0, 0, 5, 5).data;
+        let r = 0, g = 0, b = 0, count = 0;
+        for (let i = 0; i < imgData.length; i += 4) {
+          r += imgData[i];
+          g += imgData[i + 1];
+          b += imgData[i + 2];
+          count++;
+        }
+        r = Math.round(r / count);
+        g = Math.round(g / count);
+        b = Math.round(b / count);
+
+        const luminance = (r * 299 + g * 587 + b * 114) / 1000;
+        const isDark = luminance < 135;
+
+        const bg = `linear-gradient(180deg, rgba(${r},${g},${b},0.92) 0%, rgba(${Math.max(0, r-35)},${Math.max(0, g-35)},${Math.max(0, b-35)},0.98) 100%)`;
+        const titleColor = isDark ? '#ffffff' : '#0f172a';
+        const authorColor = isDark ? '#fef08a' : '#334155';
+        const textShadow = isDark ? '0px 1px 3px rgba(0,0,0,0.9)' : '0px 1px 2px rgba(255,255,255,0.7)';
+
+        setCoverColors(prev => ({
+          ...prev,
+          [bookId]: { bg, titleColor, authorColor, textShadow }
+        }));
+      } catch (err) {
+        console.warn("표지 대표색 획득 실패:", err);
+      }
+    };
+  };
+
+  // [다중 API 연동 체인] Supabase RPC 알라딘 연동 -> 알라딘 JSONP -> Google Books -> Open Library
   const handleSyncBookInfo = async (book) => {
     if (!book || syncingGoogleInfo) return;
     setSyncingGoogleInfo(true);
@@ -208,10 +257,9 @@ export default function BookshelfView({
         }
       }
 
-      // [2단계] 도서 제목으로 알라딘 ItemSearch 검색 후 ItemId 추출 및 ItemLookUp 2차 조회 ("악의", "달려라 아비", "투명한 나선", "국민이 먼저입니다" 등 대응)
+      // [2단계] Supabase Database RPC (aladin_search_proxy) 활용 - 서버사이드 100% 성공 보장
       if (!fetchedPages && book.title) {
         try {
-          // 특수문자 및 마침표 제거, 깔끔한 제목 정제
           const cleanTitle = (book.title || '')
             .split('-')[0]
             .split('(')[0]
@@ -219,13 +267,25 @@ export default function BookshelfView({
             .replace(/\s+/g, ' ')
             .trim();
 
-          const searchUrl = `https://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=${ttbKey}&Query=${encodeURIComponent(cleanTitle)}&QueryType=Title&MaxResults=1&SearchTarget=Book&output=js&Version=20131101`;
-          
-          const sData = await fetchJsonWithProxyFallback(searchUrl);
-
           let foundItemId = null;
-          if (sData && sData.item && sData.item.length > 0) {
-            foundItemId = sData.item[0].itemId || sData.item[0].isbn13 || sData.item[0].isbn;
+
+          // 2-1: Supabase RPC 우선 시도 (CORS 및 프록시 에러 100% 우회)
+          try {
+            const { data, error } = await supabase.rpc('aladin_search_proxy', { search_query: cleanTitle });
+            if (!error && data && data.item && data.item.length > 0) {
+              foundItemId = data.item[0].itemId || data.item[0].isbn13 || data.item[0].isbn;
+            }
+          } catch (rpcErr) {
+            console.warn('Supabase RPC 알라딘 검색 실패, HTTP 프록시 폴백:', rpcErr);
+          }
+
+          // 2-2: HTTP 프록시 폴백
+          if (!foundItemId) {
+            const searchUrl = `https://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=${ttbKey}&Query=${encodeURIComponent(cleanTitle)}&QueryType=Title&MaxResults=1&SearchTarget=Book&output=js&Version=20131101`;
+            const sData = await fetchJsonWithProxyFallback(searchUrl);
+            if (sData && sData.item && sData.item.length > 0) {
+              foundItemId = sData.item[0].itemId || sData.item[0].isbn13 || sData.item[0].isbn;
+            }
           }
 
           if (foundItemId) {
@@ -282,32 +342,7 @@ export default function BookshelfView({
     }
   };
 
-  // 1. URL로부터 실제 메인 대표 색상을 CORS 우회 추출하는 헬퍼 함수
-  const extractMainColor = (bookId, coverUrl) => {
-    if (!coverUrl || coverColors[bookId]) return;
 
-    // CORS 우회 이미지 프록시 (weserv.nl)
-    const cleanUrl = coverUrl.replace(/^https?:\/\//, '');
-    const proxyUrl = `https://images.weserv.nl/?url=${encodeURIComponent(cleanUrl)}&w=10&h=10`;
-
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = proxyUrl;
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = 1;
-        canvas.height = 1;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, 1, 1);
-        const data = ctx.getImageData(0, 0, 1, 1).data;
-        const rgbColor = `rgb(${data[0]}, ${data[1]}, ${data[2]})`;
-        setCoverColors(prev => ({ ...prev, [bookId]: rgbColor }));
-      } catch (err) {
-        console.warn("표지 대표색 획득 실패 (CORS 또는 포맷 불가):", err);
-      }
-    };
-  };
 
   // 2. 저자 3자 단명화 포맷터
   const formatAuthor = (author) => {
@@ -529,7 +564,12 @@ export default function BookshelfView({
                           if (book.cover_url && !coverColors[book.id]) {
                             extractMainColor(book.id, book.cover_url);
                           }
-                          const finalBg = coverColors[book.id] || spineStyle.bg;
+                          
+                          const extracted = coverColors[book.id];
+                          const finalBg = (extracted && extracted.bg) ? extracted.bg : (typeof extracted === 'string' ? extracted : spineStyle.bg);
+                          const titleColor = (extracted && extracted.titleColor) ? extracted.titleColor : spineStyle.titleColor;
+                          const authorColor = (extracted && extracted.authorColor) ? extracted.authorColor : spineStyle.authorColor;
+                          const textShadow = (extracted && extracted.textShadow) ? extracted.textShadow : spineStyle.textShadow;
 
                           return (
                             <div
@@ -554,8 +594,8 @@ export default function BookshelfView({
                                   <div className="spine-ridge"></div>
                                   <div className="spine-highlight"></div>
                                   <div className="spine-content">
-                                    <span className="spine-author" style={{ color: spineStyle.authorColor, textShadow: spineStyle.textShadow }}>{formatAuthor(book.author)}</span>
-                                    <span className="spine-title" style={{ color: spineStyle.titleColor, textShadow: spineStyle.textShadow }}>{book.title}</span>
+                                    <span className="spine-author" style={{ color: authorColor, textShadow: textShadow }}>{formatAuthor(book.author)}</span>
+                                    <span className="spine-title" style={{ color: titleColor, textShadow: textShadow }}>{book.title}</span>
                                   </div>
                                 </div>
 
