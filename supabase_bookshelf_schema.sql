@@ -87,6 +87,7 @@ CREATE POLICY "Users can insert their own notes"
 
 CREATE POLICY "Users can update their own notes"
   ON public.book_notes FOR UPDATE
+  
   USING (auth.uid() = user_id);
 
 CREATE POLICY "Users can delete their own notes"
@@ -191,8 +192,21 @@ $$;
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT UNIQUE NOT NULL,
+  name TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- 기존 profiles 테이블에 name 컬럼 추가 (필요 시)
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS name TEXT;
+
+-- 기존 가입된 사용자의 auth.users 메타데이터(full_name)를 profiles.name 컬럼으로 일괄 동기화
+UPDATE public.profiles p
+SET name = COALESCE(
+  u.raw_user_meta_data->>'full_name',
+  SPLIT_PART(p.email, '@', 1)
+)
+FROM auth.users u
+WHERE p.id = u.id;
 
 -- profiles RLS 설정하여 전체 조회를 허용 (이메일로 친구의 ID 검색 가능)
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;

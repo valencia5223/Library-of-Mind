@@ -50,11 +50,13 @@ export default function App() {
   useEffect(() => {
     if (user) {
       if (isSupabaseConfigured()) {
-        // public.profiles 에 유저 이메일 연동 동기화 (Upsert)
+        // public.profiles 에 유저 이메일 및 가입 이름 동기화 (Upsert)
+        const fullName = user.user_metadata?.full_name || user.email?.split('@')[0];
         supabase.from('profiles').upsert({
           id: user.id,
-          email: user.email
-        }).then(({ error }) => {
+          email: user.email,
+          name: fullName
+        }, { onConflict: 'id' }).then(({ error }) => {
           if (error) console.warn('프로필 자동 등록 실패 (profiles 테이블이 없을 수 있음):', error);
         });
         
@@ -443,8 +445,8 @@ export default function App() {
           {activeTab === 'social' && (
             <FriendManager
               user={user}
-              onViewFriendBookshelf={(friendId, friendEmail) => {
-                setViewedFriend({ id: friendId, email: friendEmail });
+              onViewFriendBookshelf={(friendId, friendEmail, friendName) => {
+                setViewedFriend({ id: friendId, email: friendEmail, name: friendName });
                 setActiveTab('bookshelf');
               }}
               currentViewedFriend={viewedFriend}

@@ -28,22 +28,23 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
       if (friendsError) throw friendsError;
 
       if (friendsData && friendsData.length > 0) {
-        // 2. 관계자들의 이메일 프로필 조회
+        // 2. 관계자들의 이메일/이름 프로필 조회
         const friendIds = friendsData.map(f => f.friend_id);
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
-          .select('id, email')
+          .select('id, email, name')
           .in('id', friendIds);
 
         if (profilesError) throw profilesError;
 
-        // 3. 로컬에서 profiles 이메일 매핑
+        // 3. 로컬에서 profiles 이메일/이름 매핑
         const mappedFriends = friendsData.map(f => {
           const prof = profilesData?.find(p => p.id === f.friend_id);
           return {
             id: f.id,
             friend_id: f.friend_id,
-            email: prof ? prof.email : '알 수 없는 사용자'
+            email: prof ? prof.email : '알 수 없는 사용자',
+            name: prof?.name || (prof?.email ? prof.email.split('@')[0] : '')
           };
         });
 
@@ -112,7 +113,7 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
       // 1. 해당 이메일의 유저가 profiles 테이블에 존재하는지 확인
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('id, email')
+        .select('id, email, name')
         .eq('email', friendEmail.trim())
         .maybeSingle();
 
@@ -155,7 +156,8 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
 
       if (insertError) throw insertError;
 
-      setSuccessMsg(`🎉 ${friendEmail} 님을 친구로 정상 등록했습니다!`);
+      const friendDisplayName = profileData.name ? `${profileData.name} (${profileData.email})` : profileData.email;
+      setSuccessMsg(`🎉 ${friendDisplayName} 님을 친구로 정상 등록했습니다!`);
       setFriendEmail('');
       await fetchFriends();
     } catch (err) {
@@ -170,8 +172,9 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
     }
   };
 
-  const handleDeleteFriend = async (friendshipId, email) => {
-    if (!window.confirm(`${email} 님을 친구 목록에서 삭제하시겠습니까?`)) return;
+  const handleDeleteFriend = async (friendshipId, email, name) => {
+    const displayName = name ? `${name} (${email})` : email;
+    if (!window.confirm(`${displayName} 님을 친구 목록에서 삭제하시겠습니까?`)) return;
 
     setLoading(true);
     try {
@@ -202,7 +205,7 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
         <div className="friend-banner-status flex justify-between align-middle p-3 mb-4 rounded border-amber" style={{ backgroundColor: '#fffbeb', border: '1px solid #fef3c7' }}>
           <div className="flex align-middle text-amber-800">
             <Sparkles className="me-2 text-warning animate-bounce" size={18} />
-            <span>현재 <strong>{currentViewedFriend.email}</strong> 님의 책장을 탐구하고 있습니다.</span>
+            <span>현재 <strong>{currentViewedFriend.name ? `${currentViewedFriend.name} (${currentViewedFriend.email})` : currentViewedFriend.email}</strong> 님의 책장을 탐구하고 있습니다.</span>
           </div>
           <button className="btn btn-secondary px-3 py-1 btn-sm" onClick={onBackToMyBookshelf}>
             내 서재로 환원
@@ -277,7 +280,12 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
               {friendsList.map((friend) => (
                 <div key={friend.id} className="friend-item-card flex justify-between align-middle border-b py-3 transition hover:bg-slate-50 px-2 rounded mb-2">
                   <div className="friend-details">
-                    <span className="font-bold text-slate-800">{friend.email}</span>
+                    <div className="flex align-center gap-2">
+                      {friend.name && (
+                        <span className="font-extrabold text-slate-800" style={{ fontSize: '0.98rem' }}>{friend.name}</span>
+                      )}
+                      <span className="text-slate-500 text-xs font-medium">({friend.email})</span>
+                    </div>
                     <div className="flex text-xs text-sub mt-1">
                       <span className="me-3">총 책 수: <strong>{friend.bookCount}권</strong></span>
                       <span>완독 수: <strong className="text-green">{friend.completedCount}권</strong></span>
@@ -287,13 +295,13 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
                     <button
                       className="btn btn-outline-primary btn-sm flex align-middle px-3"
                       style={{ fontSize: '0.8rem' }}
-                      onClick={() => onViewFriendBookshelf(friend.friend_id, friend.email)}
+                      onClick={() => onViewFriendBookshelf(friend.friend_id, friend.email, friend.name)}
                     >
                       <ExternalLink className="me-1" size={14} /> 서재 방문
                     </button>
                     <button
                       className="btn btn-outline-danger btn-sm p-1.5"
-                      onClick={() => handleDeleteFriend(friend.id, friend.email)}
+                      onClick={() => handleDeleteFriend(friend.id, friend.email, friend.name)}
                     >
                       <Trash2 size={15} />
                     </button>

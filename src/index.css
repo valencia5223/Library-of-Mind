@@ -622,7 +622,7 @@ input:focus, select:focus, textarea:focus {
   bottom: 48px;
   writing-mode: vertical-lr;
   text-orientation: mixed;
-  font-size: 0.63rem; /* 10% 축소하여 긴 제목의 좌우 잘림 현상 전면 해결 */
+  font-size: 0.57rem; /* 10% 추가 축소하여 긴 제목 및 모바일/서재 화면 잘림 현상 방지 */
   font-weight: 800;
   color: #ffffff;
   letter-spacing: 0.02em;

@@ -592,7 +592,7 @@ export default function BookshelfView({
         <div className="friend-view-banner p-3 mb-4 rounded flex justify-between align-middle" style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af' }}>
           <div className="flex align-middle font-medium">
             <span className="me-2">📢</span>
-            <span>현재 <strong>{viewedFriend.email}</strong> 님의 서재를 둘러보고 있습니다. (읽기 전용 모드)</span>
+            <span>현재 <strong>{viewedFriend.name ? `${viewedFriend.name} (${viewedFriend.email})` : viewedFriend.email}</strong> 님의 서재를 둘러보고 있습니다. (읽기 전용 모드)</span>
           </div>
           <button className="btn btn-primary btn-sm px-3 py-1" onClick={onBackToMyBookshelf} style={{ fontSize: '0.8rem' }}>
             내 서재로 돌아가기
@@ -764,6 +764,32 @@ export default function BookshelfView({
                       <div className="book-card-info">
                         <h4 className="book-title">{book.title}</h4>
                         <p className="book-author">{book.author}</p>
+                        {viewedFriend && (
+                          <button
+                            className="btn btn-primary btn-sm w-full mt-2 font-bold flex justify-center align-center gap-1"
+                            style={{ fontSize: '0.78rem', padding: '0.35rem 0.5rem', borderRadius: '6px' }}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (onAddManualBook) {
+                                await onAddManualBook({
+                                  title: book.title,
+                                  author: book.author,
+                                  publisher: book.publisher,
+                                  cover_url: book.cover_url,
+                                  isbn: book.isbn,
+                                  total_pages: book.total_pages,
+                                  status: 'TO_READ',
+                                  buy_link: book.buy_link,
+                                  pub_date: book.pub_date,
+                                  description: book.description
+                                });
+                                alert(`✅ '${book.title}' 도서가 내 서재에 성공적으로 추가되었습니다!`);
+                              }
+                            }}
+                          >
+                            <Plus size={14} /> 내 서재 담기
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))
@@ -809,6 +835,35 @@ export default function BookshelfView({
               </div>
 
               <div className="detail-content">
+                {viewedFriend && (
+                  <div className="alert alert-info mb-3 p-3 rounded flex justify-between align-center" style={{ backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e40af' }}>
+                    <span className="text-xs font-bold">🤝 친구 서재의 책입니다. 내 서재로 담으시겠습니까?</span>
+                    <button
+                      className="btn btn-primary btn-sm font-extrabold flex align-center gap-1 shadow-sm"
+                      style={{ padding: '0.4rem 0.85rem', fontSize: '0.82rem' }}
+                      onClick={async () => {
+                        if (onAddManualBook) {
+                          await onAddManualBook({
+                            title: selectedBook.title,
+                            author: selectedBook.author,
+                            publisher: selectedBook.publisher,
+                            cover_url: selectedBook.cover_url,
+                            isbn: selectedBook.isbn,
+                            total_pages: selectedBook.total_pages,
+                            status: 'TO_READ',
+                            buy_link: selectedBook.buy_link,
+                            pub_date: selectedBook.pub_date,
+                            description: selectedBook.description
+                          });
+                          alert(`✅ '${selectedBook.title}' 도서가 내 서재에 추가되었습니다!`);
+                          setSelectedBook(null);
+                        }
+                      }}
+                    >
+                      <Plus size={15} /> 내 서재에 추가하기
+                    </button>
+                  </div>
+                )}
                 <h3>{selectedBook.title}</h3>
                 <p className="detail-author">
                   {selectedBook.author} | {selectedBook.publisher || '출판사 정보'}
@@ -957,7 +1012,7 @@ export default function BookshelfView({
                             type="date"
                             value={editCompletedAt}
                             onChange={(e) => setEditCompletedAt(e.target.value)}
-                            max={new Date().toISOString().split('T')[0]} // 오늘 이후 날짜 지정 금지
+                            max={new Date().toISOString().split('T')[0]}
                             style={{
                               width: '100%',
                               padding: '0.4rem 0.5rem',
@@ -1011,11 +1066,36 @@ export default function BookshelfView({
                       rel="noopener noreferrer"
                       className="btn btn-secondary text-decoration-none"
                     >
-                      <ExternalLink size={16} /> 구매 링크 연결
+                      <ExternalLink size={16} /> 알라딘 구매
                     </a>
                   )}
 
-                  {!viewedFriend && (
+                  {viewedFriend ? (
+                    <button
+                      className="btn btn-primary font-bold flex align-center gap-1"
+                      style={{ padding: '0.5rem 1rem' }}
+                      onClick={async () => {
+                        if (onAddManualBook) {
+                          await onAddManualBook({
+                            title: selectedBook.title,
+                            author: selectedBook.author,
+                            publisher: selectedBook.publisher,
+                            cover_url: selectedBook.cover_url,
+                            isbn: selectedBook.isbn,
+                            total_pages: selectedBook.total_pages,
+                            status: 'TO_READ',
+                            buy_link: selectedBook.buy_link,
+                            pub_date: selectedBook.pub_date,
+                            description: selectedBook.description
+                          });
+                          alert(`✅ '${selectedBook.title}' 도서가 내 서재에 성공적으로 추가되었습니다!`);
+                          setSelectedBook(null);
+                        }
+                      }}
+                    >
+                      <Plus size={16} /> 내 서재에 추가하기
+                    </button>
+                  ) : (
                     <button
                       className="btn btn-danger btn-sm"
                       onClick={() => {
@@ -1071,8 +1151,34 @@ export default function BookshelfView({
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 flex justify-end" style={{ borderTop: '1px solid #e2e8f0' }}>
-                  <button className="btn btn-primary btn-sm" onClick={() => setShowDescModal(false)}>
+                <div className="mt-4 pt-3 flex justify-between align-center" style={{ borderTop: '1px solid #e2e8f0' }}>
+                  {viewedFriend ? (
+                    <button
+                      className="btn btn-primary btn-sm font-bold flex align-center gap-1"
+                      onClick={async () => {
+                        if (onAddManualBook && selectedBook) {
+                          await onAddManualBook({
+                            title: selectedBook.title,
+                            author: selectedBook.author,
+                            publisher: selectedBook.publisher,
+                            cover_url: selectedBook.cover_url,
+                            isbn: selectedBook.isbn,
+                            total_pages: selectedBook.total_pages,
+                            status: 'TO_READ',
+                            buy_link: selectedBook.buy_link,
+                            pub_date: selectedBook.pub_date,
+                            description: selectedBook.description || bookDescription
+                          });
+                          alert(`✅ '${selectedBook.title}' 도서가 내 서재에 추가되었습니다!`);
+                          setShowDescModal(false);
+                          setSelectedBook(null);
+                        }
+                      }}
+                    >
+                      <Plus size={15} /> 내 서재에 추가하기
+                    </button>
+                  ) : <div />}
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowDescModal(false)}>
                     확인 닫기
                   </button>
                 </div>
