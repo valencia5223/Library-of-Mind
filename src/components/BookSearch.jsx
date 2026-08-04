@@ -38,16 +38,45 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
     setErrorMsg('');
     try {
       let response;
-      try {
-        response = await supabase.rpc('aladin_bestseller_proxy', { category_id: catId });
-      } catch (rpcErr) {
-        console.warn('카테고리 매개변수 RPC 호출 실패, 기본 RPC 시도:', rpcErr);
+      
+      // 1-1. catId가 0(종합)이거나 기본 호출 시: 기존 인자 없는 aladin_bestseller_proxy() 우선 호출 (DB 파라미터 미업데이트 100% 대응)
+      if (catId === 0) {
         response = await supabase.rpc('aladin_bestseller_proxy');
+      } else {
+        // 1-2. 분야별 카테고리가 지정된 경우: aladin_bestseller_proxy({ category_id: catId }) 시도
+        try {
+          response = await supabase.rpc('aladin_bestseller_proxy', { category_id: catId });
+        } catch (rpcErr) {
+          console.warn('분야별 매개변수 RPC 호출 오류, 기본 RPC로 폴백:', rpcErr);
+          response = { error: { code: '42883', message: 'fallback' } };
+        }
       }
       
+      // 1-3. 카테고리 매개변수 RPC가 DB에 미등록된 구버전 상태인 경우 (42883/PGRST202 schema cache error)
+      if (response && response.error && (
+        response.error.code === '42883' || 
+        response.error.code === 'PGRST202' ||
+        String(response.error.message).includes('42883') || 
+        String(response.error.message).includes('PGRST202') || 
+        String(response.error.message).includes('does not exist') ||
+        String(response.error.message).includes('Could not find the function') ||
+        String(response.error.message).includes('fallback')
+      )) {
+        console.log('구버전 RPC 감지: 인자 없는 aladin_bestseller_proxy()로 폴백 호출 진행');
+        const fallbackResp = await supabase.rpc('aladin_bestseller_proxy');
+        if (!fallbackResp.error && fallbackResp.data && fallbackResp.data.item) {
+          setBestsellerList(parseAladinItems(fallbackResp.data.item));
+          if (catId !== 0) {
+            setErrorMsg('💡 분야별(소설, 경제, 인문 등) 베스트셀러를 DB에서 바로 불러오시려면, supabase_bookshelf_schema.sql 파일의 2번 SQL 스크립트를 Supabase 대시보드 SQL Editor에 한번 실행(Run)해 주세요! (현재 종합 베스트셀러가 안전하게 표시 중입니다)');
+          }
+          setBestsellerLoading(false);
+          return;
+        }
+      }
+
       if (response.error) {
         if (response.error.message && response.error.message.includes('does not exist')) {
-          setErrorMsg('Supabase DB에 프록시 함수(SQL)를 등록해야 알라딘 API 호출이 가능합니다. 대화창의 가이드를 따라 SQL을 꼭 실행해 주세요!');
+          setErrorMsg('Supabase DB에 프록시 함수(SQL)를 등록해야 알라딘 API 호출이 가능합니다. 가이드를 따라 SQL을 꼭 실행해 주세요!');
           return;
         }
         throw response.error;
