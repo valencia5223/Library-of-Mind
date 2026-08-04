@@ -119,6 +119,7 @@ CREATE POLICY "Users can delete their own sessions"
 CREATE EXTENSION IF NOT EXISTS "http";
 
 -- 2. 알라딘 실시간 베스트셀러 API 프록시 함수 정의 (분야별 CategoryId 지원)
+DROP FUNCTION IF EXISTS public.aladin_bestseller_proxy();
 CREATE OR REPLACE FUNCTION public.aladin_bestseller_proxy(category_id INT DEFAULT 0)
 RETURNS JSON
 LANGUAGE plpgsql
