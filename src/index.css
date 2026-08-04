@@ -598,7 +598,7 @@ input:focus, select:focus, textarea:focus {
   z-index: 2;
 }
 
-/* 세로 쓰기 전용 레이아웃 교정 (접힘 골선에 텍스트가 겹치지 않게 좌측 여백 0.65rem 확보) */
+/* 세로 쓰기 전용 레이아웃 교정 (긴 제목의 경우 우측->좌측 2줄 자동 줄바꿈 지원) */
 .spine-content {
   writing-mode: vertical-rl;
   text-orientation: mixed;
@@ -609,19 +609,19 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   height: 100%;
   width: 100%;
-  padding: 0.4rem 0.2rem 0.4rem 0.65rem;
+  padding: 0.35rem 0.15rem 0.35rem 0.45rem;
   z-index: 4;
   box-sizing: border-box;
 }
 
 .spine-title {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 800;
   color: #ffffff;
-  letter-spacing: 0.05em;
-  line-height: 1.2;
-  max-height: 82%;
-  max-width: 1.35em;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  max-height: 85%;
+  max-width: 2.8em;
   overflow: hidden;
   text-shadow: 
     0 1px 3px rgba(0, 0, 0, 0.85),
@@ -636,9 +636,9 @@ input:focus, select:focus, textarea:focus {
   font-size: 0.58rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   max-height: 14em;
-  max-width: 1.35em;
+  max-width: 2.8em;
   overflow: hidden;
   text-shadow: 
     0 1px 3px rgba(0, 0, 0, 0.75);
