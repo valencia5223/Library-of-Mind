@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, Star, ExternalLink, PlusCircle, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw } from 'lucide-react';
+import { BookOpen, Star, ExternalLink, PlusCircle, Plus, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 export default function BookshelfView({ 
