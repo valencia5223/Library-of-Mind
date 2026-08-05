@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
-import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, ShieldCheck, GripHorizontal } from 'lucide-react';
+import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, GripHorizontal } from 'lucide-react';
 
 export default function SharedLiveMemoModal({ user, friend, onClose }) {
   if (!user || !friend) return null;
@@ -9,6 +9,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   const sortedUserIds = [user.id, friend.friend_id].sort();
   const roomId = `${sortedUserIds[0]}_${sortedUserIds[1]}`;
 
+  const editorRef = useRef(null);
   const [memoContent, setMemoContent] = useState('');
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -16,6 +17,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   const [typingPartner, setTypingPartner] = useState(null);
   const [lastSavedTime, setLastSavedTime] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [isEditorEmpty, setIsEditorEmpty] = useState(true);
 
   // 글씨 폰트 크기 상태 (기본값: 16px, 숫자로 자유롭게 입력 및 localStorage 기억)
   const [fontSizePx, setFontSizePx] = useState(() => {
@@ -48,8 +50,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   const initialPosRef = useRef({ x: 0, y: 0 });
 
   const handleMouseDownHeader = (e) => {
-    // 버튼, 인풋, 텍스트에리어 클릭 시 드래그 제외
-    if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea')) return;
+    // 버튼, 인풋, 에디터 영역 클릭 시 드래그 제외
+    if (e.target.closest('button') || e.target.closest('input') || e.target.closest('[contenteditable="true"]')) return;
 
     isDraggingRef.current = true;
     dragStartRef.current = { x: e.clientX, y: e.clientY };
@@ -82,7 +84,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }
   };
 
-  // 메모 입력 창 (Textarea) 크기 조절 (드래그 resize & localStorage 기억)
+  // 메모 입력 창 크기 조절 (드래그 resize & localStorage 기억)
   const [textareaSize, setTextareaSize] = useState(() => {
     try {
       const saved = localStorage.getItem('shared_memo_textarea_size');
@@ -150,13 +152,24 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
 
   const saveTimeoutRef = useRef(null);
 
+  // 에디터 DOM 내용 업기
+  const updateEditorDOM = (htmlContent) => {
+    if (editorRef.current) {
+      if (editorRef.current.innerHTML !== htmlContent) {
+        editorRef.current.innerHTML = htmlContent || '';
+      }
+      const text = editorRef.current.innerText || '';
+      setIsEditorEmpty(!htmlContent || htmlContent === '<br>' || text.trim() === '');
+    }
+  };
+
   useEffect(() => {
     if (!isSupabaseConfigured()) {
       setLoading(false);
       return;
     }
 
-    // 1. 기존 공유 메모 조회 및 초기화 (없으면 빈 레코드 생성)
+    // 1. 기존 공유 메모 조회 및 초기화
     const initMemo = async () => {
       setLoading(true);
       try {
@@ -171,7 +184,9 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         }
 
         if (data) {
-          setMemoContent(data.content || '');
+          const content = data.content || '';
+          setMemoContent(content);
+          updateEditorDOM(content);
           if (data.updated_at) {
             setLastSavedTime(new Date(data.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
           }
@@ -207,11 +222,12 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         },
         (payload) => {
           if (payload.new && payload.new.last_updated_by !== user.id) {
-            setMemoContent(payload.new.content || '');
+            const newHtml = payload.new.content || '';
+            setMemoContent(newHtml);
+            updateEditorDOM(newHtml);
             setTypingPartner(friend.email);
             setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
 
-            // 1.5초 후 타이핑 상태 뱃지 해제
             setTimeout(() => {
               setTypingPartner(null);
             }, 1500);
@@ -228,40 +244,9 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     };
   }, [roomId, user.id, friend.friend_id, friend.email]);
 
-  // 클립보드 이미지 붙여넣기 (Paste) 처리 핸들러
-  const handlePaste = (e) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type && items[i].type.startsWith('image/')) {
-        e.preventDefault(); // 기본 텍스트 붙여넣기 방지
-        const file = items[i].getAsFile();
-        if (!file) continue;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const base64Data = event.target?.result;
-          if (!base64Data) return;
-
-          const imageMarkdown = `\n![클립보드 이미지](${base64Data})\n`;
-          const target = e.target;
-          const start = typeof target.selectionStart === 'number' ? target.selectionStart : memoContent.length;
-          const end = typeof target.selectionEnd === 'number' ? target.selectionEnd : memoContent.length;
-
-          const updatedContent = memoContent.substring(0, start) + imageMarkdown + memoContent.substring(end);
-          handleTextChange({ target: { value: updatedContent } });
-        };
-        reader.readAsDataURL(file);
-        break;
-      }
-    }
-  };
-
-  // 키보드 입력 시 디바운스(350ms)로 Supabase DB 업서트
-  const handleTextChange = (e) => {
-    const newText = e.target.value;
-    setMemoContent(newText);
+  // 메모 내용 수정 시 DB 업서트 (디바운스 350ms)
+  const triggerSave = (htmlContent) => {
+    setMemoContent(htmlContent);
     setIsSaving(true);
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -275,7 +260,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               room_id: roomId,
               user1_id: sortedUserIds[0],
               user2_id: sortedUserIds[1],
-              content: newText,
+              content: htmlContent,
               last_updated_by: user.id,
               updated_at: new Date().toISOString()
             },
@@ -292,9 +277,80 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }, 350);
   };
 
-  // 클립보드 전체 복사
+  const handleEditorInput = () => {
+    if (!editorRef.current) return;
+    const html = editorRef.current.innerHTML;
+    const text = editorRef.current.innerText || '';
+    setIsEditorEmpty(!html || html === '<br>' || text.trim() === '');
+    triggerSave(html);
+  };
+
+  // 클립보드 이미지 및 텍스트 붙여넣기 (Paste) 처리 핸들러
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    let hasImage = false;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type && items[i].type.startsWith('image/')) {
+        hasImage = true;
+        e.preventDefault(); // 기본 텍스트 붙여넣기 방지
+        const file = items[i].getAsFile();
+        if (!file) continue;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64Data = event.target?.result;
+          if (!base64Data) return;
+
+          // 커서 위치에 inline <img> 요소 바로 생성 삽입
+          const img = document.createElement('img');
+          img.src = base64Data;
+          img.alt = '클립보드 이미지';
+          img.style.maxWidth = '100%';
+          img.style.maxHeight = '320px';
+          img.style.borderRadius = '10px';
+          img.style.margin = '8px 0';
+          img.style.display = 'block';
+          img.style.boxShadow = '0 2px 8px rgba(0,0,0,0.12)';
+
+          const selection = window.getSelection();
+          if (selection && selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+            range.insertNode(img);
+            
+            // 이미지 뒤로 커서 이동
+            range.setStartAfter(img);
+            range.setEndAfter(img);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          } else if (editorRef.current) {
+            editorRef.current.appendChild(img);
+          }
+
+          handleEditorInput();
+        };
+        reader.readAsDataURL(file);
+        break;
+      }
+    }
+
+    // 이미지가 아닌 서식 지정 텍스트 붙여넣기 시 텍스트만 깔끔히 삽입
+    if (!hasImage && e.clipboardData) {
+      const text = e.clipboardData.getData('text/plain');
+      if (text) {
+        e.preventDefault();
+        document.execCommand('insertText', false, text);
+        handleEditorInput();
+      }
+    }
+  };
+
+  // 클립보드 전체 복사 (순수 텍스트 기준)
   const handleCopyAll = () => {
-    navigator.clipboard.writeText(memoContent);
+    const text = editorRef.current ? editorRef.current.innerText : memoContent;
+    navigator.clipboard.writeText(text);
     setCopySuccess(true);
     setTimeout(() => setCopySuccess(false), 2000);
   };
@@ -302,25 +358,17 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   // 내용 전체 지우기
   const handleClearAll = () => {
     if (window.confirm('실시간 메모의 전체 내용을 지우시겠습니까? (상대방 화면에서도 바로 지워집니다)')) {
-      handleTextChange({ target: { value: '' } });
+      if (editorRef.current) {
+        editorRef.current.innerHTML = '';
+      }
+      handleEditorInput();
     }
   };
 
-  // 텍스트 내에서 ![이미지명](data:image/...) 마크다운 이미지 추출 (미리보기 렌더링용)
-  const extractImages = (text) => {
-    if (!text) return [];
-    const regex = /!\[(.*?)\]\((data:image\/[^;]+;base64,[^\)]+)\)/g;
-    const matches = [];
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-      matches.push({ alt: match[1], src: match[2], fullMatch: match[0] });
-    }
-    return matches;
-  };
-
-  const attachedImages = extractImages(memoContent);
-  const lineCount = memoContent ? memoContent.split('\n').length : 0;
-  const charCount = memoContent.length;
+  // 줄 수 및 글자 수 (텍스트 노드 기준 계산)
+  const currentText = editorRef.current ? (editorRef.current.innerText || '') : '';
+  const lineCount = currentText ? currentText.split('\n').length : 0;
+  const charCount = currentText.length;
 
   return (
     <div className="modal-overlay" style={{ zIndex: 1250 }} onClick={onClose}>
@@ -501,11 +549,33 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             </div>
           ) : (
             <div style={{ position: 'relative', width: `${textareaSize.width}px`, height: `${textareaSize.height}px`, maxWidth: '100%' }}>
-              <textarea
-                value={memoContent}
-                onChange={handleTextChange}
+              {/* 비어 있을 때 가이드 텍스트 (Placeholder) */}
+              {isEditorEmpty && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '1.2rem',
+                    left: '1.2rem',
+                    right: '1.2rem',
+                    color: '#94a3b8',
+                    fontSize: `${fontSizePx}px`,
+                    lineHeight: 1.75,
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                    zIndex: 1,
+                    whiteSpace: 'pre-wrap'
+                  }}
+                >
+                  {`여기에 메모를 입력하거나 클립보드 이미지(Ctrl+V)를 붙여넣어 보세요! 🖼️\n${friend.email}님 화면에도 0.1초 만에 실시간으로 글자와 이미지가 나타납니다 ✨\n\n- 읽고 싶은 책 리스트 공유\n- 감명 깊은 구절 및 메모 공동 작성\n- 클립보드 스크린샷 실시간 공통 캡처 공유`}
+                </div>
+              )}
+
+              {/* contentEditable 기반 리치 메모장 에디터 */}
+              <div
+                ref={editorRef}
+                contentEditable
+                onInput={handleEditorInput}
                 onPaste={handlePaste}
-                placeholder={`여기에 메모를 입력하거나 클립보드 이미지(Ctrl+V)를 붙여넣어 보세요! 🖼️\n${friend.email}님 화면에도 0.1초 만에 실시간으로 글자와 이미지가 나타납니다 ✨\n\n- 읽고 싶은 책 리스트 공유\n- 감명 깊은 구절 및 메모 공동 작성\n- 클립보드 이미지/스샷 실시간 공유`}
                 style={{
                   width: '100%',
                   height: '100%',
@@ -517,7 +587,9 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                   border: '1.5px solid #cbd5e1',
                   borderRadius: '12px',
                   outline: 'none',
-                  resize: 'none',
+                  overflowY: 'auto',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
                   boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)',
                   fontFamily: 'Inter, system-ui, sans-serif'
                 }}
@@ -552,56 +624,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               </div>
             </div>
           )}
-
-          {/* 붙여넣은 클립보드 이미지 썸네일 미리보기 영역 */}
-          {attachedImages.length > 0 && (
-            <div
-              className="mt-3 p-2 rounded flex flex-wrap gap-2"
-              style={{
-                width: `${textareaSize.width}px`,
-                maxWidth: '100%',
-                maxHeight: '140px',
-                overflowY: 'auto',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0'
-              }}
-            >
-              <div className="w-100 text-xs font-bold text-slate-500 mb-1 flex justify-between align-center">
-                <span>📷 첨부된 클립보드 이미지 ({attachedImages.length}개)</span>
-                <span className="text-slate-400 font-normal">상대방 화면에서도 실시간 렌더링됩니다</span>
-              </div>
-              {attachedImages.map((img, idx) => (
-                <div key={idx} className="relative group" style={{ width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
-                  <img src={img.src} alt={img.alt} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <button
-                    type="button"
-                    title="이미지 삭제"
-                    onClick={() => {
-                      const newContent = memoContent.replace(img.fullMatch, '');
-                      handleTextChange({ target: { value: newContent } });
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: '4px',
-                      right: '4px',
-                      background: 'rgba(239, 68, 68, 0.85)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '50%',
-                      width: '20px',
-                      height: '20px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* 하단 푸터 바 (통계 및 툴바, 고정 크기) */}
@@ -623,7 +645,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             <button
               className="btn btn-outline btn-sm font-bold flex align-center gap-1"
               onClick={handleCopyAll}
-              disabled={!memoContent}
+              disabled={isEditorEmpty}
               style={{ padding: '0.45rem 0.85rem', borderRadius: '8px' }}
             >
               {copySuccess ? <CheckCircle2 size={15} color="#059669" /> : <Copy size={15} />}
@@ -633,7 +655,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             <button
               className="btn btn-outline btn-sm text-danger font-bold flex align-center gap-1"
               onClick={handleClearAll}
-              disabled={!memoContent}
+              disabled={isEditorEmpty}
               style={{ padding: '0.45rem 0.85rem', borderRadius: '8px', borderColor: '#fca5a5', color: '#dc2626' }}
             >
               <Trash2 size={15} /> 지우기
