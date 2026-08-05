@@ -137,15 +137,15 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }
   };
 
-  // 창 위치 & 크기 초기화 버튼
+  // 창 위치 & 입력창 크기 초기화 버튼
   const handleResetPos = (e) => {
     e.stopPropagation();
     const defaultPos = { x: 0, y: 0 };
-    const defaultSize = { width: 750, height: 600 };
+    const defaultTextareaSize = { width: 520, height: 260 };
     setModalPos(defaultPos);
-    setModalSize(defaultSize);
+    setTextareaSize(defaultTextareaSize);
     localStorage.removeItem('shared_memo_modal_pos');
-    localStorage.removeItem('shared_memo_modal_size');
+    localStorage.removeItem('shared_memo_textarea_size');
   };
 
   // ESC 키 누르면 모달 닫기
@@ -219,7 +219,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         (payload) => {
           if (payload.new && payload.new.last_updated_by !== user.id) {
             setMemoContent(payload.new.content || '');
-            setTypingPartner(friend.name || friend.email);
+            setTypingPartner(friend.email);
             setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
 
             // 1.5초 후 타이핑 상태 뱃지 해제
@@ -237,7 +237,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       supabase.removeChannel(channel);
     };
-  }, [roomId, user.id, friend.friend_id]);
+  }, [roomId, user.id, friend.friend_id, friend.email]);
 
   // 키보드 입력 시 디바운스(350ms)로 Supabase DB 업서트
   const handleTextChange = (e) => {
@@ -296,6 +296,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         className="modal-card animate-scale-in"
         onClick={(e) => e.stopPropagation()}
         style={{
+          width: 'fit-content',
           maxWidth: '96vw',
           maxHeight: '96vh',
           display: 'flex',
@@ -309,29 +310,48 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           transition: isDraggingRef.current || isResizingRef.current ? 'none' : 'transform 0.05s ease-out'
         }}
       >
-        {/* 모달 닫기 버튼 */}
-        <button
-          className="modal-close"
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: '1.1rem',
-            right: '1.1rem',
-            background: '#f1f5f9',
-            border: 'none',
-            borderRadius: '50%',
-            width: '34px',
-            height: '34px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            color: '#64748b',
-            zIndex: 10
-          }}
-        >
-          <X size={18} />
-        </button>
+        {/* 모달 상단 우측 버튼 그룹 (위치 초기화 및 닫기) */}
+        <div style={{ position: 'absolute', top: '1.1rem', right: '1.1rem', display: 'flex', gap: '6px', zIndex: 10 }}>
+          <button
+            type="button"
+            onClick={handleResetPos}
+            title="창 위치 및 메모 입력창 크기 초기화"
+            style={{
+              background: '#f1f5f9',
+              border: 'none',
+              borderRadius: '50%',
+              width: '34px',
+              height: '34px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#64748b'
+            }}
+          >
+            <RotateCcw size={16} />
+          </button>
+
+          <button
+            className="modal-close"
+            onClick={onClose}
+            title="닫기 (Esc)"
+            style={{
+              background: '#f1f5f9',
+              border: 'none',
+              borderRadius: '50%',
+              width: '34px',
+              height: '34px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#64748b'
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
 
         {/* 상단 타이틀 및 상태 헤더 (드래그 가능 헤더 영역, 고정 크기) */}
         <div
@@ -345,11 +365,11 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             flexShrink: 0
           }}
         >
-          <div className="flex align-center justify-between" style={{ paddingRight: '4.5rem' }}>
+          <div className="flex align-center justify-between" style={{ paddingRight: '6.5rem' }}>
             <h3 className="flex align-center gap-2" style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
               <GripHorizontal size={20} className="text-slate-400 me-1" />
               <Zap size={22} className="text-primary" style={{ color: '#0078a6' }} />
-              <span>{friend.name || friend.email}님과의 실시간 라이브 메모장</span>
+              <span>실시간 라이브 메모장</span>
             </h3>
 
             {/* 폰트 크기 커스텀 숫자 입력 컨트롤러 (localStorage 자동 기억) */}
@@ -494,7 +514,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               <textarea
                 value={memoContent}
                 onChange={handleTextChange}
-                placeholder={`여기에 메모를 입력해 보세요!\n${friend.name || friend.email}님 화면에도 0.1초 만에 실시간으로 글자가 나타나고 수정됩니다 ✨\n\n- 읽고 싶은 책 리스트 공유\n- 감명 깊은 구절 및 메모 공동 작성\n- 실시간 아이디어 스케치`}
+                placeholder={`여기에 메모를 입력해 보세요!\n${friend.email}님 화면에도 0.1초 만에 실시간으로 글자가 나타나고 수정됩니다 ✨\n\n- 읽고 싶은 책 리스트 공유\n- 감명 깊은 구절 및 메모 공동 작성\n- 실시간 아이디어 스케치`}
                 style={{
                   width: '100%',
                   height: '100%',
@@ -548,9 +568,13 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           className="mt-3 pt-3 flex justify-between align-center"
           style={{ borderTop: '1px solid #e2e8f0', background: 'transparent', flexShrink: 0 }}
         >
-          <div className="flex align-center gap-3 text-slate-500" style={{ fontSize: '0.83rem', fontWeight: 500 }}>
+          <div className="flex align-center gap-2.5 text-slate-500" style={{ fontSize: '0.78rem', fontWeight: 500 }}>
             <span>줄 수: <b>{lineCount}</b></span>
             <span>글자 수: <b>{charCount}</b>자</span>
+            <span className="text-slate-300">|</span>
+            <span className="text-slate-500" style={{ fontSize: '0.75rem' }}>
+              대상: <b style={{ color: '#475569', fontWeight: 600 }}>{friend.email}</b>
+            </span>
           </div>
 
           <div className="flex align-center gap-2">
