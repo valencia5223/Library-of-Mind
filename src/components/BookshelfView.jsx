@@ -906,13 +906,15 @@ export default function BookshelfView({
                 <div key={`${cat.key}-shelf-${chunkIdx}`} className={`wood-shelf shelf-theme-${shelfTheme}`} style={{ marginBottom: '2rem', position: 'relative' }}>
                   {/* 포차코 & 헬로키티 캐릭터 전용 귀여운 3D 데코 스티커 */}
                   {shelfTheme === 'pochacco' && (
-                    <div className="pochacco-decor" style={{ position: 'absolute', top: '-14px', right: '18px', zIndex: 12, background: '#ffffff', padding: '2px 8px', borderRadius: '12px', border: '2px solid #6ee7b7', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', fontWeight: 800, fontSize: '0.82rem', color: '#047857', display: 'flex', alignItems: 'center', gap: '4px', userSelect: 'none' }}>
-                      <span>🐶 POCHACCO</span> <span style={{ fontSize: '0.75rem' }}>🐾☁️</span>
+                    <div className="pochacco-decor" style={{ position: 'absolute', top: '-24px', right: '18px', zIndex: 12, background: 'rgba(255,255,255,0.95)', padding: '4px 10px', borderRadius: '16px', border: '2px solid #6ee7b7', boxShadow: '0 6px 14px rgba(0,0,0,0.12)', fontWeight: 800, fontSize: '0.82rem', color: '#047857', display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
+                      <img src="/assets/pochacco_sticker.png" alt="Pochacco" style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '50%' }} />
+                      <span>POCHACCO 🐶</span>
                     </div>
                   )}
                   {shelfTheme === 'kitty' && (
-                    <div className="kitty-decor" style={{ position: 'absolute', top: '-14px', right: '18px', zIndex: 12, background: '#ffffff', padding: '2px 8px', borderRadius: '12px', border: '2px solid #f472b6', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', fontWeight: 800, fontSize: '0.82rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '4px', userSelect: 'none' }}>
-                      <span>🎀 HELLO KITTY</span> <span style={{ fontSize: '0.75rem' }}>💖✨</span>
+                    <div className="kitty-decor" style={{ position: 'absolute', top: '-24px', right: '18px', zIndex: 12, background: 'rgba(255,255,255,0.95)', padding: '4px 10px', borderRadius: '16px', border: '2px solid #f472b6', boxShadow: '0 6px 14px rgba(0,0,0,0.12)', fontWeight: 800, fontSize: '0.82rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
+                      <img src="/assets/hello_kitty_sticker.png" alt="Hello Kitty" style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '50%' }} />
+                      <span>HELLO KITTY 🎀</span>
                     </div>
                   )}
 

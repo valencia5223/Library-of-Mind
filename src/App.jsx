@@ -7,7 +7,8 @@ import ThoughtLedger from './components/ThoughtLedger';
 import FocusStudio from './components/FocusStudio';
 import ReadingStats from './components/ReadingStats';
 import FriendManager from './components/FriendManager';
-import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users } from 'lucide-react';
+import AdminApprovalModal from './components/AdminApprovalModal';
+import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck } from 'lucide-react';
 import NewsTicker from './components/NewsTicker';
 import WeatherWidget from './components/WeatherWidget';
 
@@ -16,7 +17,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('bookshelf');
   const [user, setUser] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // 관리자 권한 확인 (valencia5223@gmail.com 또는 admin 키워드)
+  const isAdmin = user && (user.email === 'valencia5223@gmail.com' || user.email?.includes('admin') || !isSupabaseConfigured());
 
   // 데이터 상태 (사용자별 개별 데이터)
   const [books, setBooks] = useState([]);
@@ -375,6 +380,26 @@ export default function App() {
 
         <div className="flex align-center gap-2" style={{ flexWrap: 'nowrap', flexShrink: 0 }}>
           <WeatherWidget />
+          
+          {isAdmin && (
+            <button
+              className="btn btn-warning btn-sm font-bold flex align-center gap-1"
+              onClick={() => setIsAdminOpen(true)}
+              style={{
+                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                color: '#ffffff',
+                border: 'none',
+                padding: '0.45rem 0.85rem',
+                borderRadius: '20px',
+                fontSize: '0.82rem',
+                boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)'
+              }}
+              title="신규 회원가입 신청 1초 승인 센터"
+            >
+              <ShieldCheck size={16} /> 👑 가입 승인 관리
+            </button>
+          )}
+
           <button className="btn btn-secondary user-profile-btn" onClick={() => setIsAuthOpen(true)}>
             <User size={16} style={{ flexShrink: 0 }} />
             <span className="user-email-text">{user ? (user.user_metadata?.full_name || user.email?.split('@')[0] || '내 프로필') : '로그인 / 회원가입'}</span>
@@ -474,6 +499,13 @@ export default function App() {
         onClose={() => setIsAuthOpen(false)}
         user={user}
         setUser={setUser}
+      />
+
+      {/* 관리자 전용 회원 승인 관리 모달 */}
+      <AdminApprovalModal
+        isOpen={isAdminOpen}
+        onClose={() => setIsAdminOpen(false)}
+        user={user}
       />
     </div>
   );
