@@ -93,11 +93,11 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         }
       }
     } catch (e) {}
-    return { width: 680, height: 380 };
+    return { width: 540, height: 280 };
   });
 
   const isResizingRef = useRef(false);
-  const resizeStartRef = useRef({ x: 0, y: 0, width: 680, height: 380 });
+  const resizeStartRef = useRef({ x: 0, y: 0, width: 540, height: 280 });
 
   const handleMouseDownResize = (e) => {
     e.preventDefault();
@@ -300,7 +300,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           maxHeight: '96vh',
           display: 'flex',
           flexDirection: 'column',
-          padding: '1.5rem',
+          padding: '1.2rem 1.35rem',
           borderRadius: '16px',
           background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
