@@ -9,6 +9,7 @@ export default function BookshelfView({
   onDeleteBook, 
   onAddManualBook, 
   onUpdateBookDetails, 
+  onReorderBooks = null,
   viewedFriend = null, 
   onBackToMyBookshelf,
   userId = null
@@ -17,6 +18,57 @@ export default function BookshelfView({
   const [selectedBook, setSelectedBook] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [isEditingReview, setIsEditingReview] = useState(false);
+
+  // 3D 책장 드래그 앤 드롭 순서 재배치 상태
+  const [draggedBookId, setDraggedBookId] = useState(null);
+  const [dragOverBookId, setDragOverBookId] = useState(null);
+
+  const handleDragStart = (e, book) => {
+    e.dataTransfer.setData('text/plain', String(book.id));
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedBookId(book.id);
+  };
+
+  const handleDragOver = (e, book) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverBookId !== book.id) {
+      setDragOverBookId(book.id);
+    }
+  };
+
+  const handleDragLeave = (e, book) => {
+    if (dragOverBookId === book.id) {
+      setDragOverBookId(null);
+    }
+  };
+
+  const handleDrop = (e, targetBook) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverBookId(null);
+
+    if (!draggedBookId || draggedBookId === targetBook.id) return;
+
+    const currentBooks = [...books];
+    const sourceIdx = currentBooks.findIndex((b) => String(b.id) === String(draggedBookId));
+    const targetIdx = currentBooks.findIndex((b) => String(b.id) === String(targetBook.id));
+
+    if (sourceIdx !== -1 && targetIdx !== -1) {
+      const [movedBook] = currentBooks.splice(sourceIdx, 1);
+      currentBooks.splice(targetIdx, 0, movedBook);
+
+      if (onReorderBooks) {
+        onReorderBooks(currentBooks);
+      }
+    }
+    setDraggedBookId(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedBookId(null);
+    setDragOverBookId(null);
+  };
 
   // 유저별 책장 테마 상태 (classic, dark, sepia, forest)
   const [shelfTheme, setShelfTheme] = useState(() => {
@@ -989,9 +1041,15 @@ export default function BookshelfView({
                           return (
                             <div
                               key={book.id}
-                              className="book-3d-container"
+                              className={`book-3d-container ${draggedBookId === book.id ? 'is-dragging' : ''} ${dragOverBookId === book.id ? 'drag-over-target' : ''}`}
+                              draggable={true}
+                              onDragStart={(e) => handleDragStart(e, book)}
+                              onDragOver={(e) => handleDragOver(e, book)}
+                              onDragLeave={(e) => handleDragLeave(e, book)}
+                              onDrop={(e) => handleDrop(e, book)}
+                              onDragEnd={handleDragEnd}
                               onClick={() => handleOpenDetail(book)}
-                              title={`${book.title} - ${book.author}`}
+                              title={`${book.title} - ${book.author} (드래그하여 위치 이동 가능)`}
                               style={{
                                 height: `${spineHeight}px`,
                                 width: `${spineWidth}px`,

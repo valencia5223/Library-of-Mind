@@ -322,9 +322,14 @@ export default function App() {
     );
   }
 
+  const handleReorderBooks = (reorderedBooks) => {
+    setBooks(reorderedBooks);
+    localStorage.setItem(`user_books_${user?.id || 'demo'}`, JSON.stringify(reorderedBooks));
+  };
+
   return (
     <div className="app-container">
-      {/* 상단 네비게이션 바 */}
+      {/* 헤더 네비게이션 */}
       <header className="navbar">
         <div className="brand-logo cursor-pointer" onClick={() => setActiveTab('bookshelf')}>
           <Library size={28} className="text-primary" />
@@ -443,6 +448,7 @@ export default function App() {
               onDeleteBook={handleDeleteBook}
               onAddManualBook={handleAddBook}
               onUpdateBookDetails={handleUpdateBookDetails}
+              onReorderBooks={handleReorderBooks}
               viewedFriend={viewedFriend}
               onBackToMyBookshelf={() => setViewedFriend(null)}
               userId={user?.id}

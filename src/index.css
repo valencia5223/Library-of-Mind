@@ -701,14 +701,43 @@ input:focus, select:focus, textarea:focus {
 /* 3D 책상 입체 3D 공간 컨테이너 (정면을 바라보는 명확한 표지 각도 보장) */
 .book-3d-container {
   position: relative;
-  cursor: pointer;
+  cursor: grab;
   perspective: 1200px;
   perspective-origin: 50% 50%;
   transform-style: preserve-3d;
   margin-right: 0.15rem;
   transform: rotateZ(var(--tilt-angle, 0deg));
-  transition: margin 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.35s ease;
+  transition: margin 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.35s ease, opacity 0.2s ease, box-shadow 0.2s ease;
   z-index: 5;
+  user-select: none;
+}
+
+.book-3d-container:active {
+  cursor: grabbing;
+}
+
+/* 드래그 중인 책 스타일 피드백 */
+.book-3d-container.is-dragging {
+  opacity: 0.45;
+  filter: grayscale(40%);
+  transform: scale(0.92) translateY(-10px);
+}
+
+/* 드래그된 책이 지나가는 드롭 타겟 서재 자리 하이라이트 */
+.book-3d-container.drag-over-target {
+  outline: 3px dashed #38bdf8;
+  outline-offset: 6px;
+  border-radius: 8px;
+  transform: scale(1.1) translateY(-12px);
+  z-index: 50;
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.6);
+  animation: pulseTarget 1.2s infinite ease-in-out;
+}
+
+@keyframes pulseTarget {
+  0% { outline-color: #38bdf8; }
+  50% { outline-color: #818cf8; }
+  100% { outline-color: #38bdf8; }
 }
 
 .book-3d-box {
