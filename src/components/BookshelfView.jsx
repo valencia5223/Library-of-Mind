@@ -845,8 +845,8 @@ export default function BookshelfView({
                   }}
                 >
                   <optgroup label="✨ 캐릭터 테마">
-                    <option value="pochacco">🐾 포차코 (Pochacco) 샌드 & 민트</option>
-                    <option value="kitty">🎀 헬로키티 (Hello Kitty) 러블리 핑크</option>
+                    <option value="pochacco">🐾 포장마차 파스텔 블루</option>
+                    <option value="kitty">🎀 안녕고양이 러블리 핑크</option>
                   </optgroup>
                   <optgroup label="☀️ 밝고 산뜻한 파스텔 테마">
                     <option value="maple">🥛 화이트 메이플</option>
@@ -906,15 +906,15 @@ export default function BookshelfView({
                 <div key={`${cat.key}-shelf-${chunkIdx}`} className={`wood-shelf shelf-theme-${shelfTheme}`} style={{ marginBottom: '2rem', position: 'relative' }}>
                   {/* 포차코 & 헬로키티 캐릭터 전용 귀여운 3D 데코 스티커 */}
                   {shelfTheme === 'pochacco' && (
-                    <div className="pochacco-decor" style={{ position: 'absolute', top: '-24px', right: '18px', zIndex: 12, background: 'rgba(255,255,255,0.95)', padding: '4px 10px', borderRadius: '16px', border: '2px solid #6ee7b7', boxShadow: '0 6px 14px rgba(0,0,0,0.12)', fontWeight: 800, fontSize: '0.82rem', color: '#047857', display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
-                      <img src="/assets/pochacco_sticker.png" alt="Pochacco" style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '50%' }} />
-                      <span>POCHACCO 🐶</span>
+                    <div className="pochacco-decor" style={{ position: 'absolute', top: '-24px', right: '18px', zIndex: 12, background: 'rgba(255,255,255,0.95)', padding: '4px 10px', borderRadius: '16px', border: '2px solid #5ba8b7', boxShadow: '0 6px 14px rgba(0,0,0,0.12)', fontWeight: 800, fontSize: '0.82rem', color: '#2c6e7a', display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
+                      <img src="/assets/pochacco_sticker.png" alt="Pojangmacha" style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '50%' }} />
+                      <span>POJANGMACHA 🐾</span>
                     </div>
                   )}
                   {shelfTheme === 'kitty' && (
                     <div className="kitty-decor" style={{ position: 'absolute', top: '-24px', right: '18px', zIndex: 12, background: 'rgba(255,255,255,0.95)', padding: '4px 10px', borderRadius: '16px', border: '2px solid #f472b6', boxShadow: '0 6px 14px rgba(0,0,0,0.12)', fontWeight: 800, fontSize: '0.82rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
-                      <img src="/assets/hello_kitty_sticker.png" alt="Hello Kitty" style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '50%' }} />
-                      <span>HELLO KITTY 🎀</span>
+                      <img src="/assets/hello_kitty_sticker.png" alt="Annyeong Kitty" style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '50%' }} />
+                      <span>ANNYEONG KITTY 🎀</span>
                     </div>
                   )}
 
