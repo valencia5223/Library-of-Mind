@@ -154,14 +154,28 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   const latestContentRef = useRef('');
   const isDirtyRef = useRef(false);
 
+  // HTML 문자열이 &lt;div&gt; 등 이중 Escape 되어 텍스트로 노출되는 현상을 자동 복원하는 정제 함수
+  const sanitizeAndNormalizeHTML = (rawContent) => {
+    if (!rawContent) return '';
+    let content = rawContent;
+    // &lt;와 &gt;가 포함된 escape 텍스트인 경우 unescape 처리
+    if (typeof content === 'string' && (content.includes('&lt;') || content.includes('&gt;'))) {
+      const txt = document.createElement('textarea');
+      txt.innerHTML = content;
+      content = txt.value;
+    }
+    return content;
+  };
+
   // 에디터 DOM 내용 업기
   const updateEditorDOM = (htmlContent) => {
     if (editorRef.current) {
-      if (editorRef.current.innerHTML !== htmlContent) {
-        editorRef.current.innerHTML = htmlContent || '';
+      const normalized = sanitizeAndNormalizeHTML(htmlContent);
+      if (editorRef.current.innerHTML !== normalized) {
+        editorRef.current.innerHTML = normalized || '';
       }
       const text = editorRef.current.innerText || '';
-      setIsEditorEmpty(!htmlContent || htmlContent === '<br>' || text.trim() === '');
+      setIsEditorEmpty(!normalized || normalized === '<br>' || text.trim() === '');
     }
   };
 
