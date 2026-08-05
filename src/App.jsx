@@ -371,47 +371,37 @@ export default function App() {
               className={`nav-tab-capsule ${activeTab === 'focus' ? 'active' : ''}`}
               onClick={() => setActiveTab('focus')}
             >
-              <Timer size={18} /> 몰입 스튜디오
+              <Timer size={16} /> 몰입 스튜디오
             </button>
 
             <button
-              className={`nav-item ${activeTab === 'stats' ? 'active' : ''}`}
+              className={`nav-tab-capsule ${activeTab === 'stats' ? 'active' : ''}`}
               onClick={() => setActiveTab('stats')}
             >
-              <BarChart2 size={18} /> 독서 리포트
+              <BarChart2 size={16} /> 독서 리포트
             </button>
-
 
             <button
-              className={`nav-item ${activeTab === 'social' ? 'active' : ''}`}
+              className={`nav-tab-capsule ${activeTab === 'social' ? 'active' : ''}`}
               onClick={() => setActiveTab('social')}
             >
-              <Users size={18} /> 소셜 서재
+              <Users size={16} /> 이웃 서재
             </button>
+
+            {isAdmin && (
+              <button
+                className={`nav-tab-capsule admin-tab-capsule`}
+                onClick={() => setIsAdminOpen(true)}
+                title="신규 회원가입 신청 1초 승인 센터"
+              >
+                <ShieldCheck size={16} /> 👑 가입 승인 관리
+              </button>
+            )}
           </nav>
         )}
 
         <div className="flex align-center gap-2" style={{ flexWrap: 'nowrap', flexShrink: 0 }}>
           <WeatherWidget />
-          
-          {isAdmin && (
-            <button
-              className="btn btn-warning btn-sm font-bold flex align-center gap-1"
-              onClick={() => setIsAdminOpen(true)}
-              style={{
-                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                color: '#ffffff',
-                border: 'none',
-                padding: '0.45rem 0.85rem',
-                borderRadius: '20px',
-                fontSize: '0.82rem',
-                boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)'
-              }}
-              title="신규 회원가입 신청 1초 승인 센터"
-            >
-              <ShieldCheck size={16} /> 👑 가입 승인 관리
-            </button>
-          )}
 
           <button className="btn btn-secondary user-profile-btn" onClick={() => setIsAuthOpen(true)}>
             <User size={16} style={{ flexShrink: 0 }} />

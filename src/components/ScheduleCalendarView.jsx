@@ -220,8 +220,8 @@ export default function ScheduleCalendarView({ userId = null }) {
         </div>
       </div>
 
-      {/* 요일 헤더 */}
-      <div className="calendar-week-header">
+      {/* 요일 헤더 - 7열 그리드 보장 */}
+      <div className="calendar-week-header" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
         <div className="week-cell sun">일</div>
         <div className="week-cell">월</div>
         <div className="week-cell">화</div>
@@ -231,8 +231,8 @@ export default function ScheduleCalendarView({ userId = null }) {
         <div className="week-cell sat">토</div>
       </div>
 
-      {/* 달력 그리드 */}
-      <div className="calendar-grid">
+      {/* 달력 그리드 - 7열 그리드 보장 */}
+      <div className="calendar-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
         {days.map((dateObj, idx) => {
           if (!dateObj) {
             return <div key={`empty-${idx}`} className="calendar-day-cell empty" />;
