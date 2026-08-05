@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
-import { Users, UserPlus, Heart, ExternalLink, Trash2, ShieldAlert, Sparkles, Mail } from 'lucide-react';
+import { Users, UserPlus, Heart, ExternalLink, Trash2, ShieldAlert, Sparkles, Mail, Zap } from 'lucide-react';
+import SharedLiveMemoModal from './SharedLiveMemoModal';
 
 export default function FriendManager({ user, onViewFriendBookshelf, currentViewedFriend, onBackToMyBookshelf }) {
   const [friendEmail, setFriendEmail] = useState('');
@@ -8,6 +9,7 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [activeFriendForMemo, setActiveFriendForMemo] = useState(null);
 
   useEffect(() => {
     if (user && isSupabaseConfigured()) {
@@ -293,12 +295,21 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
                   </div>
                   <div className="friend-actions flex gap-2">
                     <button
+                      className="btn btn-outline-primary btn-sm flex align-middle px-2.5 font-bold"
+                      style={{ fontSize: '0.8rem', color: '#0284c7', borderColor: '#bae6fd', backgroundColor: '#f0f9ff' }}
+                      onClick={() => setActiveFriendForMemo(friend)}
+                    >
+                      <Zap className="me-1 text-sky-600" size={14} /> 실시간 메모
+                    </button>
+
+                    <button
                       className="btn btn-outline-primary btn-sm flex align-middle px-3"
                       style={{ fontSize: '0.8rem' }}
                       onClick={() => onViewFriendBookshelf(friend.friend_id, friend.email, friend.name)}
                     >
                       <ExternalLink className="me-1" size={14} /> 서재 방문
                     </button>
+
                     <button
                       className="btn btn-outline-danger btn-sm p-1.5"
                       onClick={() => handleDeleteFriend(friend.id, friend.email, friend.name)}
@@ -312,6 +323,15 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
           )}
         </div>
       </div>
+
+      {/* 1:1 친구 실시간 라이브 메모장 모달 */}
+      {activeFriendForMemo && (
+        <SharedLiveMemoModal
+          user={user}
+          friend={activeFriendForMemo}
+          onClose={() => setActiveFriendForMemo(null)}
+        />
+      )}
     </div>
   );
 }

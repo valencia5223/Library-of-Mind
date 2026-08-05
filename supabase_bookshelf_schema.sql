@@ -326,4 +326,29 @@ SELECT id, email FROM auth.users
 ON CONFLICT (id) DO NOTHING;
 
 
+-- ========================================================
+-- 8. 친구 간 1:1 실시간 공유 메모 (Live Shared Memos) 테이블 생성
+-- ========================================================
+CREATE TABLE IF NOT EXISTS public.shared_memos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id TEXT UNIQUE NOT NULL, -- "user1Id_user2Id" 결정론적 룸 고유 키
+  user1_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  user2_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  content TEXT DEFAULT '',
+  last_updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- shared_memos RLS 설정
+ALTER TABLE public.shared_memos ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can access their own 1:1 shared memos"
+  ON public.shared_memos FOR ALL
+  USING (auth.uid() = user1_id OR auth.uid() = user2_id)
+  WITH CHECK (auth.uid() = user1_id OR auth.uid() = user2_id);
+
+-- Supabase Realtime 테이블 게시(Publication) 등록 (선택적)
+ALTER PUBLICATION supabase_realtime ADD TABLE public.shared_memos;
+
+
 
