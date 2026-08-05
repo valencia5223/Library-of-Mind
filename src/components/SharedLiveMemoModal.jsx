@@ -82,10 +82,10 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }
   };
 
-  // 모달 창 크기 조절 (드래그 resize & localStorage 기억)
-  const [modalSize, setModalSize] = useState(() => {
+  // 메모 입력 창 (Textarea) 크기 조절 (드래그 resize & localStorage 기억)
+  const [textareaSize, setTextareaSize] = useState(() => {
     try {
-      const saved = localStorage.getItem('shared_memo_modal_size');
+      const saved = localStorage.getItem('shared_memo_textarea_size');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (typeof parsed.width === 'number' && typeof parsed.height === 'number') {
@@ -93,11 +93,11 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         }
       }
     } catch (e) {}
-    return { width: 750, height: 600 };
+    return { width: 680, height: 380 };
   });
 
   const isResizingRef = useRef(false);
-  const resizeStartRef = useRef({ x: 0, y: 0, width: 750, height: 600 });
+  const resizeStartRef = useRef({ x: 0, y: 0, width: 680, height: 380 });
 
   const handleMouseDownResize = (e) => {
     e.preventDefault();
@@ -106,8 +106,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     resizeStartRef.current = {
       x: e.clientX,
       y: e.clientY,
-      width: modalSize.width,
-      height: modalSize.height
+      width: textareaSize.width,
+      height: textareaSize.height
     };
 
     document.addEventListener('mousemove', handleMouseMoveResize);
@@ -118,10 +118,10 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     if (!isResizingRef.current) return;
     const dx = e.clientX - resizeStartRef.current.x;
     const dy = e.clientY - resizeStartRef.current.y;
-    const newWidth = Math.max(420, Math.min(window.innerWidth - 20, resizeStartRef.current.width + dx));
-    const newHeight = Math.max(320, Math.min(window.innerHeight - 20, resizeStartRef.current.height + dy));
+    const newWidth = Math.max(380, Math.min(window.innerWidth - 60, resizeStartRef.current.width + dx));
+    const newHeight = Math.max(160, Math.min(window.innerHeight - 220, resizeStartRef.current.height + dy));
 
-    setModalSize({ width: newWidth, height: newHeight });
+    setTextareaSize({ width: newWidth, height: newHeight });
   };
 
   const handleMouseUpResize = () => {
@@ -130,8 +130,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
       document.removeEventListener('mousemove', handleMouseMoveResize);
       document.removeEventListener('mouseup', handleMouseUpResize);
 
-      setModalSize((latestSize) => {
-        localStorage.setItem('shared_memo_modal_size', JSON.stringify(latestSize));
+      setTextareaSize((latestSize) => {
+        localStorage.setItem('shared_memo_textarea_size', JSON.stringify(latestSize));
         return latestSize;
       });
     }
@@ -296,8 +296,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         className="modal-card animate-scale-in"
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: `${modalSize.width}px`,
-          height: `${modalSize.height}px`,
           maxWidth: '96vw',
           maxHeight: '96vh',
           display: 'flex',
@@ -308,7 +306,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           position: 'relative',
           transform: `translate(${modalPos.x}px, ${modalPos.y}px)`,
-          transition: isDraggingRef.current || isResizingRef.current ? 'none' : 'transform 0.05s ease-out, width 0.05s ease-out, height 0.05s ease-out'
+          transition: isDraggingRef.current || isResizingRef.current ? 'none' : 'transform 0.05s ease-out'
         }}
       >
         {/* 모달 닫기 버튼 */}
@@ -335,7 +333,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           <X size={18} />
         </button>
 
-        {/* 상단 타이틀 및 상태 헤더 (드래그 가능 헤더 영역) */}
+        {/* 상단 타이틀 및 상태 헤더 (드래그 가능 헤더 영역, 고정 크기) */}
         <div
           onMouseDown={handleMouseDownHeader}
           style={{
@@ -343,7 +341,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             borderBottom: '1px solid #e2e8f0',
             marginBottom: '1rem',
             cursor: 'move',
-            userSelect: 'none'
+            userSelect: 'none',
+            flexShrink: 0
           }}
         >
           <div className="flex align-center justify-between" style={{ paddingRight: '4.5rem' }}>
@@ -483,41 +482,71 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           </div>
         </div>
 
-        {/* 메인 메모 에디터 영역 */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        {/* 메인 메모 에디터 영역 (오직 메모 입력 박스만 조절됨) */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: 0 }}>
           {loading ? (
-            <div className="empty-search p-5 text-center flex-1 flex flex-col align-center justify-center">
+            <div className="empty-search p-5 text-center flex-1 flex flex-col align-center justify-center" style={{ width: `${textareaSize.width}px`, height: `${textareaSize.height}px` }}>
               <RefreshCw size={28} className="animate-spin text-primary mb-2" />
               <p>실시간 메모 보드를 불러오는 중입니다...</p>
             </div>
           ) : (
-            <textarea
-              value={memoContent}
-              onChange={handleTextChange}
-              placeholder={`여기에 메모를 입력해 보세요!\n${friend.name || friend.email}님 화면에도 0.1초 만에 실시간으로 글자가 나타나고 수정됩니다 ✨\n\n- 읽고 싶은 책 리스트 공유\n- 감명 깊은 구절 및 메모 공동 작성\n- 실시간 아이디어 스케치`}
-              style={{
-                width: '100%',
-                flex: 1,
-                padding: '1.2rem',
-                fontSize: `${fontSizePx}px`,
-                lineHeight: 1.75,
-                color: '#1e293b',
-                background: '#ffffff',
-                border: '1.5px solid #cbd5e1',
-                borderRadius: '12px',
-                outline: 'none',
-                resize: 'none',
-                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)',
-                fontFamily: 'Inter, system-ui, sans-serif'
-              }}
-            />
+            <div style={{ position: 'relative', width: `${textareaSize.width}px`, height: `${textareaSize.height}px`, maxWidth: '100%' }}>
+              <textarea
+                value={memoContent}
+                onChange={handleTextChange}
+                placeholder={`여기에 메모를 입력해 보세요!\n${friend.name || friend.email}님 화면에도 0.1초 만에 실시간으로 글자가 나타나고 수정됩니다 ✨\n\n- 읽고 싶은 책 리스트 공유\n- 감명 깊은 구절 및 메모 공동 작성\n- 실시간 아이디어 스케치`}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  padding: '1.2rem',
+                  fontSize: `${fontSizePx}px`,
+                  lineHeight: 1.75,
+                  color: '#1e293b',
+                  background: '#ffffff',
+                  border: '1.5px solid #cbd5e1',
+                  borderRadius: '12px',
+                  outline: 'none',
+                  resize: 'none',
+                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)',
+                  fontFamily: 'Inter, system-ui, sans-serif'
+                }}
+              />
+
+              {/* 메모 입력부 전용 우측 하단 크기 조절 손잡이 */}
+              <div
+                onMouseDown={handleMouseDownResize}
+                title="드래그하여 메모 입력 박스 크기 변경 (localStorage 기억됨)"
+                style={{
+                  position: 'absolute',
+                  bottom: '8px',
+                  right: '8px',
+                  width: '22px',
+                  height: '22px',
+                  cursor: 'nwse-resize',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#0284c7',
+                  background: '#f0f9ff',
+                  borderRadius: '5px',
+                  border: '1px solid #bae6fd',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                  zIndex: 5,
+                  userSelect: 'none'
+                }}
+              >
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                  <path d="M10 2L2 10M10 6L6 10M10 10H10.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* 하단 푸터 바 (통계 및 툴바) */}
+        {/* 하단 푸터 바 (통계 및 툴바, 고정 크기) */}
         <div
           className="mt-3 pt-3 flex justify-between align-center"
-          style={{ borderTop: '1px solid #e2e8f0', background: 'transparent' }}
+          style={{ borderTop: '1px solid #e2e8f0', background: 'transparent', flexShrink: 0 }}
         >
           <div className="flex align-center gap-3 text-slate-500" style={{ fontSize: '0.83rem', fontWeight: 500 }}>
             <span>줄 수: <b>{lineCount}</b></span>
@@ -552,30 +581,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               닫기
             </button>
           </div>
-        </div>
-
-        {/* 우측 하단 창 크기 조절 손잡이 */}
-        <div
-          onMouseDown={handleMouseDownResize}
-          title="드래그하여 창 크기 자유 변경 (위치/크기 기억됨)"
-          style={{
-            position: 'absolute',
-            bottom: '4px',
-            right: '4px',
-            width: '20px',
-            height: '20px',
-            cursor: 'nwse-resize',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#94a3b8',
-            zIndex: 10,
-            userSelect: 'none'
-          }}
-        >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M10 2L2 10M10 6L6 10M10 10H10.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
         </div>
       </div>
     </div>
