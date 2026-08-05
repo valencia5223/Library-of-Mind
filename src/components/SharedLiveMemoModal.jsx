@@ -17,6 +17,16 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   const [lastSavedTime, setLastSavedTime] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
 
+  // 글씨 폰트 크기 상태 (기본값: 1rem / 16px, localStorage 저장 반영)
+  const [fontSize, setFontSize] = useState(() => {
+    return localStorage.getItem('shared_memo_font_size') || '1rem';
+  });
+
+  const handleFontSizeChange = (newSize) => {
+    setFontSize(newSize);
+    localStorage.setItem('shared_memo_font_size', newSize);
+  };
+
   const saveTimeoutRef = useRef(null);
 
   useEffect(() => {
@@ -196,6 +206,36 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               <Zap size={22} className="text-primary" style={{ color: '#0078a6' }} />
               <span>{friend.name || friend.email}님과의 실시간 라이브 메모장</span>
             </h3>
+
+            {/* 폰트 크기 설정 컨트롤러 (localStorage 자동 기억) */}
+            <div className="flex align-center gap-1" style={{ background: '#f1f5f9', padding: '3px 6px', borderRadius: '8px' }}>
+              <span className="text-xs font-bold text-slate-500 me-1" style={{ fontSize: '0.78rem' }}>글씨 크기:</span>
+              {[
+                { label: '작게', value: '0.88rem' },
+                { label: '보통', value: '1rem' },
+                { label: '크게', value: '1.18rem' },
+                { label: '최대', value: '1.38rem' }
+              ].map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => handleFontSizeChange(opt.value)}
+                  style={{
+                    padding: '2px 8px',
+                    fontSize: '0.78rem',
+                    fontWeight: fontSize === opt.value ? 700 : 500,
+                    borderRadius: '5px',
+                    border: 'none',
+                    background: fontSize === opt.value ? '#ffffff' : 'transparent',
+                    color: fontSize === opt.value ? '#0284c7' : '#64748b',
+                    boxShadow: fontSize === opt.value ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="flex align-center gap-3 mt-2" style={{ fontSize: '0.82rem', color: '#64748b' }}>
@@ -245,7 +285,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                 width: '100%',
                 flex: 1,
                 padding: '1.2rem',
-                fontSize: '1rem',
+                fontSize: fontSize,
                 lineHeight: 1.75,
                 color: '#1e293b',
                 background: '#ffffff',
