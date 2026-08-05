@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
-import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, ShieldCheck, GripHorizontal, RotateCcw } from 'lucide-react';
+import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, ShieldCheck, GripHorizontal } from 'lucide-react';
 
 export default function SharedLiveMemoModal({ user, friend, onClose }) {
   if (!user || !friend) return null;
@@ -135,17 +135,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         return latestSize;
       });
     }
-  };
-
-  // 창 위치 & 입력창 크기 초기화 버튼
-  const handleResetPos = (e) => {
-    e.stopPropagation();
-    const defaultPos = { x: 0, y: 0 };
-    const defaultTextareaSize = { width: 520, height: 260 };
-    setModalPos(defaultPos);
-    setTextareaSize(defaultTextareaSize);
-    localStorage.removeItem('shared_memo_modal_pos');
-    localStorage.removeItem('shared_memo_textarea_size');
   };
 
   // ESC 키 누르면 모달 닫기
@@ -310,48 +299,30 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           transition: isDraggingRef.current || isResizingRef.current ? 'none' : 'transform 0.05s ease-out'
         }}
       >
-        {/* 모달 상단 우측 버튼 그룹 (위치 초기화 및 닫기) */}
-        <div style={{ position: 'absolute', top: '1.1rem', right: '1.1rem', display: 'flex', gap: '6px', zIndex: 10 }}>
-          <button
-            type="button"
-            onClick={handleResetPos}
-            title="창 위치 및 메모 입력창 크기 초기화"
-            style={{
-              background: '#f1f5f9',
-              border: 'none',
-              borderRadius: '50%',
-              width: '34px',
-              height: '34px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: '#64748b'
-            }}
-          >
-            <RotateCcw size={16} />
-          </button>
-
-          <button
-            className="modal-close"
-            onClick={onClose}
-            title="닫기 (Esc)"
-            style={{
-              background: '#f1f5f9',
-              border: 'none',
-              borderRadius: '50%',
-              width: '34px',
-              height: '34px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: '#64748b'
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
+        {/* 모달 닫기 버튼 */}
+        <button
+          className="modal-close"
+          onClick={onClose}
+          title="닫기 (Esc)"
+          style={{
+            position: 'absolute',
+            top: '1.1rem',
+            right: '1.1rem',
+            background: '#f1f5f9',
+            border: 'none',
+            borderRadius: '50%',
+            width: '34px',
+            height: '34px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#64748b',
+            zIndex: 10
+          }}
+        >
+          <X size={18} />
+        </button>
 
         {/* 상단 타이틀 및 상태 헤더 (드래그 가능 헤더 영역, 고정 크기) */}
         <div
@@ -568,13 +539,14 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           className="mt-3 pt-3 flex justify-between align-center"
           style={{ borderTop: '1px solid #e2e8f0', background: 'transparent', flexShrink: 0 }}
         >
-          <div className="flex align-center gap-2.5 text-slate-500" style={{ fontSize: '0.78rem', fontWeight: 500 }}>
-            <span>줄 수: <b>{lineCount}</b></span>
-            <span>글자 수: <b>{charCount}</b>자</span>
-            <span className="text-slate-300">|</span>
-            <span className="text-slate-500" style={{ fontSize: '0.75rem' }}>
-              대상: <b style={{ color: '#475569', fontWeight: 600 }}>{friend.email}</b>
-            </span>
+          <div className="flex flex-col gap-1 text-slate-500" style={{ fontSize: '0.78rem', fontWeight: 500, lineHeight: 1.35 }}>
+            <div className="flex align-center gap-3">
+              <span>줄 수: <b style={{ color: '#0f172a' }}>{lineCount}</b></span>
+              <span>글자 수: <b style={{ color: '#0f172a' }}>{charCount}</b>자</span>
+            </div>
+            <div className="text-slate-500" style={{ fontSize: '0.75rem' }}>
+              대상: <b style={{ color: '#0284c7', fontWeight: 600 }}>{friend.email}</b>
+            </div>
           </div>
 
           <div className="flex align-center gap-2">
