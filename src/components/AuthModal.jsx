@@ -33,39 +33,20 @@ export default function AuthModal({ isOpen, onClose, user, setUser }) {
 
     try {
       if (isSignUp) {
-        // 1. 회원가입 실행 (Email confirm 필요없이 바로 자동 승인 시도)
+        // 1. 회원가입 신청 (기본적으로 is_approved: false 상태로 회원가입 신청)
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name: name } }
+          options: { data: { full_name: name, is_approved: false } }
         });
 
         if (error) throw error;
 
-        // 세션이 바로 반환된 경우 (Confirm Email이 비활성화되어 있을 때)
-        if (data?.session) {
-          setUser(data.session.user);
-          setMessage({ type: 'success', text: '회원가입 완료! 즉시 승인되어 로그인되었습니다.' });
-          setTimeout(onClose, 1000);
-        } else {
-          // 세션이 오지 않은 경우, 즉시 비밀번호로 자동 로그인 시도
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password
-          });
-
-          if (!signInError && signInData?.user) {
-            setUser(signInData.user);
-            setMessage({ type: 'success', text: '회원가입 완료! 즉시 승인되어 로그인되었습니다.' });
-            setTimeout(onClose, 1000);
-          } else {
-            setMessage({
-              type: 'success',
-              text: '회원가입 신청이 완료되었습니다! 아래 로그인 버튼을 눌러 바로 입장해 주세요.'
-            });
-            setIsSignUp(false);
-          }
-        }
+        setMessage({
+          type: 'success',
+          text: '🎉 회원가입 신청이 등록되었습니다! 관리자 메일로 가입 승인 요청이 전송되었으며, 관리자가 승인한 후 로그인하실 수 있습니다.'
+        });
+        setIsSignUp(false);
       } else {
         // 2. 로그인 실행
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -73,6 +54,17 @@ export default function AuthModal({ isOpen, onClose, user, setUser }) {
           password,
         });
         if (error) throw error;
+
+        // 관리자 승인 여부 검사 (is_approved가 false인 경우 승인 대기 처리)
+        const userMeta = data.user?.user_metadata || {};
+        if (userMeta.is_approved === false && data.user.email !== 'valencia5223@gmail.com') {
+          await supabase.auth.signOut();
+          setMessage({
+            type: 'error',
+            text: '🔒 관리자의 가입 승인 대기 중입니다. 관리자가 가입을 승인한 후 서비스 이용이 가능합니다.'
+          });
+          return;
+        }
 
         setUser(data.user);
         if (autoLogin) {

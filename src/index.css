@@ -210,6 +210,35 @@ body {
   border-top: 3px solid #34d399 !important;
 }
 
+/* --- [ 🐶 캐릭터 테마 라인업 ] --- */
+/* 13. 포차코 샌드 & 민트 (Pochacco Cute Cream & Mint) */
+.shelf-theme-pochacco .shelf-surface {
+  background: 
+    repeating-linear-gradient(90deg, rgba(16, 185, 129, 0.04) 0px, rgba(16, 185, 129, 0.04) 40px, rgba(0, 0, 0, 0.03) 41px, rgba(0, 0, 0, 0.03) 42px),
+    linear-gradient(180deg, #fffef9 0%, #f7f3e9 40%, #e8e2d3 100%) !important;
+  border-left: 18px solid #a7f3d0 !important;
+  border-right: 18px solid #a7f3d0 !important;
+  border-top: 10px solid #d1fae5 !important;
+}
+.shelf-theme-pochacco .shelf-plank {
+  background: linear-gradient(180deg, #6ee7b7 0%, #34d399 40%, #059669 100%) !important;
+  border-top: 3px solid #a7f3d0 !important;
+}
+
+/* 14. 헬로키티 러블리 핑크 (Hello Kitty Ribbon & Rose Gold) */
+.shelf-theme-kitty .shelf-surface {
+  background: 
+    repeating-linear-gradient(90deg, rgba(244, 114, 182, 0.05) 0px, rgba(244, 114, 182, 0.05) 35px, rgba(251, 113, 133, 0.08) 36px, rgba(251, 113, 133, 0.08) 37px),
+    linear-gradient(180deg, #fff5f8 0%, #fce7f3 40%, #fbcfe8 100%) !important;
+  border-left: 18px solid #f472b6 !important;
+  border-right: 18px solid #f472b6 !important;
+  border-top: 10px solid #fbcfe8 !important;
+}
+.shelf-theme-kitty .shelf-plank {
+  background: linear-gradient(180deg, #f472b6 0%, #e11d48 40%, #be123c 100%) !important;
+  border-top: 3px solid #fda4af !important;
+}
+
 /* 유틸리티 */
 .text-center { text-align: center; }
 .text-primary { color: var(--primary) !important; }

@@ -844,6 +844,10 @@ export default function BookshelfView({
                     whiteSpace: 'nowrap'
                   }}
                 >
+                  <optgroup label="🐶 캐릭터 & 컬래버 테마">
+                    <option value="pochacco">🐶 포차코 샌드 & 민트</option>
+                    <option value="kitty">🎀 헬로키티 러블리 핑크</option>
+                  </optgroup>
                   <optgroup label="☀️ 밝고 산뜻한 파스텔 테마">
                     <option value="maple">🥛 화이트 메이플</option>
                     <option value="blossom">🌸 체리블라썸 핑크</option>
@@ -899,7 +903,19 @@ export default function BookshelfView({
 
             {viewMode === '3d' ? (
               chunks.map((shelfBooks, chunkIdx) => (
-                <div key={`${cat.key}-shelf-${chunkIdx}`} className={`wood-shelf shelf-theme-${shelfTheme}`} style={{ marginBottom: '2rem' }}>
+                <div key={`${cat.key}-shelf-${chunkIdx}`} className={`wood-shelf shelf-theme-${shelfTheme}`} style={{ marginBottom: '2rem', position: 'relative' }}>
+                  {/* 포차코 & 헬로키티 캐릭터 전용 귀여운 3D 데코 스티커 */}
+                  {shelfTheme === 'pochacco' && (
+                    <div className="pochacco-decor" style={{ position: 'absolute', top: '-14px', right: '18px', zIndex: 12, background: '#ffffff', padding: '2px 8px', borderRadius: '12px', border: '2px solid #6ee7b7', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', fontWeight: 800, fontSize: '0.82rem', color: '#047857', display: 'flex', alignItems: 'center', gap: '4px', userSelect: 'none' }}>
+                      <span>🐶 POCHACCO</span> <span style={{ fontSize: '0.75rem' }}>🐾☁️</span>
+                    </div>
+                  )}
+                  {shelfTheme === 'kitty' && (
+                    <div className="kitty-decor" style={{ position: 'absolute', top: '-14px', right: '18px', zIndex: 12, background: '#ffffff', padding: '2px 8px', borderRadius: '12px', border: '2px solid #f472b6', boxShadow: '0 4px 8px rgba(0,0,0,0.1)', fontWeight: 800, fontSize: '0.82rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '4px', userSelect: 'none' }}>
+                      <span>🎀 HELLO KITTY</span> <span style={{ fontSize: '0.75rem' }}>💖✨</span>
+                    </div>
+                  )}
+
                   <div className="shelf-surface">
                     {shelfBooks.length === 0 ? (
                       <div className="empty-shelf-text">이 책장은 비어 있습니다. 탐색 탭에서 책을 찾아 꽂아보세요!</div>
