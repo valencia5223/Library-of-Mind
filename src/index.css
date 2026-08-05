@@ -682,6 +682,8 @@ input:focus, select:focus, textarea:focus {
   width: 100%;
   transform-style: preserve-3d;
   overflow: visible; /* 3D 돌출시 스크롤바 클리핑에 의한 뭉개짐 전면 차단 */
+  position: relative;
+  z-index: 5; /* 안쪽 벽면 캐릭터 배경보다 물리적으로 앞쪽 레이어 고정 */
 }
 
 .book-spine-item {
@@ -706,7 +708,7 @@ input:focus, select:focus, textarea:focus {
   margin-right: 0.15rem;
   transform: rotateZ(var(--tilt-angle, 0deg));
   transition: margin 0.35s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.35s ease;
-  z-index: 1;
+  z-index: 5;
 }
 
 .book-3d-box {
@@ -749,7 +751,10 @@ input:focus, select:focus, textarea:focus {
   border-bottom: 2px solid rgba(0, 0, 0, 0.4);
   transform: rotateY(0deg) translateZ(0px);
   backface-visibility: hidden;
-  z-index: 3;
+  z-index: 6;
+  opacity: 1 !important;
+  isolation: isolate;
+  background-color: #1e293b; /* 바탕 단색 불투명 레이어 보장 */
 }
 
 /* 실사 도서 헤드밴드(책머리 띠 리본) 엠보싱 효과 */
