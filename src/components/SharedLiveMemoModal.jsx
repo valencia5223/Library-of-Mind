@@ -151,6 +151,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   }, [onClose]);
 
   const saveTimeoutRef = useRef(null);
+  const latestContentRef = useRef('');
+  const isDirtyRef = useRef(false);
 
   // 에디터 DOM 내용 업기
   const updateEditorDOM = (htmlContent) => {
@@ -160,6 +162,37 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
       }
       const text = editorRef.current.innerText || '';
       setIsEditorEmpty(!htmlContent || htmlContent === '<br>' || text.trim() === '');
+    }
+  };
+
+  // DB에 즉시 동기화 저장 (Flush)
+  const saveImmediately = async (htmlContent) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    isDirtyRef.current = false;
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('shared_memos')
+        .upsert(
+          {
+            room_id: roomId,
+            user1_id: sortedUserIds[0],
+            user2_id: sortedUserIds[1],
+            content: htmlContent,
+            last_updated_by: user.id,
+            updated_at: new Date().toISOString()
+          },
+          { onConflict: 'room_id' }
+        );
+      if (error) throw error;
+      setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    } catch (err) {
+      console.error('메모 즉시 저장 오류:', err);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -186,7 +219,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         if (data) {
           const content = data.content || '';
           setMemoContent(content);
-          updateEditorDOM(content);
+          latestContentRef.current = content;
           if (data.updated_at) {
             setLastSavedTime(new Date(data.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
           }
@@ -224,7 +257,13 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           if (payload.new && payload.new.last_updated_by !== user.id) {
             const newHtml = payload.new.content || '';
             setMemoContent(newHtml);
-            updateEditorDOM(newHtml);
+            latestContentRef.current = newHtml;
+            
+            // 현재 사용자가 직접 작성 중이 아닐 때만 DOM 덮어쓰기 (입력 커서 튀김 방지)
+            if (!editorRef.current || document.activeElement !== editorRef.current) {
+              updateEditorDOM(newHtml);
+            }
+            
             setTypingPartner(friend.email);
             setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
 
@@ -239,42 +278,35 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
       });
 
     return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      // 모달 닫힐 때 작성 중인 내용이 있으면 즉시 DB 저장 보장
+      if (isDirtyRef.current) {
+        saveImmediately(latestContentRef.current);
+      } else if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
       supabase.removeChannel(channel);
     };
   }, [roomId, user.id, friend.friend_id, friend.email]);
 
-  // 메모 내용 수정 시 DB 업서트 (디바운스 350ms)
+  // loading 완료 후 에디터 DOM이 마운트되었을 때 memoContent 바인딩 보장
+  useEffect(() => {
+    if (!loading) {
+      updateEditorDOM(memoContent);
+    }
+  }, [loading]);
+
+  // 메모 내용 수정 시 DB 업서트 (디바운스 250ms)
   const triggerSave = (htmlContent) => {
     setMemoContent(htmlContent);
+    latestContentRef.current = htmlContent;
+    isDirtyRef.current = true;
     setIsSaving(true);
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 
-    saveTimeoutRef.current = setTimeout(async () => {
-      try {
-        const { error } = await supabase
-          .from('shared_memos')
-          .upsert(
-            {
-              room_id: roomId,
-              user1_id: sortedUserIds[0],
-              user2_id: sortedUserIds[1],
-              content: htmlContent,
-              last_updated_by: user.id,
-              updated_at: new Date().toISOString()
-            },
-            { onConflict: 'room_id' }
-          );
-
-        if (error) throw error;
-        setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-      } catch (err) {
-        console.error('메모 실시간 저장 오류:', err);
-      } finally {
-        setIsSaving(false);
-      }
-    }, 350);
+    saveTimeoutRef.current = setTimeout(() => {
+      saveImmediately(htmlContent);
+    }, 250);
   };
 
   const handleEditorInput = () => {
@@ -283,6 +315,12 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     const text = editorRef.current.innerText || '';
     setIsEditorEmpty(!html || html === '<br>' || text.trim() === '');
     triggerSave(html);
+  };
+
+  const handleBlur = () => {
+    if (isDirtyRef.current && editorRef.current) {
+      saveImmediately(editorRef.current.innerHTML);
+    }
   };
 
   // 클립보드 이미지 및 텍스트 붙여넣기 (Paste) 처리 핸들러
@@ -576,6 +614,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                 ref={editorRef}
                 contentEditable
                 onInput={handleEditorInput}
+                onBlur={handleBlur}
                 onPaste={handlePaste}
                 style={{
                   width: '100%',
