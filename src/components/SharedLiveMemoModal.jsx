@@ -228,6 +228,36 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     };
   }, [roomId, user.id, friend.friend_id, friend.email]);
 
+  // 클립보드 이미지 붙여넣기 (Paste) 처리 핸들러
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type && items[i].type.startsWith('image/')) {
+        e.preventDefault(); // 기본 텍스트 붙여넣기 방지
+        const file = items[i].getAsFile();
+        if (!file) continue;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const base64Data = event.target?.result;
+          if (!base64Data) return;
+
+          const imageMarkdown = `\n![클립보드 이미지](${base64Data})\n`;
+          const target = e.target;
+          const start = typeof target.selectionStart === 'number' ? target.selectionStart : memoContent.length;
+          const end = typeof target.selectionEnd === 'number' ? target.selectionEnd : memoContent.length;
+
+          const updatedContent = memoContent.substring(0, start) + imageMarkdown + memoContent.substring(end);
+          handleTextChange({ target: { value: updatedContent } });
+        };
+        reader.readAsDataURL(file);
+        break;
+      }
+    }
+  };
+
   // 키보드 입력 시 디바운스(350ms)로 Supabase DB 업서트
   const handleTextChange = (e) => {
     const newText = e.target.value;
@@ -276,6 +306,19 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }
   };
 
+  // 텍스트 내에서 ![이미지명](data:image/...) 마크다운 이미지 추출 (미리보기 렌더링용)
+  const extractImages = (text) => {
+    if (!text) return [];
+    const regex = /!\[(.*?)\]\((data:image\/[^;]+;base64,[^\)]+)\)/g;
+    const matches = [];
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      matches.push({ alt: match[1], src: match[2], fullMatch: match[0] });
+    }
+    return matches;
+  };
+
+  const attachedImages = extractImages(memoContent);
   const lineCount = memoContent ? memoContent.split('\n').length : 0;
   const charCount = memoContent.length;
 
@@ -415,30 +458,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               >
                 +
               </button>
-
-              {/* 빠른 프리셋 단추 */}
-              <div className="flex align-center gap-1 ms-1 style-presets">
-                {[14, 16, 19, 24].map((px) => (
-                  <button
-                    key={px}
-                    type="button"
-                    onClick={() => handleFontSizePxChange(px)}
-                    style={{
-                      padding: '1px 6px',
-                      fontSize: '0.72rem',
-                      fontWeight: fontSizePx === px ? 700 : 500,
-                      borderRadius: '4px',
-                      border: 'none',
-                      background: fontSizePx === px ? '#0284c7' : '#e2e8f0',
-                      color: fontSizePx === px ? '#ffffff' : '#64748b',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {px}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
 
@@ -485,7 +504,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               <textarea
                 value={memoContent}
                 onChange={handleTextChange}
-                placeholder={`여기에 메모를 입력해 보세요!\n${friend.email}님 화면에도 0.1초 만에 실시간으로 글자가 나타나고 수정됩니다 ✨\n\n- 읽고 싶은 책 리스트 공유\n- 감명 깊은 구절 및 메모 공동 작성\n- 실시간 아이디어 스케치`}
+                onPaste={handlePaste}
+                placeholder={`여기에 메모를 입력하거나 클립보드 이미지(Ctrl+V)를 붙여넣어 보세요! 🖼️\n${friend.email}님 화면에도 0.1초 만에 실시간으로 글자와 이미지가 나타납니다 ✨\n\n- 읽고 싶은 책 리스트 공유\n- 감명 깊은 구절 및 메모 공동 작성\n- 클립보드 이미지/스샷 실시간 공유`}
                 style={{
                   width: '100%',
                   height: '100%',
@@ -530,6 +550,56 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                   <path d="M10 2L2 10M10 6L6 10M10 10H10.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
               </div>
+            </div>
+          )}
+
+          {/* 붙여넣은 클립보드 이미지 썸네일 미리보기 영역 */}
+          {attachedImages.length > 0 && (
+            <div
+              className="mt-3 p-2 rounded flex flex-wrap gap-2"
+              style={{
+                width: `${textareaSize.width}px`,
+                maxWidth: '100%',
+                maxHeight: '140px',
+                overflowY: 'auto',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0'
+              }}
+            >
+              <div className="w-100 text-xs font-bold text-slate-500 mb-1 flex justify-between align-center">
+                <span>📷 첨부된 클립보드 이미지 ({attachedImages.length}개)</span>
+                <span className="text-slate-400 font-normal">상대방 화면에서도 실시간 렌더링됩니다</span>
+              </div>
+              {attachedImages.map((img, idx) => (
+                <div key={idx} className="relative group" style={{ width: '80px', height: '80px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
+                  <img src={img.src} alt={img.alt} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <button
+                    type="button"
+                    title="이미지 삭제"
+                    onClick={() => {
+                      const newContent = memoContent.replace(img.fullMatch, '');
+                      handleTextChange({ target: { value: newContent } });
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      background: 'rgba(239, 68, 68, 0.85)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '20px',
+                      height: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
