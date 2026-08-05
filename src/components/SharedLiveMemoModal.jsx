@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
-import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, ShieldCheck } from 'lucide-react';
+import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, ShieldCheck, GripHorizontal, RotateCcw } from 'lucide-react';
 
 export default function SharedLiveMemoModal({ user, friend, onClose }) {
   if (!user || !friend) return null;
@@ -24,9 +24,69 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   });
 
   const handleFontSizePxChange = (val) => {
-    const num = Math.max(10, Math.min(72, parseInt(val, 10) || 16));
+    const num = Math.max(1, Math.min(100, parseInt(val, 10) || 16));
     setFontSizePx(num);
     localStorage.setItem('shared_memo_font_size_px', num.toString());
+  };
+
+  // 모달 창 마우스 드래그 이동 및 위치 localStorage 기억
+  const [modalPos, setModalPos] = useState(() => {
+    try {
+      const saved = localStorage.getItem('shared_memo_modal_pos');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return { x: 0, y: 0 };
+  });
+
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const initialPosRef = useRef({ x: 0, y: 0 });
+
+  const handleMouseDownHeader = (e) => {
+    // 버튼, 인풋, 텍스트에리어 클릭 시 드래그 제외
+    if (e.target.closest('button') || e.target.closest('input') || e.target.closest('textarea')) return;
+
+    isDraggingRef.current = true;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    initialPosRef.current = { ...modalPos };
+
+    document.addEventListener('mousemove', handleMouseMoveWindow);
+    document.addEventListener('mouseup', handleMouseUpWindow);
+  };
+
+  const handleMouseMoveWindow = (e) => {
+    if (!isDraggingRef.current) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    setModalPos({
+      x: initialPosRef.current.x + dx,
+      y: initialPosRef.current.y + dy
+    });
+  };
+
+  const handleMouseUpWindow = () => {
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false;
+      document.removeEventListener('mousemove', handleMouseMoveWindow);
+      document.removeEventListener('mouseup', handleMouseUpWindow);
+
+      setModalPos((latestPos) => {
+        localStorage.setItem('shared_memo_modal_pos', JSON.stringify(latestPos));
+        return latestPos;
+      });
+    }
+  };
+
+  const handleResetPos = (e) => {
+    e.stopPropagation();
+    const defaultPos = { x: 0, y: 0 };
+    setModalPos(defaultPos);
+    localStorage.removeItem('shared_memo_modal_pos');
   };
 
   const saveTimeoutRef = useRef(null);
@@ -175,36 +235,68 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           borderRadius: '16px',
           background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-          position: 'relative'
+          position: 'relative',
+          transform: `translate(${modalPos.x}px, ${modalPos.y}px)`,
+          transition: isDraggingRef.current ? 'none' : 'transform 0.05s ease-out'
         }}
       >
-        {/* 모달 닫기 버튼 */}
-        <button
-          className="modal-close"
-          onClick={onClose}
+        {/* 모달 닫기 및 위치 리셋 버튼 */}
+        <div style={{ position: 'absolute', top: '1.1rem', right: '1.1rem', display: 'flex', gap: '6px', zIndex: 10 }}>
+          {(modalPos.x !== 0 || modalPos.y !== 0) && (
+            <button
+              title="창 위치 중앙으로 초기화"
+              onClick={handleResetPos}
+              style={{
+                background: '#f1f5f9',
+                border: 'none',
+                borderRadius: '50%',
+                width: '34px',
+                height: '34px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#64748b'
+              }}
+            >
+              <RotateCcw size={15} />
+            </button>
+          )}
+
+          <button
+            className="modal-close"
+            onClick={onClose}
+            style={{
+              background: '#f1f5f9',
+              border: 'none',
+              borderRadius: '50%',
+              width: '34px',
+              height: '34px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: '#64748b'
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* 상단 타이틀 및 상태 헤더 (드래그 가능 헤더 영역) */}
+        <div
+          onMouseDown={handleMouseDownHeader}
           style={{
-            position: 'absolute',
-            top: '1.1rem',
-            right: '1.1rem',
-            background: '#f1f5f9',
-            border: 'none',
-            borderRadius: '50%',
-            width: '34px',
-            height: '34px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            color: '#64748b'
+            paddingBottom: '0.85rem',
+            borderBottom: '1px solid #e2e8f0',
+            marginBottom: '1rem',
+            cursor: 'move',
+            userSelect: 'none'
           }}
         >
-          <X size={18} />
-        </button>
-
-        {/* 상단 타이틀 및 상태 헤더 */}
-        <div style={{ paddingBottom: '0.85rem', borderBottom: '1px solid #e2e8f0', marginBottom: '1rem' }}>
-          <div className="flex align-center justify-between" style={{ paddingRight: '2.5rem' }}>
+          <div className="flex align-center justify-between" style={{ paddingRight: '4.5rem' }}>
             <h3 className="flex align-center gap-2" style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              <GripHorizontal size={20} className="text-slate-400 me-1" />
               <Zap size={22} className="text-primary" style={{ color: '#0078a6' }} />
               <span>{friend.name || friend.email}님과의 실시간 라이브 메모장</span>
             </h3>
@@ -239,8 +331,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               <div className="flex align-center gap-1">
                 <input
                   type="number"
-                  min="10"
-                  max="72"
+                  min="1"
+                  max="100"
                   value={fontSizePx}
                   onChange={(e) => handleFontSizePxChange(e.target.value)}
                   style={{
