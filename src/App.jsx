@@ -8,13 +8,14 @@ import FocusStudio from './components/FocusStudio';
 import ReadingStats from './components/ReadingStats';
 import FriendManager from './components/FriendManager';
 import AdminApprovalModal from './components/AdminApprovalModal';
-import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck } from 'lucide-react';
+import ScheduleCalendarView from './components/ScheduleCalendarView';
+import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon } from 'lucide-react';
 import NewsTicker from './components/NewsTicker';
 import WeatherWidget from './components/WeatherWidget';
 
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('bookshelf');
+  const [activeTab, setActiveTab] = useState('schedule'); // 기본 메인화면: 일정관리
   const [user, setUser] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -331,36 +332,43 @@ export default function App() {
     <div className="app-container">
       {/* 헤더 네비게이션 */}
       <header className="navbar">
-        <div className="brand-logo cursor-pointer" onClick={() => setActiveTab('bookshelf')}>
+        <div className="brand-logo cursor-pointer" onClick={() => setActiveTab('schedule')}>
           <Library size={28} className="text-primary" />
           <span>Library of Mind</span>
         </div>
 
         {user && (
-          <nav className="nav-links">
+          <nav className="navbar-tabs-container">
             <button
-              className={`nav-item ${activeTab === 'bookshelf' ? 'active' : ''}`}
+              className={`nav-tab-capsule ${activeTab === 'schedule' ? 'active' : ''}`}
+              onClick={() => setActiveTab('schedule')}
+            >
+              <CalendarIcon size={16} /> 일정관리
+            </button>
+
+            <button
+              className={`nav-tab-capsule ${activeTab === 'bookshelf' ? 'active' : ''}`}
               onClick={() => setActiveTab('bookshelf')}
             >
-              <BookOpen size={18} /> 내 서재
+              <BookOpen size={16} /> 내 서재
             </button>
 
             <button
-              className={`nav-item ${activeTab === 'search' ? 'active' : ''}`}
+              className={`nav-tab-capsule ${activeTab === 'search' ? 'active' : ''}`}
               onClick={() => setActiveTab('search')}
             >
-              <Search size={18} /> 베스트셀러 / 탐색
+              <Search size={16} /> 탐색
             </button>
 
             <button
-              className={`nav-item ${activeTab === 'ledger' ? 'active' : ''}`}
+              className={`nav-tab-capsule ${activeTab === 'ledger' ? 'active' : ''}`}
               onClick={() => setActiveTab('ledger')}
             >
-              <MessageSquare size={18} /> 생각 저장소
+              <MessageSquare size={16} /> 생각 저장소
             </button>
 
             <button
-              className={`nav-item ${activeTab === 'focus' ? 'active' : ''}`}
+              className={`nav-tab-capsule ${activeTab === 'focus' ? 'active' : ''}`}
               onClick={() => setActiveTab('focus')}
             >
               <Timer size={18} /> 몰입 스튜디오
@@ -441,6 +449,10 @@ export default function App() {
       ) : (
         /* 로그인 후 접속 허용 메인 뷰 */
         <main className="main-content">
+          {activeTab === 'schedule' && (
+            <ScheduleCalendarView userId={user?.id} />
+          )}
+
           {activeTab === 'bookshelf' && (
             <BookshelfView
               books={books}
