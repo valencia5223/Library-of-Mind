@@ -828,15 +828,7 @@ export default function BookshelfView({
 
             {viewMode === '3d' && (
               <div className="flex align-center gap-1 mt-1 justify-end" style={{ fontSize: '0.78rem', whiteSpace: 'nowrap', flexWrap: 'nowrap' }}>
-                <span className="sub-text font-bold" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  🪵 책장 테마:
-                  {shelfTheme === 'pochacco' && (
-                    <img src="/assets/pochacco_sticker.png" alt="Pochacco" style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1.5px solid #34d399', objectFit: 'contain' }} />
-                  )}
-                  {shelfTheme === 'kitty' && (
-                    <img src="/assets/hello_kitty_sticker.png" alt="Hello Kitty" style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1.5px solid #f472b6', objectFit: 'contain' }} />
-                  )}
-                </span>
+                <span className="sub-text font-bold" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>🪵 책장 테마:</span>
                 <select
                   value={shelfTheme}
                   onChange={(e) => handleShelfThemeChange(e.target.value)}
@@ -852,8 +844,8 @@ export default function BookshelfView({
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  <optgroup label="🐶 산리오 캐릭터 테마">
-                    <option value="pochacco">🐶 포차코 (Pochacco) 샌드 & 민트</option>
+                  <optgroup label="✨ 캐릭터 테마">
+                    <option value="pochacco">🐾 포차코 (Pochacco) 샌드 & 민트</option>
                     <option value="kitty">🎀 헬로키티 (Hello Kitty) 러블리 핑크</option>
                   </optgroup>
                   <optgroup label="☀️ 밝고 산뜻한 파스텔 테마">
