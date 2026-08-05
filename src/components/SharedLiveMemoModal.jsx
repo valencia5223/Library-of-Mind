@@ -377,6 +377,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         onClick={(e) => e.stopPropagation()}
         style={{
           width: 'fit-content',
+          minWidth: `${Math.max(420, textareaSize.width + 44)}px`,
           maxWidth: '96vw',
           maxHeight: '96vh',
           display: 'flex',
@@ -509,8 +510,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             </div>
           </div>
 
-          <div className="flex align-center gap-3 mt-2" style={{ fontSize: '0.82rem', color: '#64748b' }}>
-            <span className="flex align-center gap-1 font-semibold" style={{ color: isConnected ? '#059669' : '#d97706' }}>
+          <div className="flex align-center gap-3 mt-2" style={{ fontSize: '0.82rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', height: '22px' }}>
+            <span className="flex align-center gap-1 font-semibold flex-shrink-0" style={{ color: isConnected ? '#059669' : '#d97706' }}>
               <span
                 style={{
                   display: 'inline-block',
@@ -525,17 +526,17 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             </span>
 
             {typingPartner && (
-              <span className="animate-pulse flex align-center gap-1 font-bold text-primary" style={{ color: '#0284c7' }}>
+              <span className="animate-pulse flex align-center gap-1 font-bold text-primary flex-shrink-0" style={{ color: '#0284c7' }}>
                 <Sparkles size={14} /> {typingPartner}님이 작성 중...
               </span>
             )}
 
             {isSaving ? (
-              <span className="flex align-center gap-1 text-slate-500">
+              <span className="flex align-center gap-1 text-slate-500 flex-shrink-0">
                 <RefreshCw size={13} className="animate-spin" /> 자동 저장 중...
               </span>
             ) : lastSavedTime ? (
-              <span className="text-slate-400">최근 동기화: {lastSavedTime}</span>
+              <span className="text-slate-400 flex-shrink-0">최근 동기화: {lastSavedTime}</span>
             ) : null}
           </div>
         </div>
