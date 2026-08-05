@@ -548,7 +548,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             </div>
           </div>
 
-          <div className="flex align-center gap-3 mt-2" style={{ fontSize: '0.82rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', height: '22px' }}>
+          {/* 상태 표시 1줄: 연결 상태 및 최근 저장 시간 */}
+          <div className="flex align-center justify-between mt-2" style={{ fontSize: '0.82rem', color: '#64748b' }}>
             <span className="flex align-center gap-1 font-semibold flex-shrink-0" style={{ color: isConnected ? '#059669' : '#d97706' }}>
               <span
                 style={{
@@ -563,18 +564,21 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               {isConnected ? '실시간 동기화 연결됨 (Realtime)' : '연결 준비 중...'}
             </span>
 
-            {typingPartner && (
-              <span className="animate-pulse flex align-center gap-1 font-bold text-primary flex-shrink-0" style={{ color: '#0284c7' }}>
-                <Sparkles size={14} /> {typingPartner}님이 작성 중...
-              </span>
-            )}
-
             {isSaving ? (
               <span className="flex align-center gap-1 text-slate-500 flex-shrink-0">
                 <RefreshCw size={13} className="animate-spin" /> 자동 저장 중...
               </span>
             ) : lastSavedTime ? (
               <span className="text-slate-400 flex-shrink-0">최근 동기화: {lastSavedTime}</span>
+            ) : null}
+          </div>
+
+          {/* 상태 표시 2줄: 전용 작성 중 안내 줄 (고정 높이 20px로 레이아웃 변동 완전 방지) */}
+          <div style={{ height: '20px', marginTop: '4px', display: 'flex', alignItems: 'center', fontSize: '0.78rem' }}>
+            {typingPartner ? (
+              <span className="animate-pulse flex align-center gap-1 font-bold" style={{ color: '#0284c7' }}>
+                <Sparkles size={13} /> {typingPartner}님이 작성 중...
+              </span>
             ) : null}
           </div>
         </div>
