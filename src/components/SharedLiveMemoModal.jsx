@@ -1,23 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
-import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, GripHorizontal } from 'lucide-react';
+import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, GripHorizontal, ArrowRightLeft, User, MessageSquare } from 'lucide-react';
 
 export default function SharedLiveMemoModal({ user, friend, onClose }) {
   if (!user || !friend) return null;
 
-  // 1:1 대화방 결정을 위한 고유 룸 ID (두 사용자 UUID 오름차순 정렬 연결)
+  // 1:1 대화방 고유 룸 ID (두 사용자 UUID 오름차순 정렬 연결)
   const sortedUserIds = [user.id, friend.friend_id].sort();
   const roomId = `${sortedUserIds[0]}_${sortedUserIds[1]}`;
 
-  const editorRef = useRef(null);
-  const [memoContent, setMemoContent] = useState('');
+  const myEditorRef = useRef(null);
+  const [myContent, setMyContent] = useState('');
+  const [partnerContent, setPartnerContent] = useState('');
+  
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
   const [typingPartner, setTypingPartner] = useState(null);
   const [lastSavedTime, setLastSavedTime] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [isEditorEmpty, setIsEditorEmpty] = useState(true);
+  
+  const [isMyEditorEmpty, setIsMyEditorEmpty] = useState(true);
+  const [isPartnerEmpty, setIsPartnerEmpty] = useState(true);
 
   // 글씨 폰트 크기 상태 (기본값: 16px, 숫자로 자유롭게 입력 및 localStorage 기억)
   const [fontSizePx, setFontSizePx] = useState(() => {
@@ -50,7 +54,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   const initialPosRef = useRef({ x: 0, y: 0 });
 
   const handleMouseDownHeader = (e) => {
-    // 버튼, 인풋, 에디터 영역 클릭 시 드래그 제외
     if (e.target.closest('button') || e.target.closest('input') || e.target.closest('[contenteditable="true"]')) return;
 
     isDraggingRef.current = true;
@@ -84,10 +87,10 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }
   };
 
-  // 메모 입력 창 크기 조절 (드래그 resize & localStorage 기억)
-  const [textareaSize, setTextareaSize] = useState(() => {
+  // 메모 보드 개별 입력 박스 크기 조절 (드래그 resize & localStorage 기억)
+  const [panelSize, setPanelSize] = useState(() => {
     try {
-      const saved = localStorage.getItem('shared_memo_textarea_size');
+      const saved = localStorage.getItem('shared_memo_panel_size_dual');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (typeof parsed.width === 'number' && typeof parsed.height === 'number') {
@@ -95,11 +98,11 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         }
       }
     } catch (e) {}
-    return { width: 540, height: 280 };
+    return { width: 380, height: 320 };
   });
 
   const isResizingRef = useRef(false);
-  const resizeStartRef = useRef({ x: 0, y: 0, width: 540, height: 280 });
+  const resizeStartRef = useRef({ x: 0, y: 0, width: 380, height: 320 });
 
   const handleMouseDownResize = (e) => {
     e.preventDefault();
@@ -108,8 +111,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     resizeStartRef.current = {
       x: e.clientX,
       y: e.clientY,
-      width: textareaSize.width,
-      height: textareaSize.height
+      width: panelSize.width,
+      height: panelSize.height
     };
 
     document.addEventListener('mousemove', handleMouseMoveResize);
@@ -120,10 +123,10 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     if (!isResizingRef.current) return;
     const dx = e.clientX - resizeStartRef.current.x;
     const dy = e.clientY - resizeStartRef.current.y;
-    const newWidth = Math.max(380, Math.min(window.innerWidth - 60, resizeStartRef.current.width + dx));
-    const newHeight = Math.max(160, Math.min(window.innerHeight - 220, resizeStartRef.current.height + dy));
+    const newWidth = Math.max(300, Math.min((window.innerWidth - 100) / 2, resizeStartRef.current.width + dx));
+    const newHeight = Math.max(180, Math.min(window.innerHeight - 240, resizeStartRef.current.height + dy));
 
-    setTextareaSize({ width: newWidth, height: newHeight });
+    setPanelSize({ width: newWidth, height: newHeight });
   };
 
   const handleMouseUpResize = () => {
@@ -132,8 +135,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
       document.removeEventListener('mousemove', handleMouseMoveResize);
       document.removeEventListener('mouseup', handleMouseUpResize);
 
-      setTextareaSize((latestSize) => {
-        localStorage.setItem('shared_memo_textarea_size', JSON.stringify(latestSize));
+      setPanelSize((latestSize) => {
+        localStorage.setItem('shared_memo_panel_size_dual', JSON.stringify(latestSize));
         return latestSize;
       });
     }
@@ -151,14 +154,14 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   }, [onClose]);
 
   const saveTimeoutRef = useRef(null);
-  const latestContentRef = useRef('');
+  const latestMyContentRef = useRef('');
+  const allMemosDictRef = useRef({}); // { [user1_id]: html1, [user2_id]: html2 }
   const isDirtyRef = useRef(false);
 
   // HTML 문자열이 &lt;div&gt; 등 이중 Escape 되어 텍스트로 노출되는 현상을 자동 복원하는 정제 함수
   const sanitizeAndNormalizeHTML = (rawContent) => {
     if (!rawContent) return '';
     let content = rawContent;
-    // &lt;와 &gt;가 포함된 escape 텍스트인 경우 unescape 처리
     if (typeof content === 'string' && (content.includes('&lt;') || content.includes('&gt;'))) {
       const txt = document.createElement('textarea');
       txt.innerHTML = content;
@@ -167,26 +170,45 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     return content;
   };
 
-  // 에디터 DOM 내용 업기
-  const updateEditorDOM = (htmlContent) => {
-    if (editorRef.current) {
-      const normalized = sanitizeAndNormalizeHTML(htmlContent);
-      if (editorRef.current.innerHTML !== normalized) {
-        editorRef.current.innerHTML = normalized || '';
+  // 내 에디터 DOM 업데이트
+  const updateMyEditorDOM = (htmlContent) => {
+    const normalized = sanitizeAndNormalizeHTML(htmlContent);
+    if (myEditorRef.current) {
+      if (myEditorRef.current.innerHTML !== normalized) {
+        myEditorRef.current.innerHTML = normalized || '';
       }
-      const text = editorRef.current.innerText || '';
-      setIsEditorEmpty(!normalized || normalized === '<br>' || text.trim() === '');
+      const text = myEditorRef.current.innerText || '';
+      setIsMyEditorEmpty(!normalized || normalized === '<br>' || text.trim() === '');
     }
   };
 
-  // DB에 즉시 동기화 저장 (Flush)
-  const saveImmediately = async (htmlContent) => {
+  // DB에서 읽어온 콘텐츠(JSON 또는 마크다운/단일텍스트)를 딕셔너리로 구파싱
+  const parseMemoContent = (raw) => {
+    if (!raw) return {};
+    try {
+      if (raw.trim().startsWith('{') && raw.trim().endsWith('}')) {
+        return JSON.parse(raw);
+      }
+    } catch (e) {}
+    // 이전 단일 텍스트 데이터의 경우 내 메모로 보존
+    return { [user.id]: raw };
+  };
+
+  // DB에 내 메모만 즉시 동기화 저장 (Flush)
+  const saveImmediately = async (myHtmlContent) => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
     }
     isDirtyRef.current = false;
     setIsSaving(true);
+
+    const updatedDict = {
+      ...allMemosDictRef.current,
+      [user.id]: myHtmlContent
+    };
+    allMemosDictRef.current = updatedDict;
+
     try {
       const { error } = await supabase
         .from('shared_memos')
@@ -195,7 +217,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             room_id: roomId,
             user1_id: sortedUserIds[0],
             user2_id: sortedUserIds[1],
-            content: htmlContent,
+            content: JSON.stringify(updatedDict),
             last_updated_by: user.id,
             updated_at: new Date().toISOString()
           },
@@ -231,19 +253,31 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         }
 
         if (data) {
-          const content = data.content || '';
-          setMemoContent(content);
-          latestContentRef.current = content;
+          const dict = parseMemoContent(data.content);
+          allMemosDictRef.current = dict;
+          
+          const myHtml = dict[user.id] || '';
+          const partnerHtml = dict[friend.friend_id] || '';
+
+          setMyContent(myHtml);
+          latestMyContentRef.current = myHtml;
+          setPartnerContent(partnerHtml);
+
+          const pText = sanitizeAndNormalizeHTML(partnerHtml).replace(/<[^>]*>/g, '').trim();
+          setIsPartnerEmpty(!partnerHtml || partnerHtml === '<br>' || pText === '');
+
           if (data.updated_at) {
             setLastSavedTime(new Date(data.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
           }
         } else {
           // 데이터가 없으면 최초 생성
+          const initialDict = { [user.id]: '', [friend.friend_id]: '' };
+          allMemosDictRef.current = initialDict;
           await supabase.from('shared_memos').insert({
             room_id: roomId,
             user1_id: sortedUserIds[0],
             user2_id: sortedUserIds[1],
-            content: '',
+            content: JSON.stringify(initialDict),
             last_updated_by: user.id
           });
         }
@@ -269,15 +303,15 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         },
         (payload) => {
           if (payload.new && payload.new.last_updated_by !== user.id) {
-            const newHtml = payload.new.content || '';
-            setMemoContent(newHtml);
-            latestContentRef.current = newHtml;
-            
-            // 현재 사용자가 직접 작성 중이 아닐 때만 DOM 덮어쓰기 (입력 커서 튀김 방지)
-            if (!editorRef.current || document.activeElement !== editorRef.current) {
-              updateEditorDOM(newHtml);
-            }
-            
+            const dict = parseMemoContent(payload.new.content);
+            allMemosDictRef.current = dict;
+
+            const newPartnerHtml = dict[friend.friend_id] || '';
+            setPartnerContent(newPartnerHtml);
+
+            const pText = sanitizeAndNormalizeHTML(newPartnerHtml).replace(/<[^>]*>/g, '').trim();
+            setIsPartnerEmpty(!newPartnerHtml || newPartnerHtml === '<br>' || pText === '');
+
             setTypingPartner(friend.email);
             setLastSavedTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
 
@@ -292,9 +326,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
       });
 
     return () => {
-      // 모달 닫힐 때 작성 중인 내용이 있으면 즉시 DB 저장 보장
       if (isDirtyRef.current) {
-        saveImmediately(latestContentRef.current);
+        saveImmediately(latestMyContentRef.current);
       } else if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
@@ -302,17 +335,17 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     };
   }, [roomId, user.id, friend.friend_id, friend.email]);
 
-  // loading 완료 후 에디터 DOM이 마운트되었을 때 memoContent 바인딩 보장
+  // loading 완료 후 내 에디터 DOM 마운트 시 myContent 바인딩
   useEffect(() => {
     if (!loading) {
-      updateEditorDOM(memoContent);
+      updateMyEditorDOM(myContent);
     }
   }, [loading]);
 
   // 메모 내용 수정 시 DB 업서트 (디바운스 250ms)
   const triggerSave = (htmlContent) => {
-    setMemoContent(htmlContent);
-    latestContentRef.current = htmlContent;
+    setMyContent(htmlContent);
+    latestMyContentRef.current = htmlContent;
     isDirtyRef.current = true;
     setIsSaving(true);
 
@@ -323,17 +356,17 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }, 250);
   };
 
-  const handleEditorInput = () => {
-    if (!editorRef.current) return;
-    const html = editorRef.current.innerHTML;
-    const text = editorRef.current.innerText || '';
-    setIsEditorEmpty(!html || html === '<br>' || text.trim() === '');
+  const handleMyEditorInput = () => {
+    if (!myEditorRef.current) return;
+    const html = myEditorRef.current.innerHTML;
+    const text = myEditorRef.current.innerText || '';
+    setIsMyEditorEmpty(!html || html === '<br>' || text.trim() === '');
     triggerSave(html);
   };
 
-  const handleBlur = () => {
-    if (isDirtyRef.current && editorRef.current) {
-      saveImmediately(editorRef.current.innerHTML);
+  const handleMyBlur = () => {
+    if (isDirtyRef.current && myEditorRef.current) {
+      saveImmediately(myEditorRef.current.innerHTML);
     }
   };
 
@@ -346,7 +379,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     for (let i = 0; i < items.length; i++) {
       if (items[i].type && items[i].type.startsWith('image/')) {
         hasImage = true;
-        e.preventDefault(); // 기본 텍스트 붙여넣기 방지
+        e.preventDefault();
         const file = items[i].getAsFile();
         if (!file) continue;
 
@@ -355,7 +388,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           const base64Data = event.target?.result;
           if (!base64Data) return;
 
-          // 커서 위치에 inline <img> 요소 바로 생성 삽입
           const img = document.createElement('img');
           img.src = base64Data;
           img.alt = '클립보드 이미지';
@@ -372,55 +404,67 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             range.deleteContents();
             range.insertNode(img);
             
-            // 이미지 뒤로 커서 이동
             range.setStartAfter(img);
             range.setEndAfter(img);
             selection.removeAllRanges();
             selection.addRange(range);
-          } else if (editorRef.current) {
-            editorRef.current.appendChild(img);
+          } else if (myEditorRef.current) {
+            myEditorRef.current.appendChild(img);
           }
 
-          handleEditorInput();
+          handleMyEditorInput();
         };
         reader.readAsDataURL(file);
         break;
       }
     }
 
-    // 이미지가 아닌 서식 지정 텍스트 붙여넣기 시 텍스트만 깔끔히 삽입
     if (!hasImage && e.clipboardData) {
       const text = e.clipboardData.getData('text/plain');
       if (text) {
         e.preventDefault();
         document.execCommand('insertText', false, text);
-        handleEditorInput();
+        handleMyEditorInput();
       }
     }
   };
 
-  // 클립보드 전체 복사 (순수 텍스트 기준)
-  const handleCopyAll = () => {
-    const text = editorRef.current ? editorRef.current.innerText : memoContent;
+  // 내 메모 전체 복사
+  const handleCopyMyContent = () => {
+    const text = myEditorRef.current ? myEditorRef.current.innerText : myContent;
     navigator.clipboard.writeText(text);
     setCopySuccess(true);
     setTimeout(() => setCopySuccess(false), 2000);
   };
 
-  // 내용 전체 지우기
-  const handleClearAll = () => {
-    if (window.confirm('실시간 메모의 전체 내용을 지우시겠습니까? (상대방 화면에서도 바로 지워집니다)')) {
-      if (editorRef.current) {
-        editorRef.current.innerHTML = '';
+  // 내 메모 지우기
+  const handleClearMyContent = () => {
+    if (window.confirm('내 메모 내용을 모두 지우시겠습니까?')) {
+      if (myEditorRef.current) {
+        myEditorRef.current.innerHTML = '';
       }
-      handleEditorInput();
+      handleMyEditorInput();
     }
   };
 
-  // 줄 수 및 글자 수 (텍스트 노드 기준 계산)
-  const currentText = editorRef.current ? (editorRef.current.innerText || '') : '';
-  const lineCount = currentText ? currentText.split('\n').length : 0;
-  const charCount = currentText.length;
+  // 상대방 메모를 내 메모로 전체 가져오기 복사
+  const handleImportPartnerContent = () => {
+    if (!partnerContent || isPartnerEmpty) return;
+    if (window.confirm(`${friend.email}님의 라이브 메모 내용을 내 메모장으로 가져올까요? (기존 내 메모 뒤에 추가됩니다)`)) {
+      const newMyContent = (myContent ? myContent + '<br><br>' : '') + partnerContent;
+      setMyContent(newMyContent);
+      updateMyEditorDOM(newMyContent);
+      triggerSave(newMyContent);
+    }
+  };
+
+  // 줄 수 및 글자 수 계산
+  const myText = myEditorRef.current ? (myEditorRef.current.innerText || '') : '';
+  const myLineCount = myText ? myText.split('\n').length : 0;
+  const myCharCount = myText.length;
+
+  const partnerText = sanitizeAndNormalizeHTML(partnerContent).replace(/<[^>]*>/g, '').trim();
+  const partnerCharCount = partnerText.length;
 
   return (
     <div className="modal-overlay" style={{ zIndex: 1250 }} onClick={onClose}>
@@ -429,8 +473,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         onClick={(e) => e.stopPropagation()}
         style={{
           width: 'fit-content',
-          minWidth: `${Math.max(420, textareaSize.width + 44)}px`,
-          maxWidth: '96vw',
+          minWidth: `${Math.max(680, panelSize.width * 2 + 60)}px`,
+          maxWidth: '98vw',
           maxHeight: '96vh',
           display: 'flex',
           flexDirection: 'column',
@@ -468,7 +512,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           <X size={18} />
         </button>
 
-        {/* 상단 타이틀 및 상태 헤더 (드래그 가능 헤더 영역, 고정 크기) */}
+        {/* 상단 타이틀 및 상태 헤더 */}
         <div
           onMouseDown={handleMouseDownHeader}
           style={{
@@ -484,36 +528,19 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             <h3 className="flex align-center gap-2" style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
               <GripHorizontal size={20} className="text-slate-400 me-1" />
               <Zap size={22} className="text-primary" style={{ color: '#0078a6' }} />
-              <span>실시간 라이브 메모장</span>
+              <span>실시간 1:1 분리 메모장</span>
             </h3>
 
-            {/* 폰트 크기 커스텀 숫자 입력 컨트롤러 (localStorage 자동 기억) */}
+            {/* 폰트 크기 커스텀 숫자 입력 컨트롤러 */}
             <div className="flex align-center gap-1.5" style={{ background: '#f1f5f9', padding: '4px 8px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
               <span className="text-xs font-bold text-slate-600" style={{ fontSize: '0.78rem' }}>글씨 크기:</span>
-              
-              {/* - 버튼 */}
               <button
                 type="button"
                 onClick={() => handleFontSizePxChange(fontSizePx - 1)}
-                style={{
-                  width: '22px',
-                  height: '22px',
-                  borderRadius: '4px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  fontWeight: 700,
-                  fontSize: '0.8rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: '#334155'
-                }}
+                style={{ width: '22px', height: '22px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
               >
                 -
               </button>
-
-              {/* 숫자로 직접 입력하는 인풋 */}
               <div className="flex align-center gap-1">
                 <input
                   type="number"
@@ -521,48 +548,21 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                   max="100"
                   value={fontSizePx}
                   onChange={(e) => handleFontSizePxChange(e.target.value)}
-                  style={{
-                    width: '42px',
-                    height: '24px',
-                    textAlign: 'center',
-                    fontSize: '0.82rem',
-                    fontWeight: 700,
-                    color: '#0284c7',
-                    border: '1.5px solid #38bdf8',
-                    borderRadius: '5px',
-                    outline: 'none',
-                    background: '#ffffff',
-                    padding: '0 2px'
-                  }}
+                  style={{ width: '42px', height: '24px', textAlign: 'center', fontSize: '0.82rem', fontWeight: 700, color: '#0284c7', border: '1.5px solid #38bdf8', borderRadius: '5px', outline: 'none', background: '#ffffff', padding: '0 2px' }}
                 />
                 <span className="text-xs font-bold text-slate-500" style={{ fontSize: '0.75rem' }}>px</span>
               </div>
-
-              {/* + 버튼 */}
               <button
                 type="button"
                 onClick={() => handleFontSizePxChange(fontSizePx + 1)}
-                style={{
-                  width: '22px',
-                  height: '22px',
-                  borderRadius: '4px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  fontWeight: 700,
-                  fontSize: '0.8rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: '#334155'
-                }}
+                style={{ width: '22px', height: '22px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
               >
                 +
               </button>
             </div>
           </div>
 
-          {/* 상태 표시 1줄: 연결 상태 및 최근 저장 시간 */}
+          {/* 상태 표시 1줄 */}
           <div className="flex align-center justify-between mt-2" style={{ fontSize: '0.82rem', color: '#64748b' }}>
             <span className="flex align-center gap-1 font-semibold flex-shrink-0" style={{ color: isConnected ? '#059669' : '#d97706' }}>
               <span
@@ -575,145 +575,213 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                   boxShadow: isConnected ? '0 0 8px #10b981' : 'none'
                 }}
               />
-              {isConnected ? '실시간 동기화 연결됨 (Realtime)' : '연결 준비 중...'}
+              {isConnected ? '실시간 동기화 연결됨 (2인 독립 동시 작성)' : '연결 준비 중...'}
             </span>
 
             {isSaving ? (
               <span className="flex align-center gap-1 text-slate-500 flex-shrink-0">
-                <RefreshCw size={13} className="animate-spin" /> 자동 저장 중...
+                <RefreshCw size={13} className="animate-spin" /> 저장 중...
               </span>
             ) : lastSavedTime ? (
               <span className="text-slate-400 flex-shrink-0">최근 동기화: {lastSavedTime}</span>
             ) : null}
           </div>
 
-          {/* 상태 표시 2줄: 전용 작성 중 안내 줄 (고정 높이 20px로 레이아웃 변동 완전 방지) */}
+          {/* 상태 표시 2줄: 작성 중 안내 줄 (고정 높이 20px) */}
           <div style={{ height: '20px', marginTop: '4px', display: 'flex', alignItems: 'center', fontSize: '0.78rem' }}>
             {typingPartner ? (
               <span className="animate-pulse flex align-center gap-1 font-bold" style={{ color: '#0284c7' }}>
-                <Sparkles size={13} /> {typingPartner}님이 작성 중...
+                <Sparkles size={13} /> {typingPartner}님이 오른쪽 메모장에서 실시간 작성 중...
               </span>
             ) : null}
           </div>
         </div>
 
-        {/* 메인 메모 에디터 영역 (오직 메모 입력 박스만 조절됨) */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', minHeight: 0 }}>
+        {/* 2열 듀얼 실시간 분리 메모 영역 */}
+        <div style={{ flex: 1, display: 'flex', gap: '1.2rem', minHeight: 0 }}>
           {loading ? (
-            <div className="empty-search p-5 text-center flex-1 flex flex-col align-center justify-center" style={{ width: `${textareaSize.width}px`, height: `${textareaSize.height}px` }}>
+            <div className="empty-search p-5 text-center flex-1 flex flex-col align-center justify-center" style={{ width: `${panelSize.width * 2 + 20}px`, height: `${panelSize.height}px` }}>
               <RefreshCw size={28} className="animate-spin text-primary mb-2" />
-              <p>실시간 메모 보드를 불러오는 중입니다...</p>
+              <p>독립 1:1 라이브 메모장을 준비하는 중입니다...</p>
             </div>
           ) : (
-            <div style={{ position: 'relative', width: `${textareaSize.width}px`, height: `${textareaSize.height}px`, maxWidth: '100%' }}>
-              {/* 비어 있을 때 가이드 텍스트 (Placeholder) */}
-              {isEditorEmpty && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '1.2rem',
-                    left: '1.2rem',
-                    right: '1.2rem',
-                    color: '#94a3b8',
-                    fontSize: `${fontSizePx}px`,
-                    lineHeight: 1.75,
-                    pointerEvents: 'none',
-                    userSelect: 'none',
-                    zIndex: 1,
-                    whiteSpace: 'pre-wrap'
-                  }}
-                >
-                  {`여기에 메모를 입력하거나 클립보드 이미지(Ctrl+V)를 붙여넣어 보세요! 🖼️\n${friend.email}님 화면에도 0.1초 만에 실시간으로 글자와 이미지가 나타납니다 ✨\n\n- 읽고 싶은 책 리스트 공유\n- 감명 깊은 구절 및 메모 공동 작성\n- 클립보드 스크린샷 실시간 공통 캡처 공유`}
+            <>
+              {/* 좌측: 내 메모보드 */}
+              <div style={{ display: 'flex', flexDirection: 'column', width: `${panelSize.width}px` }}>
+                <div className="flex align-center justify-between mb-2">
+                  <span className="font-bold flex align-center gap-1 text-slate-800" style={{ fontSize: '0.88rem' }}>
+                    <User size={16} className="text-sky-600" /> 내 메모 (독립 작성)
+                  </span>
+                  <span className="text-xs text-slate-400">자유롭게 입력 & 이미지 붙여넣기</span>
                 </div>
-              )}
 
-              {/* contentEditable 기반 리치 메모장 에디터 */}
-              <div
-                ref={editorRef}
-                contentEditable
-                onInput={handleEditorInput}
-                onBlur={handleBlur}
-                onPaste={handlePaste}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  padding: '1.2rem',
-                  fontSize: `${fontSizePx}px`,
-                  lineHeight: 1.75,
-                  color: '#1e293b',
-                  background: '#ffffff',
-                  border: '1.5px solid #cbd5e1',
-                  borderRadius: '12px',
-                  outline: 'none',
-                  overflowY: 'auto',
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)',
-                  fontFamily: 'Inter, system-ui, sans-serif'
-                }}
-              />
+                <div style={{ position: 'relative', width: '100%', height: `${panelSize.height}px` }}>
+                  {isMyEditorEmpty && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '1rem',
+                        left: '1rem',
+                        right: '1rem',
+                        color: '#94a3b8',
+                        fontSize: `${fontSizePx}px`,
+                        lineHeight: 1.7,
+                        pointerEvents: 'none',
+                        userSelect: 'none',
+                        zIndex: 1,
+                        whiteSpace: 'pre-wrap'
+                      }}
+                    >
+                      {`여기에 나만의 메모나 이미지(Ctrl+V)를 자유롭게 작성하세요!\n상대방의 작성과 서로 방해받지 않고 독립적으로 실시간 공유됩니다 ✨`}
+                    </div>
+                  )}
 
-              {/* 메모 입력부 전용 우측 하단 크기 조절 손잡이 */}
-              <div
-                onMouseDown={handleMouseDownResize}
-                title="드래그하여 메모 입력 박스 크기 변경 (localStorage 기억됨)"
-                style={{
-                  position: 'absolute',
-                  bottom: '8px',
-                  right: '8px',
-                  width: '22px',
-                  height: '22px',
-                  cursor: 'nwse-resize',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#0284c7',
-                  background: '#f0f9ff',
-                  borderRadius: '5px',
-                  border: '1px solid #bae6fd',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-                  zIndex: 5,
-                  userSelect: 'none'
-                }}
-              >
-                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                  <path d="M10 2L2 10M10 6L6 10M10 10H10.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
+                  <div
+                    ref={myEditorRef}
+                    contentEditable
+                    onInput={handleMyEditorInput}
+                    onBlur={handleMyBlur}
+                    onPaste={handlePaste}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      padding: '1rem',
+                      fontSize: `${fontSizePx}px`,
+                      lineHeight: 1.7,
+                      color: '#1e293b',
+                      background: '#ffffff',
+                      border: '2px solid #bae6fd',
+                      borderRadius: '12px',
+                      outline: 'none',
+                      overflowY: 'auto',
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)',
+                      fontFamily: 'Inter, system-ui, sans-serif'
+                    }}
+                  />
+                </div>
               </div>
-            </div>
+
+              {/* 우측: 상대방 실시간 메모보드 */}
+              <div style={{ display: 'flex', flexDirection: 'column', width: `${panelSize.width}px` }}>
+                <div className="flex align-center justify-between mb-2">
+                  <span className="font-bold flex align-center gap-1 text-slate-800" style={{ fontSize: '0.88rem' }}>
+                    <MessageSquare size={16} className="text-emerald-600" /> {friend.email} 님의 메모
+                  </span>
+                  <button
+                    className="btn btn-xs btn-outline font-bold flex align-center gap-1"
+                    onClick={handleImportPartnerContent}
+                    disabled={isPartnerEmpty}
+                    title="상대방 메모 내용을 내 메모에 추가 복사"
+                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem', borderRadius: '6px' }}
+                  >
+                    <ArrowRightLeft size={12} /> 내 메모로 가져오기
+                  </button>
+                </div>
+
+                <div style={{ position: 'relative', width: '100%', height: `${panelSize.height}px` }}>
+                  {isPartnerEmpty ? (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        padding: '1rem',
+                        fontSize: `${fontSizePx}px`,
+                        lineHeight: 1.7,
+                        color: '#94a3b8',
+                        background: '#f8fafc',
+                        border: '1.5px dashed #cbd5e1',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        textAlign: 'center'
+                      }}
+                    >
+                      상대방({friend.email})이 메모를 작성하면<br />0.1초 만에 실시간으로 여기에 노출됩니다.
+                    </div>
+                  ) : (
+                    <div
+                      dangerouslySetInnerHTML={{ __html: sanitizeAndNormalizeHTML(partnerContent) }}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        padding: '1rem',
+                        fontSize: `${fontSizePx}px`,
+                        lineHeight: 1.7,
+                        color: '#334155',
+                        background: '#f8fafc',
+                        border: '1.5px solid #e2e8f0',
+                        borderRadius: '12px',
+                        overflowY: 'auto',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        userSelect: 'text',
+                        fontFamily: 'Inter, system-ui, sans-serif'
+                      }}
+                    />
+                  )}
+
+                  {/* 우측 하단 듀얼 전체 크기 조절 손잡이 */}
+                  <div
+                    onMouseDown={handleMouseDownResize}
+                    title="드래그하여 메모 박스 크기 변경 (localStorage 기억됨)"
+                    style={{
+                      position: 'absolute',
+                      bottom: '8px',
+                      right: '8px',
+                      width: '22px',
+                      height: '22px',
+                      cursor: 'nwse-resize',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#0284c7',
+                      background: '#f0f9ff',
+                      borderRadius: '5px',
+                      border: '1px solid #bae6fd',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                      zIndex: 5,
+                      userSelect: 'none'
+                    }}
+                  >
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                      <path d="M10 2L2 10M10 6L6 10M10 10H10.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </div>
 
-        {/* 하단 푸터 바 (통계 및 툴바, 고정 크기) */}
+        {/* 하단 푸터 바 */}
         <div
           className="mt-3 pt-3 flex justify-between align-center"
           style={{ borderTop: '1px solid #e2e8f0', background: 'transparent', flexShrink: 0 }}
         >
-          <div className="flex flex-col gap-1 text-slate-500" style={{ fontSize: '0.78rem', fontWeight: 500, lineHeight: 1.35 }}>
-            <div className="flex align-center gap-3">
-              <span>줄 수: <b style={{ color: '#0f172a' }}>{lineCount}</b></span>
-              <span>글자 수: <b style={{ color: '#0f172a' }}>{charCount}</b>자</span>
-            </div>
-            <div className="text-slate-500" style={{ fontSize: '0.75rem' }}>
-              대상: <b style={{ color: '#0284c7', fontWeight: 600 }}>{friend.email}</b>
-            </div>
+          <div className="flex align-center gap-4 text-slate-500" style={{ fontSize: '0.78rem', fontWeight: 500 }}>
+            <span>내 글자 수: <b style={{ color: '#0284c7' }}>{myCharCount}</b>자 ({myLineCount}줄)</span>
+            <span style={{ color: '#cbd5e1' }}>|</span>
+            <span>상대방 글자 수: <b style={{ color: '#059669' }}>{partnerCharCount}</b>자</span>
           </div>
 
           <div className="flex align-center gap-2">
             <button
               className="btn btn-outline btn-sm font-bold flex align-center gap-1"
-              onClick={handleCopyAll}
-              disabled={isEditorEmpty}
+              onClick={handleCopyMyContent}
+              disabled={isMyEditorEmpty}
               style={{ padding: '0.45rem 0.85rem', borderRadius: '8px' }}
             >
               {copySuccess ? <CheckCircle2 size={15} color="#059669" /> : <Copy size={15} />}
-              {copySuccess ? '복사 완료!' : '전체 복사'}
+              {copySuccess ? '복사 완료!' : '내 메모 전체 복사'}
             </button>
 
             <button
               className="btn btn-outline btn-sm text-danger font-bold flex align-center gap-1"
-              onClick={handleClearAll}
-              disabled={isEditorEmpty}
+              onClick={handleClearMyContent}
+              disabled={isMyEditorEmpty}
               style={{ padding: '0.45rem 0.85rem', borderRadius: '8px', borderColor: '#fca5a5', color: '#dc2626' }}
             >
               <Trash2 size={15} /> 지우기
