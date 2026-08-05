@@ -610,9 +610,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               <div style={{ display: 'flex', flexDirection: 'column', width: `${panelSize.width}px` }}>
                 <div className="flex align-center justify-between mb-2">
                   <span className="font-bold flex align-center gap-1 text-slate-800" style={{ fontSize: '0.88rem' }}>
-                    <User size={16} className="text-sky-600" /> 내 메모 (독립 작성)
+                    <User size={16} className="text-sky-600" /> 내 메모
                   </span>
-                  <span className="text-xs text-slate-400">자유롭게 입력 & 이미지 붙여넣기</span>
                 </div>
 
                 <div style={{ position: 'relative', width: '100%', height: `${panelSize.height}px` }}>
