@@ -828,15 +828,23 @@ export default function BookshelfView({
 
             {viewMode === '3d' && (
               <div className="flex align-center gap-1 mt-1 justify-end" style={{ fontSize: '0.78rem', whiteSpace: 'nowrap', flexWrap: 'nowrap' }}>
-                <span className="sub-text font-bold" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>🪵 책장 테마:</span>
+                <span className="sub-text font-bold" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  🪵 책장 테마:
+                  {shelfTheme === 'pochacco' && (
+                    <img src="/assets/pochacco_sticker.png" alt="Pochacco" style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1.5px solid #34d399', objectFit: 'contain' }} />
+                  )}
+                  {shelfTheme === 'kitty' && (
+                    <img src="/assets/hello_kitty_sticker.png" alt="Hello Kitty" style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1.5px solid #f472b6', objectFit: 'contain' }} />
+                  )}
+                </span>
                 <select
                   value={shelfTheme}
                   onChange={(e) => handleShelfThemeChange(e.target.value)}
                   style={{
-                    padding: '0.15rem 0.45rem',
-                    fontSize: '0.75rem',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
+                    padding: '0.2rem 0.5rem',
+                    fontSize: '0.78rem',
+                    borderRadius: '8px',
+                    border: '1.5px solid #cbd5e1',
                     backgroundColor: '#ffffff',
                     color: '#1e293b',
                     fontWeight: 700,
@@ -844,9 +852,9 @@ export default function BookshelfView({
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  <optgroup label="🐶 캐릭터 & 컬래버 테마">
-                    <option value="pochacco">🐶 포차코 샌드 & 민트</option>
-                    <option value="kitty">🎀 헬로키티 러블리 핑크</option>
+                  <optgroup label="🐶 산리오 캐릭터 테마">
+                    <option value="pochacco">🐶 포차코 (Pochacco) 샌드 & 민트</option>
+                    <option value="kitty">🎀 헬로키티 (Hello Kitty) 러블리 핑크</option>
                   </optgroup>
                   <optgroup label="☀️ 밝고 산뜻한 파스텔 테마">
                     <option value="maple">🥛 화이트 메이플</option>
@@ -918,7 +926,50 @@ export default function BookshelfView({
                     </div>
                   )}
 
-                  <div className="shelf-surface">
+                  <div className="shelf-surface" style={{ position: 'relative', overflow: 'hidden' }}>
+                    {/* 책장 안쪽 벽면 포차코 & 헬로키티 은은한 워터마크 캐릭터 배경 벽지 */}
+                    {shelfTheme === 'pochacco' && (
+                      <div
+                        className="shelf-wall-character pochacco-wall"
+                        style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -55%)',
+                          width: '180px',
+                          height: '180px',
+                          backgroundImage: 'url(/assets/pochacco_sticker.png)',
+                          backgroundSize: 'contain',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'center',
+                          opacity: 0.28,
+                          pointerEvents: 'none',
+                          filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.15))',
+                          zIndex: 1
+                        }}
+                      />
+                    )}
+                    {shelfTheme === 'kitty' && (
+                      <div
+                        className="shelf-wall-character kitty-wall"
+                        style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: '50%',
+                          transform: 'translate(-50%, -55%)',
+                          width: '180px',
+                          height: '180px',
+                          backgroundImage: 'url(/assets/hello_kitty_sticker.png)',
+                          backgroundSize: 'contain',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'center',
+                          opacity: 0.28,
+                          pointerEvents: 'none',
+                          filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.15))',
+                          zIndex: 1
+                        }}
+                      />
+                    )}
                     {shelfBooks.length === 0 ? (
                       <div className="empty-shelf-text">이 책장은 비어 있습니다. 탐색 탭에서 책을 찾아 꽂아보세요!</div>
                     ) : (
