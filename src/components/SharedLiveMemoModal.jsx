@@ -17,14 +17,16 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   const [lastSavedTime, setLastSavedTime] = useState(null);
   const [copySuccess, setCopySuccess] = useState(false);
 
-  // 글씨 폰트 크기 상태 (기본값: 1rem / 16px, localStorage 저장 반영)
-  const [fontSize, setFontSize] = useState(() => {
-    return localStorage.getItem('shared_memo_font_size') || '1rem';
+  // 글씨 폰트 크기 상태 (기본값: 16px, 숫자로 자유롭게 입력 및 localStorage 기억)
+  const [fontSizePx, setFontSizePx] = useState(() => {
+    const saved = localStorage.getItem('shared_memo_font_size_px');
+    return saved ? parseInt(saved, 10) || 16 : 16;
   });
 
-  const handleFontSizeChange = (newSize) => {
-    setFontSize(newSize);
-    localStorage.setItem('shared_memo_font_size', newSize);
+  const handleFontSizePxChange = (val) => {
+    const num = Math.max(10, Math.min(72, parseInt(val, 10) || 16));
+    setFontSizePx(num);
+    localStorage.setItem('shared_memo_font_size_px', num.toString());
   };
 
   const saveTimeoutRef = useRef(null);
@@ -207,34 +209,102 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               <span>{friend.name || friend.email}님과의 실시간 라이브 메모장</span>
             </h3>
 
-            {/* 폰트 크기 설정 컨트롤러 (localStorage 자동 기억) */}
-            <div className="flex align-center gap-1" style={{ background: '#f1f5f9', padding: '3px 6px', borderRadius: '8px' }}>
-              <span className="text-xs font-bold text-slate-500 me-1" style={{ fontSize: '0.78rem' }}>글씨 크기:</span>
-              {[
-                { label: '작게', value: '0.88rem' },
-                { label: '보통', value: '1rem' },
-                { label: '크게', value: '1.18rem' },
-                { label: '최대', value: '1.38rem' }
-              ].map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => handleFontSizeChange(opt.value)}
+            {/* 폰트 크기 커스텀 숫자 입력 컨트롤러 (localStorage 자동 기억) */}
+            <div className="flex align-center gap-1.5" style={{ background: '#f1f5f9', padding: '4px 8px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <span className="text-xs font-bold text-slate-600" style={{ fontSize: '0.78rem' }}>글씨 크기:</span>
+              
+              {/* - 버튼 */}
+              <button
+                type="button"
+                onClick={() => handleFontSizePxChange(fontSizePx - 1)}
+                style={{
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '4px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#334155'
+                }}
+              >
+                -
+              </button>
+
+              {/* 숫자로 직접 입력하는 인풋 */}
+              <div className="flex align-center gap-1">
+                <input
+                  type="number"
+                  min="10"
+                  max="72"
+                  value={fontSizePx}
+                  onChange={(e) => handleFontSizePxChange(e.target.value)}
                   style={{
-                    padding: '2px 8px',
-                    fontSize: '0.78rem',
-                    fontWeight: fontSize === opt.value ? 700 : 500,
+                    width: '42px',
+                    height: '24px',
+                    textAlign: 'center',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    color: '#0284c7',
+                    border: '1.5px solid #38bdf8',
                     borderRadius: '5px',
-                    border: 'none',
-                    background: fontSize === opt.value ? '#ffffff' : 'transparent',
-                    color: fontSize === opt.value ? '#0284c7' : '#64748b',
-                    boxShadow: fontSize === opt.value ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease'
+                    outline: 'none',
+                    background: '#ffffff',
+                    padding: '0 2px'
                   }}
-                >
-                  {opt.label}
-                </button>
-              ))}
+                />
+                <span className="text-xs font-bold text-slate-500" style={{ fontSize: '0.75rem' }}>px</span>
+              </div>
+
+              {/* + 버튼 */}
+              <button
+                type="button"
+                onClick={() => handleFontSizePxChange(fontSizePx + 1)}
+                style={{
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '4px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#334155'
+                }}
+              >
+                +
+              </button>
+
+              {/* 빠른 프리셋 단추 */}
+              <div className="flex align-center gap-1 ms-1 style-presets">
+                {[14, 16, 19, 24].map((px) => (
+                  <button
+                    key={px}
+                    type="button"
+                    onClick={() => handleFontSizePxChange(px)}
+                    style={{
+                      padding: '1px 6px',
+                      fontSize: '0.72rem',
+                      fontWeight: fontSizePx === px ? 700 : 500,
+                      borderRadius: '4px',
+                      border: 'none',
+                      background: fontSizePx === px ? '#0284c7' : '#e2e8f0',
+                      color: fontSizePx === px ? '#ffffff' : '#64748b',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    {px}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -285,7 +355,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                 width: '100%',
                 flex: 1,
                 padding: '1.2rem',
-                fontSize: fontSize,
+                fontSize: `${fontSizePx}px`,
                 lineHeight: 1.75,
                 color: '#1e293b',
                 background: '#ffffff',
