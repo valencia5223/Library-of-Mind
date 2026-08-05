@@ -82,12 +82,82 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }
   };
 
+  // 모달 창 크기 조절 (드래그 resize & localStorage 기억)
+  const [modalSize, setModalSize] = useState(() => {
+    try {
+      const saved = localStorage.getItem('shared_memo_modal_size');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.width === 'number' && typeof parsed.height === 'number') {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return { width: 750, height: 600 };
+  });
+
+  const isResizingRef = useRef(false);
+  const resizeStartRef = useRef({ x: 0, y: 0, width: 750, height: 600 });
+
+  const handleMouseDownResize = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isResizingRef.current = true;
+    resizeStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      width: modalSize.width,
+      height: modalSize.height
+    };
+
+    document.addEventListener('mousemove', handleMouseMoveResize);
+    document.addEventListener('mouseup', handleMouseUpResize);
+  };
+
+  const handleMouseMoveResize = (e) => {
+    if (!isResizingRef.current) return;
+    const dx = e.clientX - resizeStartRef.current.x;
+    const dy = e.clientY - resizeStartRef.current.y;
+    const newWidth = Math.max(420, Math.min(window.innerWidth - 20, resizeStartRef.current.width + dx));
+    const newHeight = Math.max(320, Math.min(window.innerHeight - 20, resizeStartRef.current.height + dy));
+
+    setModalSize({ width: newWidth, height: newHeight });
+  };
+
+  const handleMouseUpResize = () => {
+    if (isResizingRef.current) {
+      isResizingRef.current = false;
+      document.removeEventListener('mousemove', handleMouseMoveResize);
+      document.removeEventListener('mouseup', handleMouseUpResize);
+
+      setModalSize((latestSize) => {
+        localStorage.setItem('shared_memo_modal_size', JSON.stringify(latestSize));
+        return latestSize;
+      });
+    }
+  };
+
+  // 창 위치 & 크기 초기화 버튼
   const handleResetPos = (e) => {
     e.stopPropagation();
     const defaultPos = { x: 0, y: 0 };
+    const defaultSize = { width: 750, height: 600 };
     setModalPos(defaultPos);
+    setModalSize(defaultSize);
     localStorage.removeItem('shared_memo_modal_pos');
+    localStorage.removeItem('shared_memo_modal_size');
   };
+
+  // ESC 키 누르면 모달 닫기
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const saveTimeoutRef = useRef(null);
 
@@ -226,9 +296,10 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         className="modal-card animate-scale-in"
         onClick={(e) => e.stopPropagation()}
         style={{
-          maxWidth: '750px',
-          width: '92vw',
-          height: '82vh',
+          width: `${modalSize.width}px`,
+          height: `${modalSize.height}px`,
+          maxWidth: '96vw',
+          maxHeight: '96vh',
           display: 'flex',
           flexDirection: 'column',
           padding: '1.5rem',
@@ -237,51 +308,32 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           position: 'relative',
           transform: `translate(${modalPos.x}px, ${modalPos.y}px)`,
-          transition: isDraggingRef.current ? 'none' : 'transform 0.05s ease-out'
+          transition: isDraggingRef.current || isResizingRef.current ? 'none' : 'transform 0.05s ease-out, width 0.05s ease-out, height 0.05s ease-out'
         }}
       >
-        {/* 모달 닫기 및 위치 리셋 버튼 */}
-        <div style={{ position: 'absolute', top: '1.1rem', right: '1.1rem', display: 'flex', gap: '6px', zIndex: 10 }}>
-          {(modalPos.x !== 0 || modalPos.y !== 0) && (
-            <button
-              title="창 위치 중앙으로 초기화"
-              onClick={handleResetPos}
-              style={{
-                background: '#f1f5f9',
-                border: 'none',
-                borderRadius: '50%',
-                width: '34px',
-                height: '34px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                color: '#64748b'
-              }}
-            >
-              <RotateCcw size={15} />
-            </button>
-          )}
-
-          <button
-            className="modal-close"
-            onClick={onClose}
-            style={{
-              background: '#f1f5f9',
-              border: 'none',
-              borderRadius: '50%',
-              width: '34px',
-              height: '34px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: '#64748b'
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
+        {/* 모달 닫기 버튼 */}
+        <button
+          className="modal-close"
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '1.1rem',
+            right: '1.1rem',
+            background: '#f1f5f9',
+            border: 'none',
+            borderRadius: '50%',
+            width: '34px',
+            height: '34px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#64748b',
+            zIndex: 10
+          }}
+        >
+          <X size={18} />
+        </button>
 
         {/* 상단 타이틀 및 상태 헤더 (드래그 가능 헤더 영역) */}
         <div
@@ -500,6 +552,30 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               닫기
             </button>
           </div>
+        </div>
+
+        {/* 우측 하단 창 크기 조절 손잡이 */}
+        <div
+          onMouseDown={handleMouseDownResize}
+          title="드래그하여 창 크기 자유 변경 (위치/크기 기억됨)"
+          style={{
+            position: 'absolute',
+            bottom: '4px',
+            right: '4px',
+            width: '20px',
+            height: '20px',
+            cursor: 'nwse-resize',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#94a3b8',
+            zIndex: 10,
+            userSelect: 'none'
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M10 2L2 10M10 6L6 10M10 10H10.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
         </div>
       </div>
     </div>
