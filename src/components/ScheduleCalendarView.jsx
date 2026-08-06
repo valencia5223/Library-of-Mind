@@ -571,7 +571,7 @@ export default function ScheduleCalendarView({ userId = null }) {
                   <option value="">🔒 공유 안함 (나만의 개인 일정)</option>
                   {friendsList.map(f => (
                     <option key={f.id} value={f.id}>
-                      👥 {f.name || f.email.split('@')[0]} 님과 공유 ({f.email})
+                      {f.name || f.email.split('@')[0]} 님과 공유 ({f.email})
                     </option>
                   ))}
                 </select>
