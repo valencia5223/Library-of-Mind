@@ -126,8 +126,9 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const step = isTwoPageMode ? 2 : 1;
 
   // Iframe에 전달할 완벽한 URL (툴바, 사이드바, 스크롤바 숨김 파라미터 적용)
+  // 양면 보기 시 좌우 배율이 틀어지는 현상을 막기 위해 높이 기준 동기화(FitV) 사용
   const getIframeUrl = (pageNum) => {
-    return `${pdfData.url}#page=${pageNum}&toolbar=0&navpanes=0&scrollbar=0&view=Fit`;
+    return `${pdfData.url}#page=${pageNum}&toolbar=0&navpanes=0&scrollbar=0&view=FitV`;
   };
 
   return (
@@ -285,6 +286,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               }}>
                 {/* 왼쪽 페이지 Iframe */}
                 <iframe
+                  key={`left_${currentPage}`}
                   ref={iframeLeftRef}
                   src={getIframeUrl(currentPage)}
                   style={{ flex: 1, height: '100%', width: '100%', border: 'none', backgroundColor: '#ffffff', pointerEvents: 'none' }}
@@ -304,6 +306,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
                 {/* 오른쪽 페이지 Iframe (양면 모드일 경우) */}
                 <iframe
+                  key={`right_${currentPage + 1}`}
                   ref={iframeRightRef}
                   src={isTwoPageMode && currentPage + 1 <= totalPages ? getIframeUrl(currentPage + 1) : 'about:blank'}
                   style={{ flex: 1, height: '100%', width: '100%', border: 'none', backgroundColor: '#ffffff', display: isTwoPageMode ? 'block' : 'none', pointerEvents: 'none' }}
