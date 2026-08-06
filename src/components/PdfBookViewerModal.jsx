@@ -143,7 +143,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
       // ★ 핵심: 과도하게 높은 배율은 CSS 다운샘플링 과정에서 글씨 번짐을 유발합니다. ★
       // 가장 또렷한 화질을 보장하는 모니터 절대 매칭(devicePixelRatio) 기반 2배수 제한 스케일링
-      const outputScale = Math.max(window.devicePixelRatio || 1, 2);
+      const outputScale = Math.max(window.devicePixelRatio || 1, 3);
 
       canvas.width = Math.floor(viewport.width * outputScale);
       canvas.height = Math.floor(viewport.height * outputScale);
@@ -217,7 +217,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         className="modal-card pdf-viewer-card"
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: '96vw', maxWidth: showNotes ? '1480px' : '1280px', height: '93vh',
+          width: '99vw', maxWidth: showNotes ? '1800px' : '1600px', height: '98vh',
           display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden',
           backgroundColor: '#0f172a', color: '#f8fafc',
           boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', borderRadius: '16px',
