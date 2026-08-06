@@ -281,13 +281,13 @@ img {
   padding: 1.5rem 2rem;
 }
 
-/* 네비게이션 헤더 (1줄 레이아웃 유지 및 창 축소 시 가로 스크롤 보장) */
+/* 네비게이션 헤더 (1줄 및 반응형 2줄 스위칭 스마트 레이아웃) */
 .navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: nowrap;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.8rem;
   padding: 0.8rem 1.4rem;
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(16px);
@@ -297,7 +297,6 @@ img {
   margin-bottom: 1.5rem;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
   max-width: 100%;
-  overflow: hidden;
 }
 
 .brand-logo {
@@ -315,17 +314,17 @@ img {
   flex-shrink: 0;
 }
 
-/* 창 크기가 줄어들었을 때 탭 영역 수평 스크롤 지원 */
+/* 탭 메뉴 컨테이너 (스크롤바 및 유연한 래핑 지원) */
 .navbar-tabs-container,
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   flex: 1;
   min-width: 0;
   overflow-x: auto;
   white-space: nowrap;
-  padding: 0.3rem 0;
+  padding: 0.2rem 0;
   scrollbar-width: thin;
   scrollbar-color: rgba(2, 132, 199, 0.3) transparent;
 }
@@ -345,13 +344,13 @@ img {
 .nav-item {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.5rem 0.9rem;
+  gap: 0.4rem;
+  padding: 0.48rem 0.82rem;
   border-radius: 30px;
   border: 1px solid rgba(0, 0, 0, 0.06);
   background: rgba(0, 0, 0, 0.03);
   color: var(--text-sub);
-  font-size: 0.86rem;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -371,6 +370,27 @@ img {
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
   box-shadow: 0 4px 14px rgba(0, 120, 166, 0.3);
   border-color: transparent;
+}
+
+/* 1280px 이하 중소형 브라우저 창 / 노트북 대응: 2줄 스마트 레이아웃 자동 전환 */
+@media (max-width: 1280px) {
+  .navbar {
+    row-gap: 0.75rem;
+    padding: 0.8rem 1.1rem;
+  }
+  .navbar-tabs-container {
+    order: 2;
+    width: 100%;
+    flex: 0 0 100%;
+    justify-content: flex-start;
+    border-top: 1px dashed rgba(0, 0, 0, 0.08);
+    padding-top: 0.6rem;
+    margin-top: 0.2rem;
+  }
+  .navbar-tabs-container .nav-tab-capsule {
+    font-size: 0.82rem;
+    padding: 0.42rem 0.75rem;
+  }
 }
 
 /* 강제 로그인 게이트 화면 */
