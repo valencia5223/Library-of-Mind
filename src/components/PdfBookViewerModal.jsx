@@ -343,7 +343,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
           </div>
 
           {/* 중앙 Canvas (스크롤 가능 래퍼) */}
-          <div style={{
+          <div ref={containerRef} style={{
             flex: 1, height: '100%', backgroundColor: '#020617', display: 'flex', alignItems: 'center',
             justifyContent: 'center', overflow: 'auto', padding: '1rem', position: 'relative'
           }}>
