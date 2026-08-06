@@ -1,5 +1,7 @@
-import React from 'react';
-import { ExternalLink, Plus, RefreshCw, Trash2, X, BookOpen, Layers } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ExternalLink, Plus, RefreshCw, Trash2, X, BookOpen, Layers, FileText, Upload, Eye } from 'lucide-react';
+import PdfBookViewerModal from './PdfBookViewerModal';
+import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 const parseAuthorAndTranslator = (authorStr = '') => {
   if (!authorStr) return { author: '저자 미상', translator: null };
@@ -38,6 +40,71 @@ export default function BookDetailModal({
   syncing = false
 }) {
   if (!book) return null;
+
+  const [pdfData, setPdfData] = useState(null);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const pdfStorageKey = `book_pdf_meta_${book.id || book.isbn || 'demo'}`;
+
+  useEffect(() => {
+    try {
+      const savedPdf = localStorage.getItem(pdfStorageKey);
+      if (savedPdf) {
+        setPdfData(JSON.parse(savedPdf));
+      }
+    } catch (e) {}
+  }, [book, pdfStorageKey]);
+
+  const handlePdfUpload = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf') {
+      alert('PDF 파일만 첨부할 수 있습니다.');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const localObjectUrl = URL.createObjectURL(file);
+      const newPdfData = {
+        fileName: file.name,
+        fileSize: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
+        url: localObjectUrl,
+        currentPage: 1,
+        totalPages: 100,
+        uploadedAt: new Date().toISOString()
+      };
+
+      setPdfData(newPdfData);
+      localStorage.setItem(pdfStorageKey, JSON.stringify(newPdfData));
+
+      // Supabase Storage 업로드 시도 (버킷 생성 시)
+      if (isSupabaseConfigured() && book.id) {
+        const filePath = `user_pdfs/${book.id}_${Date.now()}.pdf`;
+        supabase.storage.from('book-pdfs').upload(filePath, file).then(({ data, error }) => {
+          if (!error && data) {
+            const publicUrl = supabase.storage.from('book-pdfs').getPublicUrl(filePath).data.publicUrl;
+            const updated = { ...newPdfData, url: publicUrl };
+            setPdfData(updated);
+            localStorage.setItem(pdfStorageKey, JSON.stringify(updated));
+          }
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.warn('PDF 업로드 처리 경고:', err);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleRemovePdf = () => {
+    if (window.confirm('첨부된 PDF 파일을 제거하시겠습니까?')) {
+      setPdfData(null);
+      localStorage.removeItem(pdfStorageKey);
+    }
+  };
 
   const info = parseAuthorAndTranslator(book.author);
   const buyLink = book.buy_link || book.link || (book.title ? `https://www.aladin.co.kr/search/wsearchresult.aspx?SearchTarget=Book&SearchWord=${encodeURIComponent(book.title)}` : null);
@@ -261,10 +328,10 @@ export default function BookDetailModal({
 
         {/* 하단 푸터 버튼 영역 */}
         <div
-          className="mt-4 pt-3 flex justify-between align-center"
+          className="mt-4 pt-3 flex justify-between align-center flex-wrap gap-2"
           style={{ borderTop: '1px solid #e2e8f0', background: '#fff', paddingTop: '1rem' }}
         >
-          <div className="flex align-center gap-2">
+          <div className="flex align-center gap-2 flex-wrap">
             {onAddBook && (
               <button
                 className={`btn btn-sm font-bold flex align-center gap-1 ${isAlreadyInShelf ? 'btn-secondary' : 'btn-primary'}`}
@@ -276,7 +343,57 @@ export default function BookDetailModal({
               </button>
             )}
 
-
+            {/* PDF 전자책 열기 / 첨부 섹션 */}
+            {pdfData ? (
+              <div className="flex align-center gap-1.5">
+                <button
+                  className="btn btn-primary btn-sm font-bold flex align-center gap-1.5"
+                  onClick={() => setShowPdfViewer(true)}
+                  style={{
+                    backgroundColor: '#0284c7',
+                    color: '#ffffff',
+                    padding: '0.5rem 1rem',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)'
+                  }}
+                >
+                  <BookOpen size={16} />
+                  <span>📖 PDF 전자책 읽기</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded font-normal" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+                    {pdfData.currentPage || 1}p
+                  </span>
+                </button>
+                <button
+                  className="btn btn-outline btn-sm text-xs"
+                  onClick={handleRemovePdf}
+                  title="첨부된 PDF 제거"
+                  style={{ padding: '0.5rem', borderRadius: '8px', color: '#94a3b8', borderColor: '#e2e8f0' }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ) : (
+              <label
+                className="btn btn-outline btn-sm font-bold flex align-center gap-1.5 cursor-pointer"
+                style={{
+                  padding: '0.5rem 0.9rem',
+                  borderRadius: '8px',
+                  borderColor: '#0284c7',
+                  color: '#0284c7',
+                  backgroundColor: '#f0f9ff'
+                }}
+              >
+                <Upload size={15} />
+                <span>{isUploading ? '업로드 중...' : '📄 PDF 도서 첨부'}</span>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handlePdfUpload}
+                  disabled={isUploading}
+                  style={{ display: 'none' }}
+                />
+              </label>
+            )}
 
             {onDeleteBook && (
               <button
@@ -297,6 +414,20 @@ export default function BookDetailModal({
             확인 닫기
           </button>
         </div>
+
+        {/* 내장 PDF 전자책 뷰어 모달 */}
+        {showPdfViewer && pdfData && (
+          <PdfBookViewerModal
+            book={book}
+            pdfData={pdfData}
+            onClose={() => setShowPdfViewer(false)}
+            onProgressUpdate={(page, total) => {
+              const updated = { ...pdfData, currentPage: page, totalPages: total };
+              setPdfData(updated);
+              localStorage.setItem(pdfStorageKey, JSON.stringify(updated));
+            }}
+          />
+        )}
       </div>
     </div>
   );
