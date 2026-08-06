@@ -2212,6 +2212,42 @@ input:focus, select:focus, textarea:focus {
   }
 }
 
+/* 리얼 E-Book 종이 넘김 전환 애니메이션 (Book Page Flip Animations) */
+.ebook-paper-frame {
+  transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+  transform-origin: center left;
+}
+
+.ebook-paper-frame.flip-next {
+  animation: ebookPaperFlipNext 0.25s ease-out;
+}
+
+.ebook-paper-frame.flip-prev {
+  animation: ebookPaperFlipPrev 0.25s ease-out;
+}
+
+@keyframes ebookPaperFlipNext {
+  0% {
+    opacity: 0.7;
+    transform: perspective(1000px) rotateY(-8deg) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1000px) rotateY(0deg) scale(1);
+  }
+}
+
+@keyframes ebookPaperFlipPrev {
+  0% {
+    opacity: 0.7;
+    transform: perspective(1000px) rotateY(8deg) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(1000px) rotateY(0deg) scale(1);
+  }
+}
+
 
 
 
