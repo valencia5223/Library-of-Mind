@@ -192,19 +192,19 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       const container = containerRef.current;
       if (!container) return;
 
-      const maxW = container.clientWidth - (isTwoPageMode ? 60 : 40);
-      const maxH = container.clientHeight - 40;
+      const maxW = container.clientWidth - (isTwoPageMode ? 32 : 24);
+      const maxH = container.clientHeight - 12; // 상하 여백 12px 밀착 계산으로 수직 스크롤바 0% 완전 제거
       const pageGap = 10;
       const raw = page.getViewport({ scale: 1.0 });
       const targetW = isTwoPageMode ? (maxW - pageGap) / 2 : maxW;
       
-      // 양면 보기 시 글자가 가로 좁아짐으로 인해 흐려 보이는 것을 보정하는 1.15배 선명도 부스트
-      const twoPageBoost = isTwoPageMode ? 1.15 : 1.0;
+      // 양면 보기 시 폰트 선명도를 극대화하는 1.45배 벡터 업스케일링 부스트
+      const twoPageBoost = isTwoPageMode ? 1.45 : 1.0;
       const userZoomMultiplier = zoomScale / 100;
 
       let fitScale;
-      if (fitMode === 'page') {
-        // 한 화면에 딱 맞춤 (스크롤바 0%)
+      if (fitMode === 'page' || isTwoPageMode) {
+        // 한 화면에 딱 맞춤 (스크롤바 0% - 세로/가로 뷰포트 완전 밀착)
         const scaleX = targetW / raw.width;
         const scaleY = maxH / raw.height;
         fitScale = Math.min(scaleX, scaleY) * userZoomMultiplier * twoPageBoost;
@@ -216,7 +216,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       const viewport = page.getViewport({ scale: fitScale });
 
       try {
-        // 1차 시도: 100% 벡터 품질 SVGGraphics 렌더링
+        // 1차 시도: 100% 벡터 품질 SVGGraphics 렌더링 (고품질 텍스트 힌팅 적용)
         const opList = await page.getOperatorList();
         const svgG = new window.pdfjsLib.SVGGraphics(page.commonObjs, page.objs);
         const svg = await svgG.getSVG(opList, viewport);
@@ -227,14 +227,19 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         svg.style.height = `${Math.floor(viewport.height)}px`;
         svg.style.display = 'block';
 
+        // 선명도 극대화를 위한 SVG 렌더링 파라미터 주입
+        svg.setAttribute('shape-rendering', 'geometricPrecision');
+        svg.setAttribute('text-rendering', 'geometricPrecision');
+        svg.setAttribute('image-rendering', 'high-quality');
+
         containerEl.innerHTML = '';
         containerEl.appendChild(svg);
       } catch (svgErr) {
         console.warn('SVGGraphics render failed for image/complex page, fallback to Canvas:', svgErr);
-        // 2차 시0 (Fallback): 표지/고용량 이미지 페이지 전용 고해상도 Canvas 렌더링
+        // 2차 시도 (Fallback): 표지/고용량 이미지 페이지 전용 3.0x 초고화질 Canvas 렌더링
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        const dpr = Math.max(2.5, window.devicePixelRatio || 2);
+        const dpr = Math.max(3.0, window.devicePixelRatio || 2);
 
         canvas.width = Math.floor(viewport.width * dpr);
         canvas.height = Math.floor(viewport.height * dpr);
@@ -555,7 +560,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUpOrLeave} onMouseLeave={onMouseUpOrLeave}
             style={{
             flex: 1, height: '100%', backgroundColor: '#020617', display: 'flex', flexDirection: 'column',
-            overflow: 'auto', padding: '1rem', position: 'relative', cursor: 'grab', userSelect: 'none'
+            overflow: (isTwoPageMode || fitMode === 'page') ? 'hidden' : 'auto', padding: '0.25rem 0.5rem', position: 'relative', cursor: 'grab', userSelect: 'none'
           }}>
             {/* 텍스트 파싱 기반 좌 ➔ 우 실시간 형광펜 긋기 오버레이 */}
             {isAutoPlay && textLines[lineIdx] && (
