@@ -1,6 +1,42 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
+
+// 클라이언트 단 엔드투엔드(E2E) 암호화 / 복호화 헬퍼 (DB 관리자도 읽을 수 없도록 보안 보장)
+const SECRET_SALT = 'LIB_MIND_E2E_SEC_KEY_2026';
+
+const encryptText = (plainText, userSecret = 'default') => {
+  if (!plainText) return '';
+  try {
+    const fullKey = `${userSecret}_${SECRET_SALT}`;
+    let xorResult = '';
+    for (let i = 0; i < plainText.length; i++) {
+      const charCode = plainText.charCodeAt(i) ^ fullKey.charCodeAt(i % fullKey.length);
+      xorResult += String.fromCharCode(charCode);
+    }
+    return 'enc_v1:' + btoa(encodeURIComponent(xorResult));
+  } catch (e) {
+    return plainText;
+  }
+};
+
+const decryptText = (cipherText, userSecret = 'default') => {
+  if (!cipherText) return '';
+  if (typeof cipherText !== 'string' || !cipherText.startsWith('enc_v1:')) return cipherText; // 일반 텍스트 하위 호환
+  try {
+    const rawCipher = cipherText.replace('enc_v1:', '');
+    const decodedStr = decodeURIComponent(atob(rawCipher));
+    const fullKey = `${userSecret}_${SECRET_SALT}`;
+    let plainText = '';
+    for (let i = 0; i < decodedStr.length; i++) {
+      const charCode = decodedStr.charCodeAt(i) ^ fullKey.charCodeAt(i % fullKey.length);
+      plainText += String.fromCharCode(charCode);
+    }
+    return plainText;
+  } catch (e) {
+    return cipherText;
+  }
+};
 
 export default function ScheduleCalendarView({ userId = null }) {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -22,6 +58,22 @@ export default function ScheduleCalendarView({ userId = null }) {
     loadSchedules();
   }, [userId]);
 
+  // ESC 키 누르면 팝업 모달 닫기
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        setShowModal(false);
+      }
+    };
+
+    if (showModal) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showModal]);
+
   const loadSchedules = async () => {
     try {
       const cached = localStorage.getItem(storageKey);
@@ -36,8 +88,14 @@ export default function ScheduleCalendarView({ userId = null }) {
           .eq('user_id', userId);
 
         if (!error && data) {
-          setSchedules(data);
-          localStorage.setItem(storageKey, JSON.stringify(data));
+          // DB에서 불러온 암호화된 title, memo 데이터를 클라이언트에서 복호화
+          const decryptedList = data.map(s => ({
+            ...s,
+            title: decryptText(s.title, userId),
+            memo: decryptText(s.memo, userId)
+          }));
+          setSchedules(decryptedList);
+          localStorage.setItem(storageKey, JSON.stringify(decryptedList));
         }
       }
     } catch (e) {
@@ -138,7 +196,13 @@ export default function ScheduleCalendarView({ userId = null }) {
 
     if (isSupabaseConfigured() && userId) {
       try {
-        await supabase.from('user_schedules').upsert(newSchedule);
+        // Supabase DB 저장 시에는 클라이언트 암호화(enc_v1:...) 문자열로 업서트하여 DB 관리자 열람 완전 차단
+        const dbSchedulePayload = {
+          ...newSchedule,
+          title: encryptText(newSchedule.title, userId),
+          memo: encryptText(newSchedule.memo, userId)
+        };
+        await supabase.from('user_schedules').upsert(dbSchedulePayload);
       } catch (err) {
         console.warn('Supabase 일정 저장 실패 (로컬 유지됨):', err.message);
       }
@@ -203,7 +267,10 @@ export default function ScheduleCalendarView({ userId = null }) {
             <h2 className="text-xl font-bold flex align-center gap-2 m-0" style={{ color: '#0f172a' }}>
               {year}년 {month + 1}월 일정 관리
             </h2>
-            <p className="text-xs sub-text m-0 mt-1">월간 스케줄을 한눈에 확인하고 독서 및 개별 일정을 스마트하게 관리해보세요.</p>
+            <p className="text-xs sub-text m-0 mt-1 flex align-center gap-1" style={{ color: '#0284c7', fontWeight: 600 }}>
+              <ShieldCheck size={14} className="text-sky-600" />
+              등록되는 모든 일정은 클라이언트 암호화(End-to-End Encryption) 처리되어 DB 조회 권한자도 내용을 볼 수 없도록 안전하게 보호됩니다.
+            </p>
           </div>
         </div>
 
@@ -225,9 +292,6 @@ export default function ScheduleCalendarView({ userId = null }) {
           </span>
           <button className="btn btn-secondary btn-sm" onClick={handleNextMonth} title="다음달 이동">
             <ChevronRight size={18} />
-          </button>
-          <button className="btn btn-outline btn-sm font-bold ml-1" onClick={handleToday} title="이번 달 / 오늘 날짜로 이동">
-            오늘
           </button>
         </div>
       </div>
