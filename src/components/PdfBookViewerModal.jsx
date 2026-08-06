@@ -211,8 +211,8 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       // 외형 화면 핏 Viewport
       const viewport = page.getViewport({ scale: fitScale });
 
-      // ★ YES24 핵심: 100% 화면 핏 외형 안에서 2.5배 레티나 고해상도 벡터로 글자를 그려 글씨 깨짐/흐림을 100% 차단! ★
-      const retinaScale = Math.max(2.5, window.devicePixelRatio || 2);
+      // ★ YES24 핵심: 3.5배 레티나 초고해상도 벡터로 폰트 획을 세밀하게 그려 글씨 깨짐/흐림을 100% 차단! ★
+      const retinaScale = Math.max(3.5, window.devicePixelRatio || 2);
       const highResViewport = page.getViewport({ scale: fitScale * retinaScale });
 
       try {
@@ -229,10 +229,22 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         svg.style.height = `${Math.floor(viewport.height)}px`;
         svg.style.display = 'block';
 
-        // 선명도 극대화를 위한 SVG 렌더링 파라미터 주입
+        // 폰트 안티앨리어싱 및 가독성 100% 극대화를 위한 SVG 스타일 및 파라미터 주입
         svg.setAttribute('shape-rendering', 'geometricPrecision');
-        svg.setAttribute('text-rendering', 'geometricPrecision');
+        svg.setAttribute('text-rendering', 'optimizeLegibility');
         svg.setAttribute('image-rendering', 'high-quality');
+
+        // SVG 안쪽에 폰트 선명도 스타일 주입
+        const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+        styleEl.textContent = `
+          text, tspan {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility !important;
+          }
+        `;
+        if (svg.firstChild) svg.insertBefore(styleEl, svg.firstChild);
+        else svg.appendChild(styleEl);
 
         containerEl.innerHTML = '';
         containerEl.appendChild(svg);
@@ -423,7 +435,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         className="modal-card pdf-viewer-card"
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: '96vw', maxWidth: showNotes ? '1650px' : '1550px', height: '90vh',
+          width: '96vw', maxWidth: showNotes ? '1650px' : '1550px', height: '82vh',
           display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden',
           backgroundColor: '#0f172a', color: '#f8fafc',
           boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)', borderRadius: '12px',
