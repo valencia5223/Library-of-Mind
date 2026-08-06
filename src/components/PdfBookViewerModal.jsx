@@ -423,18 +423,18 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         className="modal-card pdf-viewer-card"
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: '94vw', maxWidth: showNotes ? '1500px' : '1380px', height: '99vh',
+          width: '98vw', maxWidth: showNotes ? '1600px' : '1480px', height: '99.5vh',
           display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden',
           backgroundColor: '#0f172a', color: '#f8fafc',
-          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', borderRadius: '12px',
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', borderRadius: '8px',
           transition: 'all 0.3s ease', outline: 'none'
         }}
       >
-        {/* 초소형 상단 툴바 (스크롤 확보용) */}
+        {/* 초소형 슬림 상단 툴바 (YES24 뷰어 스타일 40px 스펙) */}
         <div style={{
-          padding: '0.35rem 0.85rem', backgroundColor: '#1e293b',
+          padding: '0.2rem 0.65rem', backgroundColor: '#1e293b',
           borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap'
+          justifyContent: 'space-between', gap: '0.5rem', height: '40px', flexShrink: 0
         }}>
           <div className="flex align-center gap-2">
             <div style={{
