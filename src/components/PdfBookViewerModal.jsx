@@ -4,6 +4,8 @@ import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
 const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const PDFJS_CMAP_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/';
+const PDFJS_STANDARD_FONTS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/';
 
 export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressUpdate }) {
   if (!book || !pdfData) return null;
@@ -18,8 +20,8 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const [pageRendering, setPageRendering] = useState(false);
   const [zoomScale, setZoomScale] = useState(100);
 
-  const canvasLeftRef = useRef(null);
-  const canvasRightRef = useRef(null);
+  const containerLeftRef = useRef(null);
+  const containerRightRef = useRef(null);
   const containerRef = useRef(null);
   const modalCardRef = useRef(null);
 
@@ -125,7 +127,12 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
       
       try {
-        const doc = await window.pdfjsLib.getDocument(pdfData.url).promise;
+        const doc = await window.pdfjsLib.getDocument({
+          url: pdfData.url,
+          cMapUrl: PDFJS_CMAP_URL,
+          cMapPacked: true,
+          standardFontDataUrl: PDFJS_STANDARD_FONTS_URL
+        }).promise;
         if (!isMounted) return;
         setPdfDoc(doc);
         setTotalPages(doc.numPages);
@@ -151,8 +158,8 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     if (!pdfDoc || !containerRef.current) return;
     let alive = true;
 
-    const renderPage = async (page, canvas) => {
-      if (!canvas) return;
+    const renderPage = async (page, containerEl) => {
+      if (!containerEl) return;
 
       const container = containerRef.current;
       if (!container) return;
@@ -162,32 +169,24 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       const raw = page.getViewport({ scale: 1.0 });
       const targetW = isTwoPageMode ? (maxW - pageGap) / 2 : maxW;
       
-      // 세로는 제한하지 않고 가로 폭을 화면에 가득 맞춤 (eBook 스타일)
       const userZoomMultiplier = zoomScale / 100;
       const fitScale = (targetW / raw.width) * userZoomMultiplier;
 
       const viewport = page.getViewport({ scale: fitScale });
 
-      // 모니터 DPR 기반 선명도 확보 (최대 2.5배 고해상도 렌더링)
-      const outputScale = Math.max(window.devicePixelRatio || 1, 2.5);
+      // PDF.js 정석 SVGGraphics 스펙: getOperatorList() 실행 후 getSVG(opList, viewport) 전달
+      const opList = await page.getOperatorList();
+      const svgG = new window.pdfjsLib.SVGGraphics(page.commonObjs, page.objs);
+      const svg = await svgG.getSVG(opList, viewport);
 
-      canvas.width = Math.floor(viewport.width * outputScale);
-      canvas.height = Math.floor(viewport.height * outputScale);
+      svg.setAttribute('width', `${Math.floor(viewport.width)}px`);
+      svg.setAttribute('height', `${Math.floor(viewport.height)}px`);
+      svg.style.width = `${Math.floor(viewport.width)}px`;
+      svg.style.height = `${Math.floor(viewport.height)}px`;
+      svg.style.display = 'block';
 
-      // 화면 표시 CSS 크기 (1:1 매칭)
-      canvas.style.width = `${Math.floor(viewport.width)}px`;
-      canvas.style.height = `${Math.floor(viewport.height)}px`;
-
-      const ctx = canvas.getContext('2d', { alpha: false });
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      const transform = [outputScale, 0, 0, outputScale, 0, 0];
-      await page.render({
-        canvasContext: ctx,
-        viewport: viewport,
-        transform: transform
-      }).promise;
+      containerEl.innerHTML = '';
+      containerEl.appendChild(svg);
     };
 
     const renderAll = async () => {
@@ -196,19 +195,18 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
         const p1 = await pdfDoc.getPage(currentPage);
         if (!alive) return;
-        await renderPage(p1, canvasLeftRef.current);
+        await renderPage(p1, containerLeftRef.current);
 
-        const canvasRight = canvasRightRef.current;
-        if (canvasRight) {
+        const containerRight = containerRightRef.current;
+        if (containerRight) {
           if (isTwoPageMode && currentPage + 1 <= totalPages) {
             const p2 = await pdfDoc.getPage(currentPage + 1);
             if (!alive) return;
-            await renderPage(p2, canvasRight);
+            await renderPage(p2, containerRight);
+            containerRight.style.display = 'block';
           } else {
-            canvasRight.width = 0;
-            canvasRight.height = 0;
-            canvasRight.style.width = '0px';
-            canvasRight.style.height = '0px';
+            containerRight.innerHTML = '';
+            containerRight.style.display = 'none';
           }
         }
       } catch (err) {
@@ -364,7 +362,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                 backgroundColor: '#ffffff', borderRadius: '6px', position: 'relative', overflow: 'visible',
                 boxShadow: '0 20px 40px rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, width: 'max-content'
               }}>
-                <canvas ref={canvasLeftRef} style={{ display: 'block', flexShrink: 0, backgroundColor: '#fff', opacity: pageRendering ? 0.7 : 1 }} />
+                <div ref={containerLeftRef} style={{ display: 'block', flexShrink: 0, backgroundColor: '#fff', opacity: pageRendering ? 0.7 : 1 }} />
 
                 {isTwoPageMode && (
                   <div style={{
@@ -373,7 +371,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                   }} />
                 )}
 
-                <canvas ref={canvasRightRef} style={{ display: isTwoPageMode ? 'block' : 'none', flexShrink: 0, backgroundColor: '#fff', opacity: pageRendering ? 0.7 : 1 }} />
+                <div ref={containerRightRef} style={{ display: isTwoPageMode ? 'block' : 'none', flexShrink: 0, backgroundColor: '#fff', opacity: pageRendering ? 0.7 : 1 }} />
               </div>
             )}
           </div>
