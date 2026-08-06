@@ -418,18 +418,26 @@ export default function App() {
             >
               <Users size={16} /> 이웃 서재
             </button>
-
-            <button
-              className="nav-tab-capsule"
-              onClick={() => setShowPdfLibrary(true)}
-              style={{ backgroundColor: 'rgba(2, 132, 199, 0.12)', color: '#0284c7', borderColor: 'rgba(2, 132, 199, 0.3)' }}
-            >
-              <FileText size={16} /> PDF 서재
-            </button>
           </nav>
         )}
 
         <div className="flex align-center gap-2" style={{ flexWrap: 'nowrap', flexShrink: 0 }}>
+          {user && (
+            <button
+              className="nav-tab-capsule"
+              onClick={() => setShowPdfLibrary(true)}
+              style={{
+                backgroundColor: 'rgba(2, 132, 199, 0.14)',
+                color: '#0284c7',
+                borderColor: 'rgba(2, 132, 199, 0.4)',
+                fontWeight: 700,
+                flexShrink: 0
+              }}
+            >
+              <FileText size={16} /> PDF 서재
+            </button>
+          )}
+
           <WeatherWidget />
 
           <button className="btn btn-secondary user-profile-btn" onClick={() => setIsAuthOpen(true)}>
