@@ -200,16 +200,6 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     return () => { isMounted = false; };
   }, [pdfData.url, progressKey]);
 
-  /**
-   * ★ pdf.js 공식 HiDPI 패턴 기반 Canvas 렌더링 ★
-   * - viewport는 "CSS 표시 크기" 기준으로 딱 한 번만 계산한다.
-   * - 실제 캔버스 픽셀 수는 CSS 크기 * devicePixelRatio(정수/실수 상관없이 곱셈 한 번)로만 결정한다.
-   * - viewport를 두 번 따로 계산해서 각각 Math.floor()로 반올림하면
-   *   두 값 사이에 미세한 배율 오차가 생기고, 그 오차가 브라우저의 축소 리샘플링과 겹치며
-   *   텍스트 획이 이중으로 겹쳐 보이는(고스팅) 원인이 된다. → transform으로 캔버스 내부에서 스케일업.
-   * - 인위적으로 dpr을 2.5배 등으로 부풀리지 않는다. 실제 devicePixelRatio만 사용해야
-   *   정수 배율이 보장되어 오차가 없다.
-   */
   useEffect(() => {
     if (!pdfDoc || !containerRef.current) return;
     let alive = true;
@@ -221,14 +211,13 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       if (!container) return;
 
       const maxW = container.clientWidth - (isTwoPageMode ? 24 : 16);
-      const maxH = container.clientHeight - 12; // 상하 여백 12px 밀착 계산으로 수직 스크롤바 0% 완전 제거
+      const maxH = container.clientHeight - 12;
       const pageGap = 12;
       const raw = page.getViewport({ scale: 1.0 });
       const targetW = isTwoPageMode ? (maxW - pageGap) / 2 : maxW;
 
       const userZoomMultiplier = zoomScale / 100;
 
-      // 화면에 표시될 CSS 비례 배율 (CSS Pixel Scale)
       const scaleX = targetW / raw.width;
       const scaleY = maxH / raw.height;
 
@@ -236,45 +225,41 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         ? Math.min(scaleX, scaleY) * userZoomMultiplier
         : scaleX * userZoomMultiplier;
 
-      // viewport는 "CSS 표시 크기" 기준으로 단 한 번만 계산한다 (이중 계산 금지)
+      // SVG는 100% 벡터이므로 화면 표시용 Viewport 하나로 100% 선명하게 렌더링
       const viewport = page.getViewport({ scale: fitScale });
 
-      // 실제 기기 배율을 기본으로 쓰되, 일반 모니터(devicePixelRatio=1)에서도
-      // 최소 2배로 오버샘플링해서 텍스트 안티앨리어싱 품질을 높인다.
-      // (3배까지 올려봤으나 실사용 환경에서는 오히려 최종 축소 단계의 블러가 더 도드라져
-      //  2배가 체감상 더 선명했다. 필요 이상으로 배율을 올리는 것이 항상 좋은 건 아니다.)
-      // ※ viewport를 한 번만 계산하고 transform으로 캔버스 내부에서만 확대하므로
-      //   배율을 몇 배로 쓰든 반올림 오차는 없다 — 다만 최적값은 2배 부근이었다.
-      const outputScale = Math.max(2, window.devicePixelRatio || 1);
+      try {
+        const opList = await page.getOperatorList();
+        const svgG = new window.pdfjsLib.SVGGraphics(page.commonObjs, page.objs);
+        const svg = await svgG.getSVG(opList, viewport);
 
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d', { alpha: false });
+        svg.setAttribute('width', `${Math.floor(viewport.width)}px`);
+        svg.setAttribute('height', `${Math.floor(viewport.height)}px`);
+        svg.style.width = `${Math.floor(viewport.width)}px`;
+        svg.style.height = `${Math.floor(viewport.height)}px`;
+        svg.style.display = 'block';
 
-      // 캔버스 실제 픽셀 수 = CSS 크기 * outputScale.
-      // CSS 크기는 소수점을 반올림하지 않고 그대로 사용한다.
-      // (정수로 반올림하는 실험을 해봤으나, 오히려 소폭의 콘텐츠 잘림/스케일 어긋남을
-      //  만들어 체감 품질이 떨어졌다 — 이 방식이 실측으로 검증된 더 나은 상태다.)
-      canvas.width = Math.round(viewport.width * outputScale);
-      canvas.height = Math.round(viewport.height * outputScale);
-      canvas.style.width = `${viewport.width}px`;
-      canvas.style.height = `${viewport.height}px`;
-      canvas.style.display = 'block';
+        // 폰트 안티앨리어싱 및 가독성 100% 극대화를 위한 SVG 힌트
+        svg.setAttribute('shape-rendering', 'geometricPrecision');
+        svg.setAttribute('text-rendering', 'optimizeLegibility');
 
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
+        const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+        styleEl.textContent = `
+          text, tspan {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility !important;
+          }
+        `;
+        if (svg.firstChild) svg.insertBefore(styleEl, svg.firstChild);
+        else svg.appendChild(styleEl);
 
-      // 축소 리샘플링 없이 transform으로 캔버스 내부에서 직접 확대해서 그린다
-      const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
-
-      await page.render({
-        canvasContext: ctx,
-        transform,
-        viewport
-      }).promise;
-
-      if (!alive) return;
-      containerEl.innerHTML = '';
-      containerEl.appendChild(canvas);
+        if (!alive) return;
+        containerEl.innerHTML = '';
+        containerEl.appendChild(svg);
+      } catch (svgErr) {
+        console.warn('SVGGraphics render fallback:', svgErr);
+      }
     };
 
     const renderAll = async () => {
@@ -283,24 +268,26 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
         const p1 = await pdfDoc.getPage(currentPage);
         if (!alive) return;
-        await renderPage(p1, containerLeftRef.current);
 
+        const containerLeft = containerLeftRef.current;
         const containerRight = containerRightRef.current;
-        if (containerRight) {
-          if (isTwoPageMode && currentPage + 1 <= totalPages) {
+
+        if (containerLeft) await renderPage(p1, containerLeft);
+
+        if (isTwoPageMode) {
+          if (currentPage + 1 <= totalPages && containerRight) {
             const p2 = await pdfDoc.getPage(currentPage + 1);
             if (!alive) return;
-            await renderPage(p2, containerRight);
             containerRight.style.display = 'block';
-          } else {
-            containerRight.innerHTML = '';
+            await renderPage(p2, containerRight);
+          } else if (containerRight) {
             containerRight.style.display = 'none';
           }
         }
-        // 렌더링 후 텍스트 행(Line) 좌표 스캔 (자동읽기 하이라이트용)
+        // 렌더링 후 SVG DOM 텍스트 행(Line) 좌표 스캔
         setTimeout(() => {
           if (!alive) return;
-          scanTextLines();
+          scanSvgTextLines();
         }, 150);
       } catch (err) {
         if (err.name !== 'RenderingCancelledException') console.warn('Render error:', err);
@@ -309,85 +296,55 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       }
     };
 
-    /**
-     * 자동읽기 하이라이트를 위한 텍스트 라인 좌표 스캔.
-     * getTextContent()의 아이템 좌표를 그대로 쓰지 않고, 실제 렌더된 캔버스 크기 대비
-     * 스케일을 계산해서 컨테이너 기준 좌표로 변환한다. (canvas 렌더링에는 DOM text 레이어가 없으므로
-     * page.getTextContent()를 이용해 좌표를 직접 계산해야 한다)
-     */
-    const scanTextLines = async () => {
+    const scanSvgTextLines = () => {
       const containerLeft = containerLeftRef.current;
       const containerRight = containerRightRef.current;
       const mainContainer = containerRef.current;
-      if (!containerLeft || !mainContainer) return;
+      if (!mainContainer) return;
 
-      const getLinesFromPage = async (page, containerEl) => {
-        if (!page || !containerEl) return [];
-        const canvas = containerEl.querySelector('canvas');
-        if (!canvas) return [];
+      const getLinesFromEl = (el) => {
+        if (!el) return [];
+        const svg = el.querySelector('svg');
+        if (!svg) return [];
 
         const mainRect = mainContainer.getBoundingClientRect();
-        const canvasRect = canvas.getBoundingClientRect();
-        const offsetTop = canvasRect.top - mainRect.top + mainContainer.scrollTop;
-        const offsetLeft = canvasRect.left - mainRect.left + mainContainer.scrollLeft;
-
-        const raw = page.getViewport({ scale: 1.0 });
-        // CSS 표시 크기 기준 스케일 (canvas.style.width 기준)
-        const cssScale = canvasRect.width / raw.width;
-        const textViewport = page.getViewport({ scale: cssScale });
-
-        const textContent = await page.getTextContent();
+        const textEls = Array.from(svg.querySelectorAll('text, tspan'));
         const lineMap = new Map();
 
-        textContent.items.forEach((item) => {
-          if (!item.str || !item.str.trim()) return;
-          const tx = window.pdfjsLib.Util.transform(textViewport.transform, item.transform);
-          const x = tx[4];
-          const y = tx[5];
-          const fontHeight = Math.hypot(tx[2], tx[3]) || 12;
-          const width = item.width * cssScale;
+        textEls.forEach((t) => {
+          const rect = t.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) return;
 
-          const top = offsetTop + (y - fontHeight);
-          const left = offsetLeft + x;
-          const roundedY = Math.round(top / 16) * 16;
+          const top = rect.top - mainRect.top + mainContainer.scrollTop;
+          const left = rect.left - mainRect.left + mainContainer.scrollLeft;
+          const roundedY = Math.round(top / 16) * 16; // 16px 단위 Y축 행 그룹화
 
           if (!lineMap.has(roundedY)) {
             lineMap.set(roundedY, {
-              top: top - 2,
+              y: top,
               minX: left,
-              maxX: left + width,
-              height: Math.max(22, fontHeight + 4)
+              maxX: left + rect.width,
+              height: Math.max(22, rect.height + 4)
             });
           } else {
             const existing = lineMap.get(roundedY);
             existing.minX = Math.min(existing.minX, left);
-            existing.maxX = Math.max(existing.maxX, left + width);
-            existing.height = Math.max(existing.height, fontHeight + 4);
+            existing.maxX = Math.max(existing.maxX, left + rect.width);
+            existing.height = Math.max(existing.height, rect.height + 4);
           }
         });
 
-        return Array.from(lineMap.values()).sort((a, b) => a.top - b.top);
+        return Array.from(lineMap.values()).sort((a, b) => a.y - b.y);
       };
 
-      try {
-        const p1 = await pdfDoc.getPage(currentPage);
-        const leftLines = await getLinesFromPage(p1, containerLeft);
+      const leftLines = getLinesFromEl(containerLeft);
+      const rightLines = getLinesFromEl(containerRight);
+      const allLines = isTwoPageMode ? [...leftLines, ...rightLines] : leftLines;
 
-        let rightLines = [];
-        if (isTwoPageMode && currentPage + 1 <= totalPages) {
-          const p2 = await pdfDoc.getPage(currentPage + 1);
-          rightLines = await getLinesFromPage(p2, containerRight);
-        }
-
-        const allLines = isTwoPageMode ? [...leftLines, ...rightLines] : leftLines;
-
-        setLeftLinesCount(leftLines.length);
-        setTextLines(allLines);
-        setLineIdx(0);
-        setLineProgress(0);
-      } catch (e) {
-        console.warn('Text line scan failed:', e);
-      }
+      setLeftLinesCount(leftLines.length);
+      setTextLines(allLines);
+      setLineIdx(0);
+      setLineProgress(0);
     };
 
     renderAll();
