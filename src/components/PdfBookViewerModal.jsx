@@ -239,8 +239,13 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       // viewport는 "CSS 표시 크기" 기준으로 단 한 번만 계산한다 (이중 계산 금지)
       const viewport = page.getViewport({ scale: fitScale });
 
-      // 실제 기기 배율만 사용 (인위적으로 2.5 등으로 부풀리면 반올림 오차로 고스팅 발생)
-      const outputScale = window.devicePixelRatio || 1;
+      // 실제 기기 배율을 기본으로 쓰되, 일반 모니터(devicePixelRatio=1)에서도
+      // 최소 2배로 오버샘플링해서 텍스트 안티앨리어싱 품질을 높인다.
+      // ※ 지난번엔 viewport를 두 번 따로 계산해서(floor 두 번) 이 배율을 올렸다가
+      //   반올림 오차로 텍스트가 겹쳐 보이는 버그가 생겼었다.
+      //   지금은 viewport를 한 번만 계산하고 transform으로 캔버스 내부에서만 확대하므로
+      //   배율을 몇 배로 올리든 오차 없이 안전하게 선명해진다.
+      const outputScale = Math.max(2, window.devicePixelRatio || 1);
 
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { alpha: false });
