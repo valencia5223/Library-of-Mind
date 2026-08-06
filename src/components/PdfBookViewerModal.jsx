@@ -344,16 +344,17 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
           {/* 중앙 Canvas (스크롤 가능 래퍼) */}
           <div ref={containerRef} style={{
-            flex: 1, height: '100%', backgroundColor: '#020617', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', overflow: 'auto', padding: '1rem', position: 'relative'
+            flex: 1, height: '100%', backgroundColor: '#020617', display: 'flex', flexDirection: 'column',
+            overflow: 'auto', padding: '1rem', position: 'relative'
           }}>
             {loadingPdf ? (
-              <div style={{ textAlign: 'center', padding: '2rem' }}>
-                <BookOpen size={48} style={{ color: '#0284c7', marginBottom: '0.75rem' }} />
+              <div style={{ margin: 'auto', textAlign: 'center', padding: '2rem' }}>
+                <BookOpen size={48} style={{ color: '#0284c7', marginBottom: '0.75rem', margin: '0 auto' }} />
                 <p style={{ fontWeight: 700, color: '#cbd5e1' }}>책 페이지를 로딩하는 중...</p>
               </div>
             ) : (
               <div style={{
+                margin: 'auto', /* 플렉스 오버플로우 시 위쪽 짤림 방지 (Safe Centering) */
                 backgroundColor: '#ffffff', borderRadius: '6px', position: 'relative', overflow: 'visible',
                 boxShadow: '0 20px 40px rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
