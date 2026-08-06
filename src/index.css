@@ -915,7 +915,13 @@ input:focus, select:focus, textarea:focus {
   flex-direction: column;
   gap: 4px;
   overflow-y: auto;
+  overflow-x: hidden !important;
   max-height: 85px;
+  scrollbar-width: none;
+}
+
+.day-schedules-list::-webkit-scrollbar {
+  display: none;
 }
 
 .schedule-chip {
@@ -928,6 +934,19 @@ input:focus, select:focus, textarea:focus {
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.12s ease;
+  white-space: nowrap;
+  overflow: hidden !important;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.schedule-time {
+  flex-shrink: 0;
+}
+
+.schedule-title {
+  flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -942,6 +961,10 @@ input:focus, select:focus, textarea:focus {
   text-decoration: line-through;
 }
 
+.check-toggle-btn {
+  flex-shrink: 0;
+}
+
 .check-toggle-btn, .delete-sch-btn {
   background: transparent;
   border: none;
@@ -952,6 +975,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 .delete-sch-btn {
+  flex-shrink: 0;
   margin-left: auto;
   opacity: 0;
   color: #ef4444;
