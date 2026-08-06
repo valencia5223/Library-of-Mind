@@ -6,17 +6,27 @@ import { supabase, isSupabaseConfigured } from '../supabaseClient';
 const SECRET_SALT = 'LIB_MIND_E2E_SEC_KEY_2026';
 const SHARED_SALT = 'LIB_MIND_SHARED_E2E_KEY_2026';
 
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
+
 const encryptText = (plainText, userSecret = 'default', isShared = false) => {
   if (!plainText) return '';
   try {
     const fullKey = isShared ? SHARED_SALT : `${userSecret}_${SECRET_SALT}`;
-    let xorResult = '';
-    for (let i = 0; i < plainText.length; i++) {
-      const charCode = plainText.charCodeAt(i) ^ fullKey.charCodeAt(i % fullKey.length);
-      xorResult += String.fromCharCode(charCode);
+    const plainBytes = textEncoder.encode(plainText);
+    const keyBytes = textEncoder.encode(fullKey);
+
+    const encryptedBytes = new Uint8Array(plainBytes.length);
+    for (let i = 0; i < plainBytes.length; i++) {
+      encryptedBytes[i] = plainBytes[i] ^ keyBytes[i % keyBytes.length];
     }
-    const prefix = isShared ? 'enc_sh_v1:' : 'enc_v1:';
-    return prefix + btoa(encodeURIComponent(xorResult));
+
+    let binary = '';
+    for (let i = 0; i < encryptedBytes.length; i++) {
+      binary += String.fromCharCode(encryptedBytes[i]);
+    }
+    const prefix = isShared ? 'enc_sh_v2:' : 'enc_v2:';
+    return prefix + btoa(binary);
   } catch (e) {
     return plainText;
   }
@@ -25,64 +35,72 @@ const encryptText = (plainText, userSecret = 'default', isShared = false) => {
 const decryptText = (cipherText, userSecret = 'default') => {
   if (!cipherText || typeof cipherText !== 'string') return cipherText;
 
-  // 1) 공유 일정 태그(enc_sh_v1:)인 경우 항상 SHARED_SALT로 복호화
-  if (cipherText.startsWith('enc_sh_v1:')) {
+  const isSharedTag = cipherText.startsWith('enc_sh_v2:') || cipherText.startsWith('enc_sh_v1:');
+  const isV2 = cipherText.startsWith('enc_sh_v2:') || cipherText.startsWith('enc_v2:');
+  const isV1 = cipherText.startsWith('enc_sh_v1:') || cipherText.startsWith('enc_v1:');
+
+  if (!isV2 && !isV1) return cipherText; // 일반 텍스트 하위 호환
+
+  // v2 방식 (TextEncoder / TextDecoder 기반)
+  if (isV2) {
     try {
-      const rawCipher = cipherText.replace('enc_sh_v1:', '');
-      const decodedStr = decodeURIComponent(atob(rawCipher));
-      let plainText = '';
-      for (let i = 0; i < decodedStr.length; i++) {
-        const charCode = decodedStr.charCodeAt(i) ^ SHARED_SALT.charCodeAt(i % SHARED_SALT.length);
-        plainText += String.fromCharCode(charCode);
+      const rawCipher = cipherText.replace(/^(enc_sh_v2:|enc_v2:)/, '');
+      const binary = atob(rawCipher);
+      const encryptedBytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        encryptedBytes[i] = binary.charCodeAt(i);
       }
-      return plainText;
+
+      const fullKey = isSharedTag ? SHARED_SALT : `${userSecret}_${SECRET_SALT}`;
+      const keyBytes = textEncoder.encode(fullKey);
+
+      const decryptedBytes = new Uint8Array(encryptedBytes.length);
+      for (let i = 0; i < encryptedBytes.length; i++) {
+        decryptedBytes[i] = encryptedBytes[i] ^ keyBytes[i % keyBytes.length];
+      }
+
+      return textDecoder.decode(decryptedBytes);
     } catch (e) {
+      console.warn('v2 복호화 오류:', e);
       return cipherText;
     }
   }
 
-  // 2) 개인 일정 태그(enc_v1:)인 경우
-  if (cipherText.startsWith('enc_v1:')) {
+  // v1 레거시 방식 하위 호환 시도
+  if (isV1) {
     try {
-      const rawCipher = cipherText.replace('enc_v1:', '');
+      const rawCipher = cipherText.replace(/^(enc_sh_v1:|enc_v1:)/, '');
       const decodedStr = decodeURIComponent(atob(rawCipher));
-      
-      // 1차: 개인키 복호화
-      const fullKey = `${userSecret}_${SECRET_SALT}`;
+      const fullKey = isSharedTag ? SHARED_SALT : `${userSecret}_${SECRET_SALT}`;
       let plainText = '';
       for (let i = 0; i < decodedStr.length; i++) {
         const charCode = decodedStr.charCodeAt(i) ^ fullKey.charCodeAt(i % fullKey.length);
         plainText += String.fromCharCode(charCode);
       }
-      
-      // 복호화 결과 깨짐 시 SHARED_SALT 2차 복호화
-      if (plainText.includes('\uFFFD') || !plainText) {
-        let sharedPlain = '';
-        for (let i = 0; i < decodedStr.length; i++) {
-          const charCode = decodedStr.charCodeAt(i) ^ SHARED_SALT.charCodeAt(i % SHARED_SALT.length);
-          sharedPlain += String.fromCharCode(charCode);
-        }
-        return sharedPlain;
-      }
       return plainText;
     } catch (e) {
-      // 2차 시도
+      // v1 복호화 예외 발생 시 하위 호환 세이프티
       try {
-        const rawCipher = cipherText.replace('enc_v1:', '');
-        const decodedStr = decodeURIComponent(atob(rawCipher));
-        let sharedPlain = '';
-        for (let i = 0; i < decodedStr.length; i++) {
-          const charCode = decodedStr.charCodeAt(i) ^ SHARED_SALT.charCodeAt(i % SHARED_SALT.length);
-          sharedPlain += String.fromCharCode(charCode);
+        const rawCipher = cipherText.replace(/^(enc_sh_v1:|enc_v1:)/, '');
+        const binary = atob(rawCipher);
+        const encryptedBytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          encryptedBytes[i] = binary.charCodeAt(i);
         }
-        return sharedPlain;
+        const fullKey = isSharedTag ? SHARED_SALT : `${userSecret}_${SECRET_SALT}`;
+        const keyBytes = textEncoder.encode(fullKey);
+        const decryptedBytes = new Uint8Array(encryptedBytes.length);
+        for (let i = 0; i < encryptedBytes.length; i++) {
+          decryptedBytes[i] = encryptedBytes[i] ^ keyBytes[i % keyBytes.length];
+        }
+        return textDecoder.decode(decryptedBytes);
       } catch (err) {
         return cipherText;
       }
     }
   }
 
-  return cipherText; // 일반 텍스트
+  return cipherText;
 };
 
 export default function ScheduleCalendarView({ userId = null }) {
