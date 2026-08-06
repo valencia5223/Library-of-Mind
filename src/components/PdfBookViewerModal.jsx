@@ -191,15 +191,20 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
           const baseScale = Math.min(widthScale, heightScale);
           const finalScale = baseScale * (zoomScale / 100);
 
+          // 슈퍼 레티나 HD 렌더링 스케일 (최소 2.2배 이상으로 글자 열화 방지)
+          const outputScale = Math.max(2.2, (window.devicePixelRatio || 1) * 1.8);
+
           const viewport1 = page1.getViewport({ scale: finalScale });
-          const outputScale = window.devicePixelRatio || 1;
 
           canvasLeft.width = Math.floor(viewport1.width * outputScale);
           canvasLeft.height = Math.floor(viewport1.height * outputScale);
           canvasLeft.style.width = `${Math.floor(viewport1.width)}px`;
           canvasLeft.style.height = `${Math.floor(viewport1.height)}px`;
 
-          const transform1 = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+          ctx1.imageSmoothingEnabled = true;
+          ctx1.imageSmoothingQuality = 'high';
+
+          const transform1 = [outputScale, 0, 0, outputScale, 0, 0];
 
           await page1.render({
             canvasContext: ctx1,
@@ -227,14 +232,16 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             const finalScale = baseScale * (zoomScale / 100);
 
             const viewport2 = page2.getViewport({ scale: finalScale });
-            const outputScale = window.devicePixelRatio || 1;
 
             canvasRight.width = Math.floor(viewport2.width * outputScale);
             canvasRight.height = Math.floor(viewport2.height * outputScale);
             canvasRight.style.width = `${Math.floor(viewport2.width)}px`;
             canvasRight.style.height = `${Math.floor(viewport2.height)}px`;
 
-            const transform2 = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+            ctx2.imageSmoothingEnabled = true;
+            ctx2.imageSmoothingQuality = 'high';
+
+            const transform2 = [outputScale, 0, 0, outputScale, 0, 0];
 
             await page2.render({
               canvasContext: ctx2,
