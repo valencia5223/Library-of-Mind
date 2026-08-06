@@ -24,6 +24,18 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const progressKey = `book_pdf_progress_${book.id || book.isbn || 'demo'}`;
   const notesKey = `book_pdf_notes_${book.id || book.isbn || 'demo'}`;
 
+  const currentPageRef = useRef(currentPage);
+  const totalPagesRef = useRef(totalPages);
+  const pageRenderingRef = useRef(pageRendering);
+  const pdfDocRef = useRef(pdfDoc);
+
+  useEffect(() => {
+    currentPageRef.current = currentPage;
+    totalPagesRef.current = totalPages;
+    pageRenderingRef.current = pageRendering;
+    pdfDocRef.current = pdfDoc;
+  }, [currentPage, totalPages, pageRendering, pdfDoc]);
+
   // 1. PDF.js CDN 동적 로드 및 문법 로드
   useEffect(() => {
     let isMounted = true;
@@ -80,12 +92,28 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       if (savedNotes) setNotes(savedNotes);
     } catch (e) {}
 
-    // 키보드 방향키 넘기기 & ESC 닫기
+    // 키보드 방향키 넘기기 & ESC 닫기 (useRef 기반 100% 실시간 최신값 바인딩)
     const handleKeyDown = (e) => {
-      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
-        handlePageChange(currentPage + 1, 'next');
+      // textarea 입력 중일 때는 글 작성을 방해하지 않음
+      if (e.target && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) {
+        if (e.key === 'Escape') onClose();
+        return;
+      }
+
+      const cur = currentPageRef.current;
+      const total = totalPagesRef.current;
+      const rendering = pageRenderingRef.current;
+
+      if (e.key === 'ArrowRight' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        if (!rendering && cur < total) {
+          handlePageChange(cur + 1, 'next');
+        }
       } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
-        handlePageChange(currentPage - 1, 'prev');
+        e.preventDefault();
+        if (!rendering && cur > 1) {
+          handlePageChange(cur - 1, 'prev');
+        }
       } else if (e.key === 'Escape' || e.key === 'Esc') {
         onClose();
       }

@@ -161,9 +161,10 @@ export default function PdfLibraryModal({ onClose }) {
             </label>
 
             <button
-              className="modal-close"
               onClick={onClose}
+              title="닫기 (ESC)"
               style={{
+                position: 'static',
                 background: '#f1f5f9',
                 border: 'none',
                 borderRadius: '50%',
@@ -182,7 +183,7 @@ export default function PdfLibraryModal({ onClose }) {
           </div>
         </div>
 
-        {/* PDF 문서 목록 콘텐츠 영역 */}
+        {/* PDF 문서 목록 콘텐츠 영역 (시원한 1열 와이드 가로형 카드) */}
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingRight: '4px' }}>
           {pdfList.length === 0 ? (
             <div className="text-center py-12 px-4 border-2 border-dashed border-slate-200 rounded-xl my-4 bg-slate-50/50">
@@ -193,82 +194,84 @@ export default function PdfLibraryModal({ onClose }) {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-3">
               {pdfList.map((item) => {
                 const progressPercent = Math.min(100, Math.round(((item.currentPage || 1) / (item.totalPages || 1)) * 100));
 
                 return (
                   <div
                     key={item.id}
-                    className="pdf-card p-4 rounded-xl border border-slate-200 hover:border-sky-400 transition-all flex flex-col justify-between"
-                    style={{ backgroundColor: '#f8fafc', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.03)' }}
+                    className="pdf-card p-3.5 rounded-xl border border-slate-200 hover:border-sky-400 transition-all flex flex-col md:flex-row md:align-center justify-between gap-3"
+                    style={{ backgroundColor: '#f8fafc', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
                   >
-                    <div>
-                      <div className="flex align-start justify-between gap-2 mb-2">
-                        <div className="flex align-center gap-2">
-                          <div
-                            style={{
-                              width: '34px',
-                              height: '34px',
-                              borderRadius: '8px',
-                              backgroundColor: '#e0f2fe',
-                              color: '#0284c7',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              flexShrink: 0
-                            }}
-                          >
-                            <FileText size={18} />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-sm text-slate-800 line-clamp-1" style={{ margin: 0 }} title={item.fileName}>
-                              {item.title}
-                            </h4>
-                            <div className="flex align-center gap-2 text-xs text-slate-400 mt-0.5">
-                              <span className="flex align-center gap-1"><HardDrive size={11} /> {item.fileSize}</span>
-                              <span>•</span>
-                              <span className="flex align-center gap-1"><Clock size={11} /> {new Date(item.createdAt).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                        </div>
+                    {/* 좌측: 파일 아이콘 & 긴 파일 제목 및 메타 정보 */}
+                    <div className="flex align-center gap-3" style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '10px',
+                          backgroundColor: '#e0f2fe',
+                          color: '#0284c7',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}
+                      >
+                        <FileText size={22} />
+                      </div>
 
-                        <button
-                          className="text-slate-400 hover:text-rose-500 p-1"
-                          onClick={() => handleDeletePdf(item.id, item.title)}
-                          title="삭제"
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h4
+                          className="font-bold text-base text-slate-800"
+                          style={{
+                            margin: 0,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            maxWidth: '100%'
+                          }}
+                          title={item.fileName}
                         >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
+                          {item.title}
+                        </h4>
 
-                      {/* 진행률 바 */}
-                      <div className="mt-3 bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                        <div
-                          className="bg-sky-500 h-full transition-all"
-                          style={{ width: `${progressPercent}%` }}
-                        />
-                      </div>
-                      <div className="flex align-center justify-between text-xs text-slate-500 mt-1">
-                        <span>읽은 위치: {item.currentPage || 1}p</span>
-                        <span className="font-semibold text-sky-600">{progressPercent}% 완료</span>
+                        <div className="flex align-center gap-3 text-xs text-slate-500 mt-1 flex-wrap">
+                          <span className="flex align-center gap-1 font-medium"><HardDrive size={12} /> {item.fileSize}</span>
+                          <span>•</span>
+                          <span className="flex align-center gap-1"><Clock size={12} /> {new Date(item.createdAt).toLocaleDateString()}</span>
+                          <span>•</span>
+                          <span className="text-slate-600 font-medium">읽은 위치: <b>{item.currentPage || 1}p</b></span>
+                          <span className="font-semibold text-sky-600">({progressPercent}% 완료)</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* 읽기 버튼 */}
-                    <button
-                      className="btn btn-primary btn-sm font-bold w-100 mt-4 flex align-center justify-center gap-1.5"
-                      onClick={() => setSelectedPdf(item)}
-                      style={{
-                        backgroundColor: '#0284c7',
-                        border: 'none',
-                        color: '#ffffff',
-                        padding: '0.55rem',
-                        borderRadius: '8px'
-                      }}
-                    >
-                      <BookOpen size={16} /> 📖 E-Book 뷰어로 열기
-                    </button>
+                    {/* 우측: 뷰어로 열기 및 삭제 버튼 */}
+                    <div className="flex align-center gap-2" style={{ flexShrink: 0 }}>
+                      <button
+                        className="btn btn-primary btn-sm font-bold flex align-center gap-1.5"
+                        onClick={() => setSelectedPdf(item)}
+                        style={{
+                          backgroundColor: '#0284c7',
+                          border: 'none',
+                          color: '#ffffff',
+                          padding: '0.5rem 1rem',
+                          borderRadius: '8px'
+                        }}
+                      >
+                        <BookOpen size={16} /> 📖 E-Book 뷰어로 열기
+                      </button>
+
+                      <button
+                        className="text-slate-400 hover:text-rose-500 p-2 rounded-lg hover:bg-rose-50 transition-colors"
+                        onClick={() => handleDeletePdf(item.id, item.title)}
+                        title="삭제"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
