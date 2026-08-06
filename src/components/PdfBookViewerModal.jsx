@@ -32,6 +32,34 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const pageRenderingRef = useRef(pageRendering);
   const isTwoPageModeRef = useRef(isTwoPageMode);
 
+  // 드래그 스크롤(패닝) 상태 관리
+  const isDragging = useRef(false);
+  const startPos = useRef({ x: 0, y: 0, sTop: 0, sLeft: 0 });
+
+  const onMouseDown = (e) => {
+    if (e.button !== 0 || !containerRef.current) return;
+    isDragging.current = true;
+    startPos.current = {
+      x: e.clientX,
+      y: e.clientY,
+      sTop: containerRef.current.scrollTop,
+      sLeft: containerRef.current.scrollLeft
+    };
+    containerRef.current.style.cursor = 'grabbing';
+  };
+
+  const onMouseUpOrLeave = () => {
+    isDragging.current = false;
+    if (containerRef.current) containerRef.current.style.cursor = 'grab';
+  };
+
+  const onMouseMove = (e) => {
+    if (!isDragging.current || !containerRef.current) return;
+    e.preventDefault();
+    containerRef.current.scrollTop = startPos.current.sTop - (e.clientY - startPos.current.y);
+    containerRef.current.scrollLeft = startPos.current.sLeft - (e.clientX - startPos.current.x);
+  };
+
   useEffect(() => {
     currentPageRef.current = currentPage;
     totalPagesRef.current = totalPages;
@@ -323,27 +351,12 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
         {/* 본문 뷰포트 (완벽 제어 Canvas 엔진) */}
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
-          {/* 좌측 클릭 영역 (이북 UX 45%) */}
-          <div onClick={() => changePage(currentPage - step)}
-            style={{
-              position: 'absolute', left: 0, top: 0, bottom: 0, width: '45%', zIndex: 10,
-              cursor: currentPage > 1 ? 'pointer' : 'default', display: 'flex', alignItems: 'center',
-              justifyContent: 'flex-start', paddingLeft: '1.25rem', outline: 'none',
-              background: 'linear-gradient(to right, rgba(0,0,0,0.3) 0%, transparent 15%)', opacity: 0, transition: 'opacity 0.2s'
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-            onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}>
-            {currentPage > 1 && (
-              <div style={{ background: 'rgba(15,23,42,0.8)', color: '#fff', padding: '10px', borderRadius: '50%', border: '1px solid #334155' }}>
-                <ChevronLeft size={24} />
-              </div>
-            )}
-          </div>
-
           {/* 중앙 Canvas (스크롤 가능 래퍼) */}
-          <div ref={containerRef} style={{
+          <div ref={containerRef} 
+            onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUpOrLeave} onMouseLeave={onMouseUpOrLeave}
+            style={{
             flex: 1, height: '100%', backgroundColor: '#020617', display: 'flex', flexDirection: 'column',
-            overflow: 'auto', padding: '1rem', position: 'relative'
+            overflow: 'auto', padding: '1rem', position: 'relative', cursor: 'grab', userSelect: 'none'
           }}>
             {loadingPdf ? (
               <div style={{ margin: 'auto', textAlign: 'center', padding: '2rem' }}>
@@ -366,23 +379,6 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                 )}
 
                 <canvas ref={canvasRightRef} style={{ display: isTwoPageMode ? 'block' : 'none', backgroundColor: '#fff', opacity: pageRendering ? 0.7 : 1 }} />
-              </div>
-            )}
-          </div>
-
-          {/* 우측 클릭 영역 (이북 UX 45%) */}
-          <div onClick={() => changePage(currentPage + step)}
-            style={{
-              position: 'absolute', right: showNotes ? '380px' : 0, top: 0, bottom: 0, width: '45%', zIndex: 10,
-              cursor: currentPage < totalPages ? 'pointer' : 'default', display: 'flex', alignItems: 'center',
-              justifyContent: 'flex-end', paddingRight: '1.25rem', outline: 'none',
-              background: 'linear-gradient(to left, rgba(0,0,0,0.3) 0%, transparent 15%)', opacity: 0, transition: 'opacity 0.2s'
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-            onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}>
-            {currentPage < totalPages && (
-              <div style={{ background: 'rgba(15,23,42,0.8)', color: '#fff', padding: '10px', borderRadius: '50%', border: '1px solid #334155' }}>
-                <ChevronRight size={24} />
               </div>
             )}
           </div>
