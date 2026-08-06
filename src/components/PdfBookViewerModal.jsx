@@ -33,6 +33,12 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const containerRef = useRef(null);
   const modalCardRef = useRef(null);
 
+  // 컨테이너 실제 크기 변화를 감지해서 렌더링을 다시 트리거하기 위한 값.
+  // 모달이 열리는 트랜지션 도중(아직 최종 크기가 아닐 때) 최초 렌더가 발생하면
+  // 그때의 작은 clientWidth/clientHeight 기준으로 배율이 고정되어 버려서
+  // 이후 계속 작고 흐리게 보이는 문제가 생긴다. ResizeObserver로 이를 방지한다.
+  const [resizeTick, setResizeTick] = useState(0);
+
   const progressKey = `book_pdf_progress_${book.id || book.isbn || 'demo'}`;
   const notesKey = `book_pdf_notes_${book.id || book.isbn || 'demo'}`;
   const modeKey = `book_pdf_twopage_${book.id || book.isbn || 'demo'}`;
@@ -129,6 +135,24 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [changePage, onClose, modeKey, notesKey]);
 
+  // 컨테이너 크기(모달 열림 트랜지션, 브라우저 창 크기 변경, 메모장 열고 닫기 등)가
+  // 바뀔 때마다 재렌더링을 트리거한다. 짧은 디바운스를 걸어 드래그 중 과도한 재렌더를 막는다.
+  useEffect(() => {
+    if (!containerRef.current) return;
+    let debounceTimer = null;
+    const ro = new ResizeObserver(() => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        setResizeTick((t) => t + 1);
+      }, 120);
+    });
+    ro.observe(containerRef.current);
+    return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      ro.disconnect();
+    };
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
     const loadPdf = async () => {
@@ -221,11 +245,13 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { alpha: false });
 
-      // 캔버스 실제 픽셀 수 = CSS 크기 * outputScale
-      canvas.width = Math.floor(viewport.width * outputScale);
-      canvas.height = Math.floor(viewport.height * outputScale);
-      canvas.style.width = `${Math.floor(viewport.width)}px`;
-      canvas.style.height = `${Math.floor(viewport.height)}px`;
+      // 캔버스 실제 픽셀 수 = CSS 크기 * outputScale.
+      // CSS 크기는 소수점을 반올림하지 않고 그대로 사용(브라우저는 subpixel CSS 크기를 정확히 지원),
+      // 픽셀(canvas.width/height)만 반올림해서 오차를 최소 1곳에서만 발생시킨다.
+      canvas.width = Math.round(viewport.width * outputScale);
+      canvas.height = Math.round(viewport.height * outputScale);
+      canvas.style.width = `${viewport.width}px`;
+      canvas.style.height = `${viewport.height}px`;
       canvas.style.display = 'block';
 
       ctx.imageSmoothingEnabled = true;
@@ -360,7 +386,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
     renderAll();
     return () => { alive = false; };
-  }, [pdfDoc, currentPage, zoomScale, isTwoPageMode, fitMode, totalPages]);
+  }, [pdfDoc, currentPage, zoomScale, isTwoPageMode, fitMode, totalPages, resizeTick]);
 
   // ★ 텍스트 기반 좌 ➔ 우 형광펜 긋기 (Sweep Highlighting) 타이머 엔진 ★
   useEffect(() => {
@@ -441,11 +467,11 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         className="modal-card pdf-viewer-card"
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: '98vw', maxWidth: showNotes ? '1750px' : '1650px', height: '76vh',
+          width: '98vw', maxWidth: showNotes ? '2000px' : '1900px', height: '92vh', maxHeight: '1100px',
           display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden',
           backgroundColor: '#0f172a', color: '#f8fafc',
           boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)', borderRadius: '12px',
-          transition: 'all 0.3s ease', outline: 'none'
+          outline: 'none'
         }}
       >
         {/* 슬림 상단 툴바 (YES24 뷰어 스타일 46px - 진행률 짤림 완전 차단) */}
