@@ -250,27 +250,21 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { alpha: false });
 
-      // CSS 표시 폭/높이를 정수로 고정한다. 소수점 CSS 폭을 그대로 두면 브라우저가
-      // 실제 디바이스 픽셀 격자에 맞춰 레이아웃 시 한 번 더 반올림하게 되고,
-      // 그 결과 캔버스 원본 해상도(outputScale 배)와 최종 표시 크기 사이에
-      // 미세한 배율 어긋남이 생겨 최종 축소 단계에서 흐려 보일 수 있다.
-      const cssWidth = Math.round(viewport.width);
-      const cssHeight = Math.round(viewport.height);
-
-      // 캔버스 실제 픽셀 수 = (정수 CSS 크기) * outputScale → 정확한 정수 배수 관계 보장
-      canvas.width = Math.round(cssWidth * outputScale);
-      canvas.height = Math.round(cssHeight * outputScale);
-      canvas.style.width = `${cssWidth}px`;
-      canvas.style.height = `${cssHeight}px`;
+      // 캔버스 실제 픽셀 수 = CSS 크기 * outputScale.
+      // CSS 크기는 소수점을 반올림하지 않고 그대로 사용한다.
+      // (정수로 반올림하는 실험을 해봤으나, 오히려 소폭의 콘텐츠 잘림/스케일 어긋남을
+      //  만들어 체감 품질이 떨어졌다 — 이 방식이 실측으로 검증된 더 나은 상태다.)
+      canvas.width = Math.round(viewport.width * outputScale);
+      canvas.height = Math.round(viewport.height * outputScale);
+      canvas.style.width = `${viewport.width}px`;
+      canvas.style.height = `${viewport.height}px`;
       canvas.style.display = 'block';
 
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      // 축소 리샘플링 없이 transform으로 캔버스 내부에서 직접 확대해서 그린다.
-      // 실제 렌더링 배율은 canvas.width / cssWidth 비율(=outputScale)을 그대로 사용한다.
-      const renderScale = canvas.width / cssWidth;
-      const transform = renderScale !== 1 ? [renderScale, 0, 0, renderScale, 0, 0] : null;
+      // 축소 리샘플링 없이 transform으로 캔버스 내부에서 직접 확대해서 그린다
+      const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
 
       await page.render({
         canvasContext: ctx,
