@@ -157,15 +157,32 @@ export default function ScheduleCalendarView({ userId = null }) {
       }
 
       if (isSupabaseConfigured() && userId) {
-        // 내가 생성한 일정 + 나에게 공유된 친구의 일정을 함께 쿼리
-        const { data, error } = await supabase
+        // 1) 내가 작성한 일정 쿼리
+        const { data: myData } = await supabase
           .from('user_schedules')
           .select('*')
-          .or(`user_id.eq.${userId},shared_friend_id.eq.${userId}`);
+          .eq('user_id', userId);
 
-        if (!error && data) {
+        // 2) 친구가 나에게 공유한 일정 쿼리 (shared_friend_id == 내 ID)
+        const { data: sharedData } = await supabase
+          .from('user_schedules')
+          .select('*')
+          .eq('shared_friend_id', userId);
+
+        const combined = [...(myData || []), ...(sharedData || [])];
+        
+        // 중복 ID 제거
+        const scheduleMap = new Map();
+        combined.forEach(item => {
+          if (item && item.id) {
+            scheduleMap.set(item.id, item);
+          }
+        });
+        const uniqueData = Array.from(scheduleMap.values());
+
+        if (uniqueData) {
           // DB에서 불러온 암호화된 title, memo 데이터를 복호화
-          const decryptedList = data.map(s => ({
+          const decryptedList = uniqueData.map(s => ({
             ...s,
             title: decryptText(s.title, userId),
             memo: decryptText(s.memo, userId)
@@ -285,16 +302,20 @@ export default function ScheduleCalendarView({ userId = null }) {
         };
         await supabase.from('user_schedules').upsert(dbSchedulePayload);
 
-        // 2) 친구와 공유 시, 상대방 계정 기준 레코드도 듀얼 업서트하여 RLS 제약에 상관없이 상대 캘린더에 100% 즉시 표시 보장
+        // 2) 친구와 공유 시, 상대방 계정 기준 레코드도 듀얼 업서트 시도 (실패 시에도 위의 shared_friend_id 쿼리로 노출 보장)
         if (isShared && sharedFriendId) {
-          const friendSchedulePayload = {
-            ...dbSchedulePayload,
-            id: `sh_${newSchedule.id}`,
-            user_id: sharedFriendId,
-            shared_friend_id: userId,
-            is_shared: true
-          };
-          await supabase.from('user_schedules').upsert(friendSchedulePayload);
+          try {
+            const friendSchedulePayload = {
+              ...dbSchedulePayload,
+              id: `sh_${newSchedule.id}`,
+              user_id: sharedFriendId,
+              shared_friend_id: userId,
+              is_shared: true
+            };
+            await supabase.from('user_schedules').upsert(friendSchedulePayload);
+          } catch (fErr) {
+            console.info('친구 레코드 직접 업서트는 RLS 정책으로 차단됨 (1번 원본 공유 레코드로 자동 교차 쿼리됨):', fErr);
+          }
         }
       } catch (err) {
         console.warn('Supabase 일정 저장 실패 (로컬 유지됨):', err.message);
