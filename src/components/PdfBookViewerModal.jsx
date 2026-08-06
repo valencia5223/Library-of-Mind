@@ -17,6 +17,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState('');
   const [loadingPdf, setLoadingPdf] = useState(true);
+  const [pdfError, setPdfError] = useState(null);
   const [pageRendering, setPageRendering] = useState(false);
   const [zoomScale, setZoomScale] = useState(100);
   const [isAutoPlay, setIsAutoPlay] = useState(false);
@@ -130,14 +131,21 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     let isMounted = true;
     const loadPdf = async () => {
       setLoadingPdf(true);
+      setPdfError(null);
       if (!window.pdfjsLib) {
-        await new Promise((resolve, reject) => {
-          const s = document.createElement('script');
-          s.src = PDFJS_CDN;
-          s.onload = resolve;
-          s.onerror = reject;
-          document.head.appendChild(s);
-        });
+        try {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = PDFJS_CDN;
+            s.onload = resolve;
+            s.onerror = reject;
+            document.head.appendChild(s);
+          });
+        } catch (e) {
+          if (isMounted) setPdfError('PDF.js 엔진 렌더러를 불러오지 못했습니다. 네트워크 연결을 확인해주세요.');
+          setLoadingPdf(false);
+          return;
+        }
       }
       if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
       
@@ -155,6 +163,9 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         if (saved) setCurrentPage(Math.min(doc.numPages, Math.max(1, parseInt(saved, 10) || 1)));
       } catch (err) {
         console.warn('PDF load error:', err);
+        if (isMounted) {
+          setPdfError('PDF 문서를 열 수 없습니다. (원인: 용량이 너무 크거나 파일 손상, 비밀번호 보안 설정 또는 외부 URL 접근 CORS 제한)');
+        }
       } finally {
         if (isMounted) setLoadingPdf(false);
       }
@@ -191,19 +202,39 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
       const viewport = page.getViewport({ scale: fitScale });
 
-      // PDF.js 정석 SVGGraphics 스펙: getOperatorList() 실행 후 getSVG(opList, viewport) 전달
-      const opList = await page.getOperatorList();
-      const svgG = new window.pdfjsLib.SVGGraphics(page.commonObjs, page.objs);
-      const svg = await svgG.getSVG(opList, viewport);
+      try {
+        // 1차 시도: 100% 벡터 품질 SVGGraphics 렌더링
+        const opList = await page.getOperatorList();
+        const svgG = new window.pdfjsLib.SVGGraphics(page.commonObjs, page.objs);
+        const svg = await svgG.getSVG(opList, viewport);
 
-      svg.setAttribute('width', `${Math.floor(viewport.width)}px`);
-      svg.setAttribute('height', `${Math.floor(viewport.height)}px`);
-      svg.style.width = `${Math.floor(viewport.width)}px`;
-      svg.style.height = `${Math.floor(viewport.height)}px`;
-      svg.style.display = 'block';
+        svg.setAttribute('width', `${Math.floor(viewport.width)}px`);
+        svg.setAttribute('height', `${Math.floor(viewport.height)}px`);
+        svg.style.width = `${Math.floor(viewport.width)}px`;
+        svg.style.height = `${Math.floor(viewport.height)}px`;
+        svg.style.display = 'block';
 
-      containerEl.innerHTML = '';
-      containerEl.appendChild(svg);
+        containerEl.innerHTML = '';
+        containerEl.appendChild(svg);
+      } catch (svgErr) {
+        console.warn('SVGGraphics render failed for image/complex page, fallback to Canvas:', svgErr);
+        // 2차 시0 (Fallback): 표지/고용량 이미지 페이지 전용 고해상도 Canvas 렌더링
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const dpr = Math.max(2.5, window.devicePixelRatio || 2);
+
+        canvas.width = Math.floor(viewport.width * dpr);
+        canvas.height = Math.floor(viewport.height * dpr);
+        canvas.style.width = `${Math.floor(viewport.width)}px`;
+        canvas.style.height = `${Math.floor(viewport.height)}px`;
+        canvas.style.display = 'block';
+
+        ctx.scale(dpr, dpr);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        containerEl.innerHTML = '';
+        containerEl.appendChild(canvas);
+      }
     };
 
     const renderAll = async () => {
@@ -281,7 +312,8 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
       const leftLines = getLinesFromEl(containerLeft);
       const rightLines = getLinesFromEl(containerRight);
-      const allLines = [...leftLines, ...rightLines].sort((a, b) => a.top - b.top);
+      // 양면 보기일 경우 반드시 왼쪽 페이지 완독 후 오른쪽 페이지 순서로 읽기 수행
+      const allLines = isTwoPageMode ? [...leftLines, ...rightLines] : leftLines;
 
       setTextLines(allLines);
       setLineIdx(0);
@@ -296,8 +328,11 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   useEffect(() => {
     if (!isAutoPlay || textLines.length === 0 || !containerRef.current) return;
 
-    const speedStepMap = { 1: 6, 2: 14, 3: 25 };
-    const stepPct = speedStepMap[autoSpeed] || 14;
+    // 1x(느림): 한 줄당 약 3.3초 동안 그윽하고 천천히 이동
+    // 2x(보통): 한 줄당 약 1.2초
+    // 3x(빠름): 한 줄당 약 0.5초
+    const speedStepMap = { 1: 1.2, 2: 3.5, 3: 8.0 };
+    const stepPct = speedStepMap[autoSpeed] || 1.2;
 
     const timer = setInterval(() => {
       setLineProgress((prev) => {
@@ -337,7 +372,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         }
         return nextPct;
       });
-    }, 60);
+    }, 40);
 
     return () => clearInterval(timer);
   }, [isAutoPlay, textLines, autoSpeed, changePage]);
@@ -507,7 +542,16 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                 boxShadow: '0 0 14px rgba(250, 204, 21, 0.6)'
               }} />
             )}
-            {loadingPdf ? (
+            {pdfError ? (
+              <div style={{ margin: 'auto', textAlign: 'center', padding: '2.5rem', backgroundColor: '#1e293b', borderRadius: '12px', border: '1px solid #ef4444', maxWidth: '520px' }}>
+                <FileText size={48} style={{ color: '#ef4444', marginBottom: '1rem', margin: '0 auto' }} />
+                <h4 style={{ fontWeight: 800, color: '#f8fafc', margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>PDF 문서를 불러올 수 없습니다</h4>
+                <p style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.5, marginBottom: '1.25rem' }}>{pdfError}</p>
+                <button onClick={onClose} style={{ backgroundColor: '#ef4444', color: '#fff', border: 'none', padding: '0.5rem 1.25rem', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>
+                  뷰어 닫기
+                </button>
+              </div>
+            ) : loadingPdf ? (
               <div style={{ margin: 'auto', textAlign: 'center', padding: '2rem' }}>
                 <BookOpen size={48} style={{ color: '#0284c7', marginBottom: '0.75rem', margin: '0 auto' }} />
                 <p style={{ fontWeight: 700, color: '#cbd5e1' }}>책 페이지를 로딩하는 중...</p>
