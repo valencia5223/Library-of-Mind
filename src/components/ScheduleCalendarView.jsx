@@ -193,15 +193,27 @@ export default function ScheduleCalendarView({ userId = null }) {
           return;
         }
 
-        const combined = [...(myData || []), ...(sharedData || [])];
-        
-        // 중복 ID 제거
+        // 중복 ID 제거 (sh_ 접두사 canonicalId 기반으로 동일 공유 일정 중복 표시 100% 차단)
         const scheduleMap = new Map();
-        combined.forEach(item => {
+        
+        // 1차: 내 일정 먼저 등록 (원본 sch_...)
+        (myData || []).forEach(item => {
           if (item && item.id) {
-            scheduleMap.set(item.id, item);
+            const canonicalId = item.id.replace(/^sh_/, '');
+            scheduleMap.set(canonicalId, item);
           }
         });
+
+        // 2차: 공유받은 일정 등록 (내가 작성한 원본이 없을 때만 등록)
+        (sharedData || []).forEach(item => {
+          if (item && item.id) {
+            const canonicalId = item.id.replace(/^sh_/, '');
+            if (!scheduleMap.has(canonicalId)) {
+              scheduleMap.set(canonicalId, item);
+            }
+          }
+        });
+
         const uniqueData = Array.from(scheduleMap.values());
 
         if (uniqueData && uniqueData.length > 0) {
