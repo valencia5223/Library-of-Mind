@@ -23,6 +23,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const [isAutoPlay, setIsAutoPlay] = useState(false);
   const [autoSpeed, setAutoSpeed] = useState(2); // 1: 느림, 2: 보통, 3: 빠름
   const [textLines, setTextLines] = useState([]);
+  const [leftLinesCount, setLeftLinesCount] = useState(0);
   const [lineIdx, setLineIdx] = useState(0);
   const [lineProgress, setLineProgress] = useState(0);
 
@@ -315,6 +316,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       // 양면 보기일 경우 반드시 왼쪽 페이지 완독 후 오른쪽 페이지 순서로 읽기 수행
       const allLines = isTwoPageMode ? [...leftLines, ...rightLines] : leftLines;
 
+      setLeftLinesCount(leftLines.length);
       setTextLines(allLines);
       setLineIdx(0);
       setLineProgress(0);
@@ -357,6 +359,14 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               return 0;
             }
 
+            // 양면 보기 시 왼쪽 페이지 완독 후 오른쪽 페이지 1번째 줄로 전환되는 순간 스크롤 최상단 리셋!
+            if (isTwoPageModeRef.current && leftLinesCount > 0 && nextIdx === leftLinesCount) {
+              if (containerRef.current) {
+                containerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+              }
+              return nextIdx;
+            }
+
             // 다음 줄로 이동 시 뷰포트 수직 스크롤 자동 동기화
             const nextLine = textLines[nextIdx];
             if (nextLine && containerRef.current) {
@@ -375,7 +385,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     }, 40);
 
     return () => clearInterval(timer);
-  }, [isAutoPlay, textLines, autoSpeed, changePage]);
+  }, [isAutoPlay, textLines, leftLinesCount, autoSpeed, changePage]);
 
   const toggleTwoPageMode = () => {
     const next = !isTwoPageMode;
