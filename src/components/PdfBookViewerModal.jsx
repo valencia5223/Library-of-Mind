@@ -423,37 +423,37 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         className="modal-card pdf-viewer-card"
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: '98vw', maxWidth: showNotes ? '1600px' : '1480px', height: '99.5vh',
+          width: '96vw', maxWidth: showNotes ? '1650px' : '1550px', height: '90vh',
           display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden',
           backgroundColor: '#0f172a', color: '#f8fafc',
-          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', borderRadius: '8px',
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)', borderRadius: '12px',
           transition: 'all 0.3s ease', outline: 'none'
         }}
       >
-        {/* 초소형 슬림 상단 툴바 (YES24 뷰어 스타일 40px 스펙) */}
+        {/* 슬림 상단 툴바 (YES24 뷰어 스타일 46px - 진행률 짤림 완전 차단) */}
         <div style={{
-          padding: '0.2rem 0.65rem', backgroundColor: '#1e293b',
+          padding: '0.25rem 0.85rem', backgroundColor: '#1e293b',
           borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', gap: '0.5rem', height: '40px', flexShrink: 0
+          justifyContent: 'space-between', gap: '0.5rem', height: '46px', flexShrink: 0
         }}>
-          <div className="flex align-center gap-2">
+          <div className="flex align-center gap-2.5">
             <div style={{
               width: '28px', height: '28px', borderRadius: '6px', backgroundColor: '#0284c7',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
             }}>
               <BookOpen size={16} className="text-white" />
             </div>
-            <div>
+            <div className="flex align-center gap-2" style={{ lineHeight: 1.2 }}>
               <h3 className="font-bold text-xs text-white flex align-center gap-1.5" style={{ margin: 0 }}>
                 {book.title || 'PDF 전자책'}
                 <span className="text-[10px] px-1.5 py-0.5 rounded font-normal" style={{ backgroundColor: '#0284c7', color: '#fff' }}>
                   {isTwoPageMode ? '📖 양면' : '📖 단면'}
                 </span>
               </h3>
-              <div className="text-[10px] text-slate-400 flex align-center gap-2 mt-0.5" style={{ lineHeight: 1 }}>
-                <span style={{ color: '#38bdf8' }}>진행률 {pct}%</span>
-                <span>• 방향키 넘기기</span>
-              </div>
+              <span className="text-slate-600 text-xs">•</span>
+              <span className="text-[11px] font-bold" style={{ color: '#38bdf8' }}>진행률 {pct}%</span>
+              <span className="text-slate-600 text-xs">•</span>
+              <span className="text-[10px] text-slate-400">방향키 스크롤</span>
             </div>
           </div>
 
