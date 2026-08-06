@@ -240,29 +240,37 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       const viewport = page.getViewport({ scale: fitScale });
 
       // 실제 기기 배율을 기본으로 쓰되, 일반 모니터(devicePixelRatio=1)에서도
-      // 최소 3배로 오버샘플링해서 텍스트 안티앨리어싱 품질을 더 끌어올린다.
-      // (2배보다 3배가 인쇄물/Retina 수준 선명도에 더 가깝다. 성능 여유가 있을 때 권장되는 값.)
+      // 최소 2배로 오버샘플링해서 텍스트 안티앨리어싱 품질을 높인다.
+      // (3배까지 올려봤으나 실사용 환경에서는 오히려 최종 축소 단계의 블러가 더 도드라져
+      //  2배가 체감상 더 선명했다. 필요 이상으로 배율을 올리는 것이 항상 좋은 건 아니다.)
       // ※ viewport를 한 번만 계산하고 transform으로 캔버스 내부에서만 확대하므로
-      //   배율을 몇 배로 올리든 반올림 오차 없이 안전하게 선명해진다.
-      const outputScale = Math.max(3, window.devicePixelRatio || 1);
+      //   배율을 몇 배로 쓰든 반올림 오차는 없다 — 다만 최적값은 2배 부근이었다.
+      const outputScale = Math.max(2, window.devicePixelRatio || 1);
 
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { alpha: false });
 
-      // 캔버스 실제 픽셀 수 = CSS 크기 * outputScale.
-      // CSS 크기는 소수점을 반올림하지 않고 그대로 사용(브라우저는 subpixel CSS 크기를 정확히 지원),
-      // 픽셀(canvas.width/height)만 반올림해서 오차를 최소 1곳에서만 발생시킨다.
-      canvas.width = Math.round(viewport.width * outputScale);
-      canvas.height = Math.round(viewport.height * outputScale);
-      canvas.style.width = `${viewport.width}px`;
-      canvas.style.height = `${viewport.height}px`;
+      // CSS 표시 폭/높이를 정수로 고정한다. 소수점 CSS 폭을 그대로 두면 브라우저가
+      // 실제 디바이스 픽셀 격자에 맞춰 레이아웃 시 한 번 더 반올림하게 되고,
+      // 그 결과 캔버스 원본 해상도(outputScale 배)와 최종 표시 크기 사이에
+      // 미세한 배율 어긋남이 생겨 최종 축소 단계에서 흐려 보일 수 있다.
+      const cssWidth = Math.round(viewport.width);
+      const cssHeight = Math.round(viewport.height);
+
+      // 캔버스 실제 픽셀 수 = (정수 CSS 크기) * outputScale → 정확한 정수 배수 관계 보장
+      canvas.width = Math.round(cssWidth * outputScale);
+      canvas.height = Math.round(cssHeight * outputScale);
+      canvas.style.width = `${cssWidth}px`;
+      canvas.style.height = `${cssHeight}px`;
       canvas.style.display = 'block';
 
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      // 축소 리샘플링 없이 transform으로 캔버스 내부에서 직접 확대해서 그린다
-      const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+      // 축소 리샘플링 없이 transform으로 캔버스 내부에서 직접 확대해서 그린다.
+      // 실제 렌더링 배율은 canvas.width / cssWidth 비율(=outputScale)을 그대로 사용한다.
+      const renderScale = canvas.width / cssWidth;
+      const transform = renderScale !== 1 ? [renderScale, 0, 0, renderScale, 0, 0] : null;
 
       await page.render({
         canvasContext: ctx,
