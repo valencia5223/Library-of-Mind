@@ -228,10 +228,39 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       // SVG는 100% 벡터이므로 화면 표시용 Viewport 하나로 100% 선명하게 렌더링
       const viewport = page.getViewport({ scale: fitScale });
 
+      // Canvas Fallback 렌더러 (이미지/표지/복잡한 비트맵 마스크 전용)
+      const renderCanvasFallback = async () => {
+        const outputScale = Math.max(2, window.devicePixelRatio || 1);
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+
+        canvas.width = Math.round(viewport.width * outputScale);
+        canvas.height = Math.round(viewport.height * outputScale);
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
+        canvas.style.display = 'block';
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+        await page.render({ canvasContext: ctx, transform, viewport }).promise;
+
+        if (!alive) return;
+        containerEl.innerHTML = '';
+        containerEl.appendChild(canvas);
+      };
+
       try {
         const opList = await page.getOperatorList();
         const svgG = new window.pdfjsLib.SVGGraphics(page.commonObjs, page.objs);
         const svg = await svgG.getSVG(opList, viewport);
+
+        // 검정 화면 방지 검사: SVG 내부 노드가 유효하지 않거나 빈 노드일 경우 즉시 Canvas Fallback
+        if (!svg || !svg.childNodes || svg.childNodes.length === 0) {
+          await renderCanvasFallback();
+          return;
+        }
 
         svg.setAttribute('width', `${Math.floor(viewport.width)}px`);
         svg.setAttribute('height', `${Math.floor(viewport.height)}px`);
@@ -258,7 +287,8 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         containerEl.innerHTML = '';
         containerEl.appendChild(svg);
       } catch (svgErr) {
-        console.warn('SVGGraphics render fallback:', svgErr);
+        console.warn('SVGGraphics render failed for image/complex page, fallback to High-DPI Canvas:', svgErr);
+        await renderCanvasFallback();
       }
     };
 
