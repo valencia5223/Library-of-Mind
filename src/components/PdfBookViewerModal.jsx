@@ -200,9 +200,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       
       const userZoomMultiplier = zoomScale / 100;
 
-      // YES24 스펙: 화면 가로 및 세로 폭에 100% 쏙 들어가는 비례 배율 계산 (스크롤바 0%)
-      const scaleX = targetW / raw.width;
-      // 1. 화면에 표시될 CSS 비례 배율 (CSS Pixel Scale)
+      // 화면에 표시될 CSS 비례 배율 (CSS Pixel Scale)
       const scaleX = targetW / raw.width;
       const scaleY = maxH / raw.height;
       
@@ -210,66 +208,30 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         ? Math.min(scaleX, scaleY) * userZoomMultiplier
         : scaleX * userZoomMultiplier;
 
-      // 2. 화면 표시용 Viewport (CSS 크기)
+      // 1. 화면 표시용 Viewport (CSS 크기)
       const viewport = page.getViewport({ scale: fitScale });
 
-      // 3. ★ 핵심: 1:1 디바이스 픽셀 매칭 (Exact Device Pixel Ratio) ★
-      // 과도한 다운스케일링 픽셀 보간 뭉개짐(Downsampling Blur)을 100% 원천 차단!
-      const dpr = Math.max(1.0, window.devicePixelRatio || 1.0);
-      const exactViewport = page.getViewport({ scale: fitScale * dpr });
+      // 2. ★ YES24급 오버샘플링(Supersampling): 최소 2.5배 고해상도 Canvas 단일 파이프라인 ★
+      // 저해상도 모니터에서도 텍스트 엣지가 부드럽고 쨍하게 나타남
+      const dpr = Math.max(2.5, window.devicePixelRatio || 1.0);
+      const renderViewport = page.getViewport({ scale: fitScale * dpr });
 
-      try {
-        // 1차 시도: 1:1 디바이스 픽셀 매칭 100% SVGGraphics 렌더링
-        const opList = await page.getOperatorList();
-        const svgG = new window.pdfjsLib.SVGGraphics(page.commonObjs, page.objs);
-        const svg = await svgG.getSVG(opList, exactViewport);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d', { alpha: false });
 
-        // 1:1 디바이스 픽셀 exact 매칭 viewBox & CSS 크기 동기화 (다운샘플링 뭉개짐 0%)
-        svg.setAttribute('viewBox', `0 0 ${exactViewport.width} ${exactViewport.height}`);
-        svg.setAttribute('width', `${Math.floor(viewport.width)}px`);
-        svg.setAttribute('height', `${Math.floor(viewport.height)}px`);
-        svg.style.width = `${Math.floor(viewport.width)}px`;
-        svg.style.height = `${Math.floor(viewport.height)}px`;
-        svg.style.display = 'block';
+      canvas.width = Math.floor(renderViewport.width);
+      canvas.height = Math.floor(renderViewport.height);
+      canvas.style.width = `${Math.floor(viewport.width)}px`;
+      canvas.style.height = `${Math.floor(viewport.height)}px`;
+      canvas.style.display = 'block';
 
-        // 폰트 안티앨리어싱 및 가독성 100% 극대화를 위한 SVG 힌트
-        svg.setAttribute('shape-rendering', 'geometricPrecision');
-        svg.setAttribute('text-rendering', 'optimizeLegibility');
-        svg.setAttribute('image-rendering', 'crisp-edges');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
-        const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-        styleEl.textContent = `
-          text, tspan {
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            text-rendering: optimizeLegibility !important;
-          }
-        `;
-        if (svg.firstChild) svg.insertBefore(styleEl, svg.firstChild);
-        else svg.appendChild(styleEl);
+      await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
 
-        containerEl.innerHTML = '';
-        containerEl.appendChild(svg);
-      } catch (svgErr) {
-        console.warn('SVGGraphics render failed for image/complex page, fallback to 1:1 Exact Canvas:', svgErr);
-        // 2차 시도 (Fallback): Chrome/Edge 내장 PDFium급 1:1 Exact Device Pixel Canvas 렌더링
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d', { alpha: false });
-
-        canvas.width = Math.floor(viewport.width * dpr);
-        canvas.height = Math.floor(viewport.height * dpr);
-        canvas.style.width = `${Math.floor(viewport.width)}px`;
-        canvas.style.height = `${Math.floor(viewport.height)}px`;
-        canvas.style.display = 'block';
-
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-
-        await page.render({ canvasContext: ctx, viewport: exactViewport }).promise;
-
-        containerEl.innerHTML = '';
-        containerEl.appendChild(canvas);
-      }
+      containerEl.innerHTML = '';
+      containerEl.appendChild(canvas);
     };
 
     const renderAll = async () => {
