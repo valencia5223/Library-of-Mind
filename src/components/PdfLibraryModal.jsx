@@ -98,58 +98,73 @@ export default function PdfLibraryModal({ onClose }) {
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '92%',
-          maxWidth: '880px',
-          maxHeight: '88vh',
+          maxWidth: '850px',
+          maxHeight: '86vh',
           display: 'flex',
           flexDirection: 'column',
           padding: '1.5rem 1.75rem',
           borderRadius: '16px',
           boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)',
           overflow: 'hidden',
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          boxSizing: 'border-box'
         }}
       >
         {/* 모달 헤더 */}
-        <div className="flex align-center justify-between pb-3 mb-4 border-b border-slate-200">
-          <div className="flex align-center gap-2.5">
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingBottom: '0.85rem',
+            marginBottom: '1rem',
+            borderBottom: '1px solid #e2e8f0'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <div
               style={{
-                width: '40px',
-                height: '40px',
+                width: '38px',
+                height: '38px',
                 borderRadius: '10px',
                 backgroundColor: '#0284c7',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#ffffff'
+                color: '#ffffff',
+                flexShrink: 0
               }}
             >
-              <FileText size={22} />
+              <FileText size={20} />
             </div>
             <div>
-              <h3 className="font-extrabold text-lg text-slate-800" style={{ margin: 0 }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#1e293b' }}>
                 PDF 전자책 보관함
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                원하는 PDF 문서를 자유롭게 등록하고 내장 E-Book 뷰어로 독서해보세요.
+              <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#64748b' }}>
+                원하는 PDF 문서를 등록하고 내장 E-Book 뷰어로 읽어보세요.
               </p>
             </div>
           </div>
 
-          <div className="flex align-center gap-3" style={{ flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
             <label
-              className="btn btn-primary btn-sm font-bold flex align-center gap-1.5 cursor-pointer"
               style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
                 backgroundColor: '#0284c7',
-                padding: '0.55rem 1rem',
+                padding: '0.5rem 0.9rem',
                 borderRadius: '8px',
-                border: 'none',
                 color: '#ffffff',
-                whiteSpace: 'nowrap',
-                flexShrink: 0
+                fontWeight: 700,
+                fontSize: '0.825rem',
+                cursor: 'pointer',
+                border: 'none',
+                whiteSpace: 'nowrap'
               }}
             >
-              <Plus size={16} />
+              <Plus size={15} />
               <span>{isUploading ? '업로드 중...' : '신규 PDF 등록'}</span>
               <input
                 type="file"
@@ -164,12 +179,11 @@ export default function PdfLibraryModal({ onClose }) {
               onClick={onClose}
               title="닫기 (ESC)"
               style={{
-                position: 'static',
                 background: '#f1f5f9',
                 border: 'none',
                 borderRadius: '50%',
-                width: '36px',
-                height: '36px',
+                width: '34px',
+                height: '34px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -178,39 +192,60 @@ export default function PdfLibraryModal({ onClose }) {
                 flexShrink: 0
               }}
             >
-              <X size={18} />
+              <X size={17} />
             </button>
           </div>
         </div>
 
-        {/* PDF 문서 목록 콘텐츠 영역 (시원한 1열 와이드 가로형 카드) */}
-        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingRight: '4px' }}>
+        {/* PDF 문서 목록 콘텐츠 영역 (무조건 1행 1카드 세로 스택) */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
           {pdfList.length === 0 ? (
-            <div className="text-center py-12 px-4 border-2 border-dashed border-slate-200 rounded-xl my-4 bg-slate-50/50">
-              <FileText size={40} className="mx-auto mb-2.5 text-slate-400" />
-              <h4 className="font-bold text-base text-slate-700">보관된 PDF 문서가 없습니다</h4>
-              <p className="text-xs text-slate-500 mt-1">
-                우측 상단의 <b className="text-sky-600">[+ 신규 PDF 등록]</b> 버튼을 눌러 PDF 파일을 선택해보세요.
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '3rem 1rem',
+                border: '2px dashed #cbd5e1',
+                borderRadius: '12px',
+                margin: '1rem 0',
+                backgroundColor: '#f8fafc'
+              }}
+            >
+              <FileText size={38} style={{ margin: '0 auto 0.5rem auto', color: '#94a3b8', display: 'block' }} />
+              <h4 style={{ margin: 0, fontWeight: 700, fontSize: '1rem', color: '#334155' }}>
+                보관된 PDF 문서가 없습니다
+              </h4>
+              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
+                우측 상단의 <b style={{ color: '#0284c7' }}>[+ 신규 PDF 등록]</b> 버튼을 눌러 PDF 파일을 첨부해보세요.
               </p>
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
               {pdfList.map((item) => {
                 const progressPercent = Math.min(100, Math.round(((item.currentPage || 1) / (item.totalPages || 1)) * 100));
 
                 return (
                   <div
                     key={item.id}
-                    className="pdf-card p-3.5 rounded-xl border border-slate-200 hover:border-sky-400 transition-all flex flex-col md:flex-row md:align-center justify-between gap-3"
-                    style={{ backgroundColor: '#f8fafc', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                      padding: '12px 16px',
+                      borderRadius: '12px',
+                      border: '1px solid #e2e8f0',
+                      backgroundColor: '#f8fafc',
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}
                   >
                     {/* 좌측: 파일 아이콘 & 긴 파일 제목 및 메타 정보 */}
-                    <div className="flex align-center gap-3" style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
                       <div
                         style={{
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '10px',
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '8px',
                           backgroundColor: '#e0f2fe',
                           color: '#0284c7',
                           display: 'flex',
@@ -219,57 +254,77 @@ export default function PdfLibraryModal({ onClose }) {
                           flexShrink: 0
                         }}
                       >
-                        <FileText size={22} />
+                        <FileText size={20} />
                       </div>
 
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <h4
-                          className="font-bold text-base text-slate-800"
                           style={{
                             margin: 0,
+                            fontWeight: 700,
+                            fontSize: '0.925rem',
+                            color: '#1e293b',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
-                            maxWidth: '100%'
+                            width: '100%'
                           }}
                           title={item.fileName}
                         >
                           {item.title}
                         </h4>
 
-                        <div className="flex align-center gap-3 text-xs text-slate-500 mt-1 flex-wrap">
-                          <span className="flex align-center gap-1 font-medium"><HardDrive size={12} /> {item.fileSize}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#64748b', marginTop: '3px', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 500 }}><HardDrive size={11} style={{ display: 'inline', marginRight: '2px' }} /> {item.fileSize}</span>
                           <span>•</span>
-                          <span className="flex align-center gap-1"><Clock size={12} /> {new Date(item.createdAt).toLocaleDateString()}</span>
+                          <span><Clock size={11} style={{ display: 'inline', marginRight: '2px' }} /> {new Date(item.createdAt).toLocaleDateString()}</span>
                           <span>•</span>
-                          <span className="text-slate-600 font-medium">읽은 위치: <b>{item.currentPage || 1}p</b></span>
-                          <span className="font-semibold text-sky-600">({progressPercent}% 완료)</span>
+                          <span>읽은 위치: <b style={{ color: '#0f172a' }}>{item.currentPage || 1}p</b></span>
+                          <span style={{ fontWeight: 600, color: '#0284c7' }}>({progressPercent}% 완료)</span>
                         </div>
                       </div>
                     </div>
 
                     {/* 우측: 뷰어로 열기 및 삭제 버튼 */}
-                    <div className="flex align-center gap-2" style={{ flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                       <button
-                        className="btn btn-primary btn-sm font-bold flex align-center gap-1.5"
                         onClick={() => setSelectedPdf(item)}
                         style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
                           backgroundColor: '#0284c7',
                           border: 'none',
                           color: '#ffffff',
-                          padding: '0.5rem 1rem',
-                          borderRadius: '8px'
+                          padding: '0.45rem 0.85rem',
+                          borderRadius: '7px',
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          cursor: 'pointer',
+                          whiteSpace: 'nowrap'
                         }}
                       >
-                        <BookOpen size={16} /> 📖 E-Book 뷰어로 열기
+                        <BookOpen size={14} /> E-Book 뷰어로 열기
                       </button>
 
                       <button
-                        className="text-slate-400 hover:text-rose-500 p-2 rounded-lg hover:bg-rose-50 transition-colors"
                         onClick={() => handleDeletePdf(item.id, item.title)}
                         title="삭제"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#94a3b8',
+                          padding: '6px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={15} />
                       </button>
                     </div>
                   </div>

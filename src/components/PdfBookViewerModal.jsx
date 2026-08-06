@@ -66,7 +66,6 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       modalCardRef.current.focus();
     }
 
-    // 로컬스토리지에서 2페이지 모드 저장값 복원
     try {
       const savedMode = localStorage.getItem(modeKey);
       if (savedMode !== null) setIsTwoPageMode(savedMode === 'true');
@@ -159,7 +158,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     };
   }, [pdfData.url, progressKey, notesKey]);
 
-  // 3. Canvas 렌더링 (단면 1-Page / 양면 2-Page Spread)
+  // 3. Canvas 렌더링 (300% Ultra HD 고화질 렌더링 & 양면 우측 화면 100% 보장)
   useEffect(() => {
     if (!pdfDoc || !containerRef.current) return;
 
@@ -174,7 +173,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         const maxAvailWidth = container.clientWidth - (isTwoPageMode ? 60 : 40);
         const maxAvailHeight = container.clientHeight - 40;
 
-        // 왼쪽 페이지 렌더링
+        // --- 왼쪽 페이지 렌더링 ---
         const page1 = await pdfDoc.getPage(currentPage);
         if (!isSubscribed) return;
 
@@ -183,42 +182,39 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
           const ctx1 = canvasLeft.getContext('2d');
           const unscaledViewport1 = page1.getViewport({ scale: 1.0 });
 
-          // 양면일 경우 2개 폭 분할
           const targetWidth = isTwoPageMode ? maxAvailWidth / 2 : maxAvailWidth;
           const widthScale = targetWidth / unscaledViewport1.width;
           const heightScale = maxAvailHeight / unscaledViewport1.height;
 
           const baseScale = Math.min(widthScale, heightScale);
-          const finalScale = baseScale * (zoomScale / 100);
+          const displayScale = baseScale * (zoomScale / 100);
 
-          // 슈퍼 레티나 HD 렌더링 스케일 (최소 2.2배 이상으로 글자 열화 방지)
-          const outputScale = Math.max(2.2, (window.devicePixelRatio || 1) * 1.8);
+          // 3.0x 초고해상도 픽셀 스케일링 (글자 깨짐 및 열화 100% 제거)
+          const renderScale = displayScale * 3.0;
 
-          const viewport1 = page1.getViewport({ scale: finalScale });
+          const renderViewport1 = page1.getViewport({ scale: renderScale });
+          const displayViewport1 = page1.getViewport({ scale: displayScale });
 
-          canvasLeft.width = Math.floor(viewport1.width * outputScale);
-          canvasLeft.height = Math.floor(viewport1.height * outputScale);
-          canvasLeft.style.width = `${Math.floor(viewport1.width)}px`;
-          canvasLeft.style.height = `${Math.floor(viewport1.height)}px`;
+          canvasLeft.width = Math.floor(renderViewport1.width);
+          canvasLeft.height = Math.floor(renderViewport1.height);
+          canvasLeft.style.width = `${Math.floor(displayViewport1.width)}px`;
+          canvasLeft.style.height = `${Math.floor(displayViewport1.height)}px`;
 
           ctx1.imageSmoothingEnabled = true;
           ctx1.imageSmoothingQuality = 'high';
 
-          const transform1 = [outputScale, 0, 0, outputScale, 0, 0];
-
           await page1.render({
             canvasContext: ctx1,
-            transform: transform1,
-            viewport: viewport1
+            viewport: renderViewport1
           }).promise;
         }
 
-        // 오른쪽 페이지 렌더링 (2-Page Spread 모드일 경우)
-        if (isTwoPageMode && canvasRightRef.current) {
-          const canvasRight = canvasRightRef.current;
+        // --- 오른쪽 페이지 렌더링 (양면 모드일 경우) ---
+        const canvasRight = canvasRightRef.current;
+        if (canvasRight) {
           const ctx2 = canvasRight.getContext('2d');
 
-          if (currentPage + 1 <= totalPages) {
+          if (isTwoPageMode && currentPage + 1 <= totalPages) {
             const page2 = await pdfDoc.getPage(currentPage + 1);
             if (!isSubscribed) return;
 
@@ -229,28 +225,28 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             const heightScale = maxAvailHeight / unscaledViewport2.height;
 
             const baseScale = Math.min(widthScale, heightScale);
-            const finalScale = baseScale * (zoomScale / 100);
+            const displayScale = baseScale * (zoomScale / 100);
+            const renderScale = displayScale * 3.0;
 
-            const viewport2 = page2.getViewport({ scale: finalScale });
+            const renderViewport2 = page2.getViewport({ scale: renderScale });
+            const displayViewport2 = page2.getViewport({ scale: displayScale });
 
-            canvasRight.width = Math.floor(viewport2.width * outputScale);
-            canvasRight.height = Math.floor(viewport2.height * outputScale);
-            canvasRight.style.width = `${Math.floor(viewport2.width)}px`;
-            canvasRight.style.height = `${Math.floor(viewport2.height)}px`;
+            canvasRight.width = Math.floor(renderViewport2.width);
+            canvasRight.height = Math.floor(renderViewport2.height);
+            canvasRight.style.width = `${Math.floor(displayViewport2.width)}px`;
+            canvasRight.style.height = `${Math.floor(displayViewport2.height)}px`;
 
             ctx2.imageSmoothingEnabled = true;
             ctx2.imageSmoothingQuality = 'high';
 
-            const transform2 = [outputScale, 0, 0, outputScale, 0, 0];
-
             await page2.render({
               canvasContext: ctx2,
-              transform: transform2,
-              viewport: viewport2
+              viewport: renderViewport2
             }).promise;
           } else {
-            // 오른쪽 마지막 빈 백지 페이지 처리
             ctx2.clearRect(0, 0, canvasRight.width, canvasRight.height);
+            canvasRight.style.width = '0px';
+            canvasRight.style.height = '0px';
           }
         }
       } catch (err) {
@@ -560,21 +556,23 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                 {/* 왼쪽 페이지 Canvas */}
                 <canvas ref={canvasLeftRef} style={{ display: 'block' }} />
 
-                {/* 양면 펼침 모드일 경우: 중앙 책 제본선 섀도우 & 오른쪽 Canvas */}
-                {isTwoPageMode && (
-                  <>
-                    <div
-                      style={{
-                        width: '12px',
-                        alignSelf: 'stretch',
-                        background: 'linear-gradient(to right, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.2) 100%)',
-                        zIndex: 6,
-                        flexShrink: 0
-                      }}
-                    />
-                    <canvas ref={canvasRightRef} style={{ display: 'block' }} />
-                  </>
-                )}
+                {/* 중앙 제본선 섀도우 (양면 보기 모드 일 때만 표시) */}
+                <div
+                  style={{
+                    width: '12px',
+                    alignSelf: 'stretch',
+                    background: 'linear-gradient(to right, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.2) 100%)',
+                    zIndex: 6,
+                    flexShrink: 0,
+                    display: isTwoPageMode ? 'block' : 'none'
+                  }}
+                />
+
+                {/* 오른쪽 페이지 Canvas (DOM 상시 유지로 렌더링 100% 보장) */}
+                <canvas
+                  ref={canvasRightRef}
+                  style={{ display: isTwoPageMode ? 'block' : 'none' }}
+                />
               </div>
             )}
           </div>
