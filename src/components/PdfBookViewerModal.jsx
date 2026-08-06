@@ -138,16 +138,19 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       // 1) 화면 표시용 기본 viewport
       const viewport = page.getViewport({ scale: fitScale });
 
-      // 2) outputScale 배율 설정 (가장 안정적이고 또렷한 3배수로 고정)
-      const outputScale = Math.max(window.devicePixelRatio || 1, 3);
+      // 2) 정수 4배수 고정 하드웨어 스케일링 (소수점 연산에 의한 픽셀 어긋남/스미어링 100% 차단)
+      const outputScale = 4;
 
-      // 3) 캔버스 물리 픽셀 세팅
-      canvas.width = Math.floor(viewport.width * outputScale);
-      canvas.height = Math.floor(viewport.height * outputScale);
+      // 3) 물리적 캔버스 크기를 무조건 정수로 확정
+      canvas.width = Math.ceil(viewport.width * outputScale);
+      canvas.height = Math.ceil(viewport.height * outputScale);
 
-      // 4) CSS 표시 크기 고정
-      canvas.style.width = `${Math.floor(viewport.width)}px`;
-      canvas.style.height = `${Math.floor(viewport.height)}px`;
+      // 4) 계산된 물리 픽셀에서 그대로 outputScale을 나누어 CSS 크기를 역계산 (1:4 비율 완벽 록인)
+      canvas.style.width = `${canvas.width / outputScale}px`;
+      canvas.style.height = `${canvas.height / outputScale}px`;
+      
+      // 5) 브라우저 Canvas의 자체 그레이스케일 안티앨리어싱(흐릿함)을 극복하는 약한 콘트라스트 보정
+      canvas.style.filter = 'contrast(1.07) saturate(1.02)';
 
       // 5) 불투명 캔버스로 글씨 안티앨리어싱 보정 완벽 적용
       const ctx = canvas.getContext('2d', { alpha: false });
