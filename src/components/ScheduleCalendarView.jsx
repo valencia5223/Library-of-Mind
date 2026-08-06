@@ -462,8 +462,8 @@ export default function ScheduleCalendarView({ userId = null }) {
                 {editingSchedule ? '일정 수정하기' : '새 일정 추가'}
                 <span className="text-xs sub-text font-normal">({formatDateString(selectedDate)})</span>
               </h3>
-              <button className="btn-close" onClick={() => setShowModal(false)}>
-                <X size={20} />
+              <button className="modal-close" onClick={() => setShowModal(false)} title="닫기">
+                <X size={18} />
               </button>
             </div>
 
@@ -483,12 +483,19 @@ export default function ScheduleCalendarView({ userId = null }) {
 
               <div className="grid grid-2 gap-3">
                 <div>
-                  <label className="form-label font-bold text-xs">시간</label>
+                  <label className="form-label font-bold text-xs flex align-center gap-1">
+                    <Clock size={13} className="text-primary" /> 시간
+                  </label>
                   <input
                     type="time"
-                    className="input-field mt-1"
+                    className="input-field mt-1 font-bold"
                     value={time}
                     onChange={(e) => setTime(e.target.value)}
+                    style={{
+                      padding: '0.65rem 0.85rem',
+                      fontSize: '0.9rem',
+                      height: '42px'
+                    }}
                   />
                 </div>
                 <div>
@@ -497,6 +504,11 @@ export default function ScheduleCalendarView({ userId = null }) {
                     className="input-field mt-1 font-bold"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
+                    style={{
+                      padding: '0.65rem 0.85rem',
+                      fontSize: '0.9rem',
+                      height: '42px'
+                    }}
                   >
                     <option value="WORK">💼 업무</option>
                     <option value="READING">📖 독서</option>
