@@ -182,25 +182,22 @@ export default function PdfLibraryModal({ onClose }) {
         {/* PDF 문서 목록 콘텐츠 영역 */}
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingRight: '4px' }}>
           {pdfList.length === 0 ? (
-            <div className="text-center py-12 px-4 border-2 border-dashed border-slate-200 rounded-xl my-4">
+            <label className="block text-center py-12 px-4 border-2 border-dashed border-slate-200 hover:border-sky-400 rounded-xl my-4 cursor-pointer transition-all bg-slate-50 hover:bg-sky-50">
               <FileText size={48} className="mx-auto mb-3 text-slate-300" />
               <h4 className="font-bold text-base text-slate-700">보관된 PDF 문서가 없습니다</h4>
-              <p className="text-xs text-slate-500 mt-1 mb-4">
-                오른쪽 상단의 [신규 PDF 등록] 버튼을 눌러 독서할 PDF 파일을 추가해보세요.
+              <p className="text-xs text-slate-500 mt-1 mb-3">
+                여기를 클릭하거나 오른쪽 상단의 <b>[신규 PDF 등록]</b> 버튼을 눌러 독서할 PDF 파일을 선택해보세요.
               </p>
-              <label
-                className="btn btn-outline btn-sm font-bold inline-flex align-center gap-1.5 cursor-pointer"
-                style={{ borderColor: '#0284c7', color: '#0284c7', padding: '0.5rem 1.2rem', borderRadius: '8px' }}
-              >
-                <Upload size={16} /> 신규 PDF 파일 업로드
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  onChange={handleFileUpload}
-                  style={{ display: 'none' }}
-                />
-              </label>
-            </div>
+              <span className="btn btn-primary btn-sm font-bold inline-flex align-center gap-1.5" style={{ backgroundColor: '#0284c7', border: 'none' }}>
+                <Upload size={15} /> PDF 파일 선택하기
+              </span>
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={handleFileUpload}
+                style={{ display: 'none' }}
+              />
+            </label>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {pdfList.map((item) => {

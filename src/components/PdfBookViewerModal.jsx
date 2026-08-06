@@ -66,7 +66,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const progressPercent = Math.min(100, Math.round((currentPage / (totalPages || 1)) * 100));
 
   return (
-    <div className="modal-overlay modal-backdrop" style={{ zIndex: 1100 }} onClick={onClose}>
+    <div className="modal-overlay modal-backdrop" style={{ zIndex: 100000 }} onClick={onClose}>
       <div
         className="modal-card pdf-viewer-card"
         onClick={(e) => e.stopPropagation()}

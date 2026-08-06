@@ -110,7 +110,7 @@ export default function BookDetailModal({
   const buyLink = book.buy_link || book.link || (book.title ? `https://www.aladin.co.kr/search/wsearchresult.aspx?SearchTarget=Book&SearchWord=${encodeURIComponent(book.title)}` : null);
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 1200 }} onClick={onClose}>
+    <div className="modal-overlay" style={{ zIndex: 99999, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }} onClick={onClose}>
       <div
         className="modal-card book-detail-modal animate-scale-in"
         onClick={(e) => e.stopPropagation()}
