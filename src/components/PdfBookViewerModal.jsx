@@ -328,11 +328,11 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   useEffect(() => {
     if (!isAutoPlay || textLines.length === 0 || !containerRef.current) return;
 
-    // 1x(느림): 한 줄당 약 3.3초 동안 그윽하고 천천히 이동
-    // 2x(보통): 한 줄당 약 1.2초
-    // 3x(빠름): 한 줄당 약 0.5초
-    const speedStepMap = { 1: 1.2, 2: 3.5, 3: 8.0 };
-    const stepPct = speedStepMap[autoSpeed] || 1.2;
+    // 1x(느림): 한 줄당 약 6.6초 동안 매우 그윽하고 천천히 이동
+    // 2x(보통): 한 줄당 약 2.5초 (이전 대비 2배 더 천천히 독서)
+    // 3x(빠름): 한 줄당 약 1.0초
+    const speedStepMap = { 1: 0.6, 2: 1.6, 3: 4.0 };
+    const stepPct = speedStepMap[autoSpeed] || 1.6;
 
     const timer = setInterval(() => {
       setLineProgress((prev) => {
