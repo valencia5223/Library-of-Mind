@@ -16,7 +16,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const [notes, setNotes] = useState('');
   const [loadingPdf, setLoadingPdf] = useState(true);
   const [pageRendering, setPageRendering] = useState(false);
-  const [zoomScale, setZoomScale] = useState(145);
+  const [zoomScale, setZoomScale] = useState(100);
 
   const canvasLeftRef = useRef(null);
   const canvasRightRef = useRef(null);
@@ -224,96 +224,94 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
           transition: 'all 0.3s ease', outline: 'none'
         }}
       >
-        {/* 상단 툴바 */}
+        {/* 초소형 상단 툴바 (스크롤 확보용) */}
         <div style={{
-          padding: '0.75rem 1.25rem', backgroundColor: '#1e293b',
+          padding: '0.35rem 0.85rem', backgroundColor: '#1e293b',
           borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap'
+          justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap'
         }}>
-          <div className="flex align-center gap-3">
+          <div className="flex align-center gap-2">
             <div style={{
-              width: '36px', height: '36px', borderRadius: '8px', backgroundColor: '#0284c7',
+              width: '28px', height: '28px', borderRadius: '6px', backgroundColor: '#0284c7',
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
-              <BookOpen size={20} className="text-white" />
+              <BookOpen size={16} className="text-white" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-white flex align-center gap-2" style={{ margin: 0 }}>
+              <h3 className="font-bold text-xs text-white flex align-center gap-1.5" style={{ margin: 0 }}>
                 {book.title || 'PDF 전자책'}
-                <span className="text-xs px-2 py-0.5 rounded font-normal" style={{ backgroundColor: '#0284c7', color: '#fff' }}>
-                  {isTwoPageMode ? '📖📖 양면 펼침' : '📖 단면 보기'}
+                <span className="text-[10px] px-1.5 py-0.5 rounded font-normal" style={{ backgroundColor: '#0284c7', color: '#fff' }}>
+                  {isTwoPageMode ? '📖 양면' : '📖 단면'}
                 </span>
               </h3>
-              <div className="text-xs text-slate-400 flex align-center gap-2 mt-0.5">
+              <div className="text-[10px] text-slate-400 flex align-center gap-2 mt-0.5" style={{ lineHeight: 1 }}>
                 <span style={{ color: '#38bdf8' }}>진행률 {pct}%</span>
-                <span>•</span>
-                <span>방향키(←/→) 책넘기기</span>
+                <span>• 방향키 넘기기</span>
               </div>
             </div>
           </div>
 
-          <div className="flex align-center gap-2 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700">
+          <div className="flex align-center gap-1.5 bg-slate-900 px-2 py-1 rounded-lg border border-slate-700">
             <button onClick={() => changePage(currentPage - step)} disabled={currentPage <= 1 || pageRendering}
-              style={{ opacity: currentPage <= 1 ? 0.4 : 1, background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '4px' }}>
-              <ChevronLeft size={20} />
+              style={{ opacity: currentPage <= 1 ? 0.4 : 1, background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px' }}>
+              <ChevronLeft size={18} />
             </button>
-            <div className="flex align-center gap-1.5 text-xs font-bold px-2">
-              <span style={{ color: '#38bdf8', fontSize: '0.9rem' }}>
+            <div className="flex align-center gap-1 text-[11px] font-bold px-1.5">
+              <span style={{ color: '#38bdf8', fontSize: '12px' }}>
                 {isTwoPageMode ? `${currentPage}-${Math.min(totalPages, currentPage + 1)}` : currentPage}
               </span>
               <span className="text-slate-500">/</span>
               <span className="text-slate-300">{totalPages}</span>
-              <span className="text-slate-400 font-normal">p</span>
             </div>
             <button onClick={() => changePage(currentPage + step)} disabled={currentPage >= totalPages || pageRendering}
-              style={{ opacity: currentPage >= totalPages ? 0.4 : 1, background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '4px' }}>
-              <ChevronRight size={20} />
+              style={{ opacity: currentPage >= totalPages ? 0.4 : 1, background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px' }}>
+              <ChevronRight size={18} />
             </button>
           </div>
 
-          <div className="flex align-center gap-2.5" style={{ flexShrink: 0 }}>
+          <div className="flex align-center gap-2" style={{ flexShrink: 0 }}>
             <button onClick={toggleTwoPageMode} title="단면/양면 전환"
               style={{
                 backgroundColor: isTwoPageMode ? '#0284c7' : '#334155', color: '#fff',
-                border: '1px solid #475569', padding: '0.4rem 0.75rem', borderRadius: '6px',
-                display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer'
+                border: '1px solid #475569', padding: '0.3rem 0.5rem', borderRadius: '5px',
+                display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer'
               }}>
-              {isTwoPageMode ? <Columns size={15} /> : <Square size={15} />}
+              {isTwoPageMode ? <Columns size={13} /> : <Square size={13} />}
               <span>{isTwoPageMode ? '양면 보기' : '단면 보기'}</span>
             </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#0f172a', padding: '4px 8px', borderRadius: '6px', border: '1px solid #334155' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#0f172a', padding: '2px 6px', borderRadius: '5px', border: '1px solid #334155' }}>
                <button onClick={() => setZoomScale(Math.max(60, zoomScale - 15))}
-                 style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px' }}>
-                 <ZoomOut size={15} />
+                 style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '1px' }}>
+                 <ZoomOut size={13} />
                </button>
-               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#cbd5e1', minWidth: '40px', textAlign: 'center' }}>{zoomScale}%</span>
+               <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#cbd5e1', minWidth: '34px', textAlign: 'center' }}>{zoomScale}%</span>
                <button onClick={() => setZoomScale(Math.min(220, zoomScale + 15))}
-                 style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px' }}>
-                 <ZoomIn size={15} />
+                 style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '1px' }}>
+                 <ZoomIn size={13} />
                </button>
                <button onClick={() => setZoomScale(100)} title="화면 맞춤"
-                 style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px', marginLeft: '2px' }}>
-                 <RotateCcw size={13} />
+                 style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '1px', marginLeft: '2px' }}>
+                 <RotateCcw size={11} />
                </button>
             </div>
 
             <button onClick={() => setShowNotes(!showNotes)}
               style={{
                 backgroundColor: showNotes ? '#0284c7' : '#334155', color: '#fff', border: 'none',
-                padding: '0.4rem 0.8rem', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px',
-                fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', whiteSpace: 'nowrap'
+                padding: '0.3rem 0.5rem', borderRadius: '5px', display: 'flex', alignItems: 'center', gap: '4px',
+                fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap'
               }}>
-              <FileText size={15} />
-              {showNotes ? '메모 닫기' : '독서 메모장'}
+              <FileText size={13} />
+              {showNotes ? '메모 닫기' : '메모장'}
             </button>
 
             <button onClick={onClose} title="닫기 (ESC)"
               style={{
-                backgroundColor: '#334155', color: '#fff', border: 'none', width: '32px', height: '32px',
+                backgroundColor: '#334155', color: '#fff', border: 'none', width: '28px', height: '28px',
                 borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0
               }}>
-              <X size={18} />
+              <X size={16} />
             </button>
           </div>
         </div>
