@@ -23,6 +23,50 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   const [isMyEditorEmpty, setIsMyEditorEmpty] = useState(true);
   const [isPartnerEmpty, setIsPartnerEmpty] = useState(true);
 
+  // 실시간 흔들기/알람 효과 및 쿨다운 상태
+  const [isLocalShaking, setIsLocalShaking] = useState(false);
+  const [nudgeCooldown, setNudgeCooldown] = useState(0);
+
+  // 쿨다운 1초 단위 카운트다운 타이머
+  useEffect(() => {
+    if (nudgeCooldown > 0) {
+      const timer = setInterval(() => {
+        setNudgeCooldown((prev) => Math.max(0, prev - 1));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [nudgeCooldown]);
+
+  // 흔들기(알람) 버튼 클릭 송신 핸들러
+  const handleSendNudge = async () => {
+    if (nudgeCooldown > 0) return;
+    setNudgeCooldown(3);
+
+    // 내 화면/모달 진동 효과 발생
+    setIsLocalShaking(true);
+    setTimeout(() => setIsLocalShaking(false), 1400);
+
+    try {
+      // 1. 현재 오픈된 메모 룸 채널로 흔들기 브로드캐스트
+      const roomChan = supabase.channel(`shared_memo:${roomId}`);
+      await roomChan.send({
+        type: 'broadcast',
+        event: 'nudge_shake',
+        payload: { sender_id: user.id }
+      });
+
+      // 2. 상대방의 전역 수신 채널로도 흔들기 브로드캐스트 (메모창 닫혀 있을 때 대응!)
+      const globalChan = supabase.channel(`global_user_nudge:${friend.friend_id}`);
+      await globalChan.send({
+        type: 'broadcast',
+        event: 'nudge_received',
+        payload: { sender_id: user.id, sender_email: user.email }
+      });
+    } catch (err) {
+      console.warn('흔들기 알람 전송 예외 발생:', err);
+    }
+  };
+
   // 글씨 폰트 크기 상태 (기본값: 16px, 숫자로 자유롭게 입력 및 localStorage 기억)
   const [fontSizePx, setFontSizePx] = useState(() => {
     const saved = localStorage.getItem('shared_memo_font_size_px');
@@ -294,6 +338,16 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     const channel = supabase
       .channel(`shared_memo:${roomId}`)
       .on(
+        'broadcast',
+        { event: 'nudge_shake' },
+        (payload) => {
+          if (payload.payload?.sender_id !== user.id) {
+            setIsLocalShaking(true);
+            setTimeout(() => setIsLocalShaking(false), 1400);
+          }
+        }
+      )
+      .on(
         'postgres_changes',
         {
           event: 'UPDATE',
@@ -469,7 +523,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   return (
     <div className="modal-overlay" style={{ zIndex: 1250 }} onClick={onClose}>
       <div
-        className="modal-card animate-scale-in"
+        className={`modal-card animate-scale-in ${isLocalShaking ? 'app-nudge-shake' : ''}`}
         onClick={(e) => e.stopPropagation()}
         style={{
           width: 'fit-content',
@@ -531,34 +585,57 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               <span>실시간 1:1 분리 메모장</span>
             </h3>
 
-            {/* 폰트 크기 커스텀 숫자 입력 컨트롤러 */}
-            <div className="flex align-center gap-1.5" style={{ background: '#f1f5f9', padding: '4px 8px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              <span className="text-xs font-bold text-slate-600" style={{ fontSize: '0.78rem' }}>글씨 크기:</span>
+            {/* 흔들기 알람 버튼 및 폰트 크기 커스텀 숫자 입력 컨트롤러 */}
+            <div className="flex align-center gap-2">
               <button
                 type="button"
-                onClick={() => handleFontSizePxChange(fontSizePx - 1)}
-                style={{ width: '22px', height: '22px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+                className={`btn btn-xs font-bold flex align-center gap-1 ${nudgeCooldown > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={handleSendNudge}
+                disabled={nudgeCooldown > 0}
+                title="상대방의 메모창/전체 화면을 진동시키고 붉은색 테두리 알람을 보냅니다!"
+                style={{
+                  background: nudgeCooldown > 0 ? '#f1f5f9' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  color: nudgeCooldown > 0 ? '#94a3b8' : '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '4px 10px',
+                  fontSize: '0.78rem',
+                  boxShadow: nudgeCooldown > 0 ? 'none' : '0 2px 8px rgba(239, 68, 68, 0.3)',
+                  cursor: nudgeCooldown > 0 ? 'not-allowed' : 'pointer'
+                }}
               >
-                -
+                <Zap size={14} className={nudgeCooldown > 0 ? '' : 'animate-bounce'} />
+                {nudgeCooldown > 0 ? `${nudgeCooldown}초 대기...` : '⚡ 흔들기 알람'}
               </button>
-              <div className="flex align-center gap-1">
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  value={fontSizePx}
-                  onChange={(e) => handleFontSizePxChange(e.target.value)}
-                  style={{ width: '42px', height: '24px', textAlign: 'center', fontSize: '0.82rem', fontWeight: 700, color: '#0284c7', border: '1.5px solid #38bdf8', borderRadius: '5px', outline: 'none', background: '#ffffff', padding: '0 2px' }}
-                />
-                <span className="text-xs font-bold text-slate-500" style={{ fontSize: '0.75rem' }}>px</span>
+
+              <div className="flex align-center gap-1.5" style={{ background: '#f1f5f9', padding: '4px 8px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <span className="text-xs font-bold text-slate-600" style={{ fontSize: '0.78rem' }}>글씨 크기:</span>
+                <button
+                  type="button"
+                  onClick={() => handleFontSizePxChange(fontSizePx - 1)}
+                  style={{ width: '22px', height: '22px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  -
+                </button>
+                <div className="flex align-center gap-1">
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={fontSizePx}
+                    onChange={(e) => handleFontSizePxChange(e.target.value)}
+                    style={{ width: '42px', height: '24px', textAlign: 'center', fontSize: '0.82rem', fontWeight: 700, color: '#0284c7', border: '1.5px solid #38bdf8', borderRadius: '5px', outline: 'none', background: '#ffffff', padding: '0 2px' }}
+                  />
+                  <span className="text-xs font-bold text-slate-500" style={{ fontSize: '0.75rem' }}>px</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleFontSizePxChange(fontSizePx + 1)}
+                  style={{ width: '22px', height: '22px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  +
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => handleFontSizePxChange(fontSizePx + 1)}
-                style={{ width: '22px', height: '22px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}
-              >
-                +
-              </button>
             </div>
           </div>
 

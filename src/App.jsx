@@ -50,6 +50,27 @@ export default function App() {
     }
   }, []);
 
+  // 전역 흔들기/깜박임 알람 상태
+  const [isNudgeShaking, setIsNudgeShaking] = useState(false);
+
+  // 로그인 시 메모창 미오픈 상태에서도 흔들기/알람 수신 가능한 전역 Supabase 채널 구독
+  useEffect(() => {
+    if (user && isSupabaseConfigured()) {
+      const channel = supabase.channel(`global_user_nudge:${user.id}`)
+        .on('broadcast', { event: 'nudge_received' }, () => {
+          setIsNudgeShaking(true);
+          setTimeout(() => {
+            setIsNudgeShaking(false);
+          }, 1400);
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user]);
+
   // 친구 조회 모드 상태
   const [viewedFriend, setViewedFriend] = useState(null); // { id: 'uuid', email: 'email@test.com' } 또는 null
 
@@ -360,7 +381,7 @@ export default function App() {
   };
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${isNudgeShaking ? 'app-nudge-shake' : ''}`}>
       {/* 헤더 네비게이션 */}
       <header className="navbar">
         <div className="brand-logo cursor-pointer" onClick={() => setActiveTab('schedule')}>
