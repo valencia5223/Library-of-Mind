@@ -128,7 +128,7 @@ export default function PdfLibraryModal({ onClose }) {
             </div>
             <div>
               <h3 className="font-extrabold text-lg text-slate-800" style={{ margin: 0 }}>
-                📄 PDF 전자책 보관함
+                PDF 전자책 보관함
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
                 원하는 PDF 문서를 자유롭게 등록하고 내장 E-Book 뷰어로 독서해보세요.
@@ -136,7 +136,7 @@ export default function PdfLibraryModal({ onClose }) {
             </div>
           </div>
 
-          <div className="flex align-center gap-2">
+          <div className="flex align-center gap-3" style={{ flexShrink: 0 }}>
             <label
               className="btn btn-primary btn-sm font-bold flex align-center gap-1.5 cursor-pointer"
               style={{
@@ -144,7 +144,9 @@ export default function PdfLibraryModal({ onClose }) {
                 padding: '0.55rem 1rem',
                 borderRadius: '8px',
                 border: 'none',
-                color: '#ffffff'
+                color: '#ffffff',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
               }}
             >
               <Plus size={16} />
@@ -171,7 +173,8 @@ export default function PdfLibraryModal({ onClose }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                color: '#64748b'
+                color: '#64748b',
+                flexShrink: 0
               }}
             >
               <X size={18} />
@@ -182,22 +185,13 @@ export default function PdfLibraryModal({ onClose }) {
         {/* PDF 문서 목록 콘텐츠 영역 */}
         <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingRight: '4px' }}>
           {pdfList.length === 0 ? (
-            <label className="block text-center py-12 px-4 border-2 border-dashed border-slate-200 hover:border-sky-400 rounded-xl my-4 cursor-pointer transition-all bg-slate-50 hover:bg-sky-50">
-              <FileText size={48} className="mx-auto mb-3 text-slate-300" />
+            <div className="text-center py-12 px-4 border-2 border-dashed border-slate-200 rounded-xl my-4 bg-slate-50/50">
+              <FileText size={40} className="mx-auto mb-2.5 text-slate-400" />
               <h4 className="font-bold text-base text-slate-700">보관된 PDF 문서가 없습니다</h4>
-              <p className="text-xs text-slate-500 mt-1 mb-3">
-                여기를 클릭하거나 오른쪽 상단의 <b>[신규 PDF 등록]</b> 버튼을 눌러 독서할 PDF 파일을 선택해보세요.
+              <p className="text-xs text-slate-500 mt-1">
+                우측 상단의 <b className="text-sky-600">[+ 신규 PDF 등록]</b> 버튼을 눌러 PDF 파일을 선택해보세요.
               </p>
-              <span className="btn btn-primary btn-sm font-bold inline-flex align-center gap-1.5" style={{ backgroundColor: '#0284c7', border: 'none' }}>
-                <Upload size={15} /> PDF 파일 선택하기
-              </span>
-              <input
-                type="file"
-                accept="application/pdf"
-                onChange={handleFileUpload}
-                style={{ display: 'none' }}
-              />
-            </label>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {pdfList.map((item) => {
