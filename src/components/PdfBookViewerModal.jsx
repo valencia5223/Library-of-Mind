@@ -192,35 +192,37 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       const container = containerRef.current;
       if (!container) return;
 
-      const maxW = container.clientWidth - (isTwoPageMode ? 32 : 24);
+      const maxW = container.clientWidth - (isTwoPageMode ? 24 : 16);
       const maxH = container.clientHeight - 12; // 상하 여백 12px 밀착 계산으로 수직 스크롤바 0% 완전 제거
-      const pageGap = 10;
+      const pageGap = 12;
       const raw = page.getViewport({ scale: 1.0 });
       const targetW = isTwoPageMode ? (maxW - pageGap) / 2 : maxW;
       
-      // 양면 보기 시 폰트 선명도를 극대화하는 1.45배 벡터 업스케일링 부스트
-      const twoPageBoost = isTwoPageMode ? 1.45 : 1.0;
       const userZoomMultiplier = zoomScale / 100;
 
-      let fitScale;
-      if (fitMode === 'page' || isTwoPageMode) {
-        // 한 화면에 딱 맞춤 (스크롤바 0% - 세로/가로 뷰포트 완전 밀착)
-        const scaleX = targetW / raw.width;
-        const scaleY = maxH / raw.height;
-        fitScale = Math.min(scaleX, scaleY) * userZoomMultiplier * twoPageBoost;
-      } else {
-        // 가로 폭 맞춤
-        fitScale = (targetW / raw.width) * userZoomMultiplier * twoPageBoost;
-      }
+      // YES24 스펙: 화면 가로 및 세로 폭에 100% 쏙 들어가는 비례 배율 계산 (스크롤바 0%)
+      const scaleX = targetW / raw.width;
+      const scaleY = maxH / raw.height;
+      
+      const fitScale = (fitMode === 'page' || isTwoPageMode) 
+        ? Math.min(scaleX, scaleY) * userZoomMultiplier
+        : scaleX * userZoomMultiplier;
 
+      // 외형 화면 핏 Viewport
       const viewport = page.getViewport({ scale: fitScale });
 
+      // ★ YES24 핵심: 100% 화면 핏 외형 안에서 2.5배 레티나 고해상도 벡터로 글자를 그려 글씨 깨짐/흐림을 100% 차단! ★
+      const retinaScale = Math.max(2.5, window.devicePixelRatio || 2);
+      const highResViewport = page.getViewport({ scale: fitScale * retinaScale });
+
       try {
-        // 1차 시도: 100% 벡터 품질 SVGGraphics 렌더링 (고품질 텍스트 힌팅 적용)
+        // 1차 시도: 100% 벡터 품질 SVGGraphics 렌더링
         const opList = await page.getOperatorList();
         const svgG = new window.pdfjsLib.SVGGraphics(page.commonObjs, page.objs);
-        const svg = await svgG.getSVG(opList, viewport);
+        const svg = await svgG.getSVG(opList, highResViewport);
 
+        // 외형 크기는 딱 화면에 핏 되도록 CSS style 지정 (스크롤 0% & 깨짐 0%)
+        svg.setAttribute('viewBox', `0 0 ${highResViewport.width} ${highResViewport.height}`);
         svg.setAttribute('width', `${Math.floor(viewport.width)}px`);
         svg.setAttribute('height', `${Math.floor(viewport.height)}px`);
         svg.style.width = `${Math.floor(viewport.width)}px`;
@@ -236,18 +238,17 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         containerEl.appendChild(svg);
       } catch (svgErr) {
         console.warn('SVGGraphics render failed for image/complex page, fallback to Canvas:', svgErr);
-        // 2차 시도 (Fallback): 표지/고용량 이미지 페이지 전용 3.0x 초고화질 Canvas 렌더링
+        // 2차 시도 (Fallback): 표지/고용량 이미지 페이지 전용 레티나 Canvas 렌더링
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        const dpr = Math.max(3.0, window.devicePixelRatio || 2);
 
-        canvas.width = Math.floor(viewport.width * dpr);
-        canvas.height = Math.floor(viewport.height * dpr);
+        canvas.width = Math.floor(viewport.width * retinaScale);
+        canvas.height = Math.floor(viewport.height * retinaScale);
         canvas.style.width = `${Math.floor(viewport.width)}px`;
         canvas.style.height = `${Math.floor(viewport.height)}px`;
         canvas.style.display = 'block';
 
-        ctx.scale(dpr, dpr);
+        ctx.scale(retinaScale, retinaScale);
         await page.render({ canvasContext: ctx, viewport }).promise;
 
         containerEl.innerHTML = '';
