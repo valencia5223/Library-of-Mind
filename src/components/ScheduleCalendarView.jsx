@@ -176,16 +176,22 @@ export default function ScheduleCalendarView({ userId = null }) {
 
       if (isSupabaseConfigured() && userId) {
         // 1) 내가 작성한 일정 쿼리
-        const { data: myData } = await supabase
+        const { data: myData, error: myError } = await supabase
           .from('user_schedules')
           .select('*')
           .eq('user_id', userId);
 
         // 2) 친구가 나에게 공유한 일정 쿼리 (shared_friend_id == 내 ID)
-        const { data: sharedData } = await supabase
+        const { data: sharedData, error: sharedError } = await supabase
           .from('user_schedules')
           .select('*')
           .eq('shared_friend_id', userId);
+
+        // DB 테이블 미존재 또는 쿼리 오류 시 기존 로컬스토리지 보존
+        if (myError || sharedError) {
+          console.warn('Supabase 일정 쿼리 오류 (로컬 캐시 보존됨):', myError || sharedError);
+          return;
+        }
 
         const combined = [...(myData || []), ...(sharedData || [])];
         
@@ -198,7 +204,7 @@ export default function ScheduleCalendarView({ userId = null }) {
         });
         const uniqueData = Array.from(scheduleMap.values());
 
-        if (uniqueData) {
+        if (uniqueData && uniqueData.length > 0) {
           // DB에서 불러온 암호화된 title, memo 데이터를 복호화
           const decryptedList = uniqueData.map(s => ({
             ...s,
