@@ -8,18 +8,20 @@ const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf
 export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressUpdate }) {
   if (!book || !pdfData) return null;
 
+  const [pdfDoc, setPdfDoc] = useState(null);
   const [currentPage, setCurrentPage] = useState(pdfData.currentPage || 1);
   const [totalPages, setTotalPages] = useState(pdfData.totalPages || 1);
   const [isTwoPageMode, setIsTwoPageMode] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState('');
   const [loadingPdf, setLoadingPdf] = useState(true);
-  const [aspectRatio, setAspectRatio] = useState(0.707); // 기본 A4 비율
+  const [pageRendering, setPageRendering] = useState(false);
   const [zoomScale, setZoomScale] = useState(100);
 
+  const canvasLeftRef = useRef(null);
+  const canvasRightRef = useRef(null);
+  const containerRef = useRef(null);
   const modalCardRef = useRef(null);
-  const iframeLeftRef = useRef(null);
-  const iframeRightRef = useRef(null);
 
   const progressKey = `book_pdf_progress_${book.id || book.isbn || 'demo'}`;
   const notesKey = `book_pdf_notes_${book.id || book.isbn || 'demo'}`;
@@ -27,15 +29,18 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
   const currentPageRef = useRef(currentPage);
   const totalPagesRef = useRef(totalPages);
+  const pageRenderingRef = useRef(pageRendering);
   const isTwoPageModeRef = useRef(isTwoPageMode);
 
   useEffect(() => {
     currentPageRef.current = currentPage;
     totalPagesRef.current = totalPages;
+    pageRenderingRef.current = pageRendering;
     isTwoPageModeRef.current = isTwoPageMode;
-  }, [currentPage, totalPages, isTwoPageMode]);
+  }, [currentPage, totalPages, pageRendering, isTwoPageMode]);
 
   const changePage = useCallback((targetPage) => {
+    if (pageRenderingRef.current) return;
     const total = totalPagesRef.current;
     let nextPage = Math.max(1, Math.min(total, targetPage));
     if (nextPage === currentPageRef.current) return;
@@ -76,10 +81,9 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [changePage, onClose, modeKey, notesKey]);
 
-  // PDF.js를 통해 메타데이터 산출 (총 페이지 수 & 비율)
   useEffect(() => {
     let isMounted = true;
-    const fetchMetadata = async () => {
+    const loadPdf = async () => {
       setLoadingPdf(true);
       if (!window.pdfjsLib) {
         await new Promise((resolve, reject) => {
@@ -95,25 +99,105 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       try {
         const doc = await window.pdfjsLib.getDocument(pdfData.url).promise;
         if (!isMounted) return;
+        setPdfDoc(doc);
         setTotalPages(doc.numPages);
-        
-        const p1 = await doc.getPage(1);
-        const vp = p1.getViewport({ scale: 1.0 });
-        if (vp.width && vp.height) {
-          setAspectRatio(vp.width / vp.height);
-        }
-        
         const saved = localStorage.getItem(progressKey);
         if (saved) setCurrentPage(Math.min(doc.numPages, Math.max(1, parseInt(saved, 10) || 1)));
       } catch (err) {
-        console.warn('PDF Metadata load error:', err);
+        console.warn('PDF load error:', err);
       } finally {
         if (isMounted) setLoadingPdf(false);
       }
     };
-    if (pdfData.url) fetchMetadata();
+    if (pdfData.url) loadPdf();
     return () => { isMounted = false; };
   }, [pdfData.url, progressKey]);
+
+  /**
+   * ★ 완벽한 비율의 Canvas 회귀 렌더링 ★
+   * - Iframe은 본질적으로 페이지 전환 시 번쩍임(Reload Flash)과 확대 시 깨짐 발생.
+   * - Canvas로 회귀하되, 브라우저가 안티앨리어싱 필터를 왜곡하는 4x 스케일링을 폐기!
+   * - 1:1 완벽 정매칭 DPR 혹은 최소 2배수로만 그리기 (글씨 뭉개짐(Smudge) 완전 차단)
+   */
+  useEffect(() => {
+    if (!pdfDoc || !containerRef.current) return;
+    let alive = true;
+
+    const renderPage = async (page, canvas) => {
+      if (!canvas) return;
+
+      const container = containerRef.current;
+      if (!container) return;
+
+      const maxW = container.clientWidth - (isTwoPageMode ? 60 : 40);
+      const maxH = container.clientHeight - 40;
+
+      const raw = page.getViewport({ scale: 1.0 });
+      const targetW = isTwoPageMode ? maxW / 2 : maxW;
+      
+      // ZoomScale이 바뀔 때마다 벡터 엔진에서 가장 깔끔한 스케일로 완전히 새로 그려서(Zoom Re-render) 화질 깨짐 픽스!
+      const userZoomMultiplier = zoomScale / 100;
+      const fitScale = Math.min(targetW / raw.width, maxH / raw.height) * userZoomMultiplier;
+
+      const viewport = page.getViewport({ scale: fitScale });
+
+      // ★ 핵심: 과도하게 높은 배율은 CSS 다운샘플링 과정에서 글씨 번짐을 유발합니다. ★
+      // 가장 또렷한 화질을 보장하는 모니터 절대 매칭(devicePixelRatio) 기반 2배수 제한 스케일링
+      const outputScale = Math.max(window.devicePixelRatio || 1, 2);
+
+      canvas.width = Math.floor(viewport.width * outputScale);
+      canvas.height = Math.floor(viewport.height * outputScale);
+
+      // 소수점 픽셀에 의한 글씨 떨림 방지
+      canvas.style.width = `${Math.floor(viewport.width)}px`;
+      canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+      const ctx = canvas.getContext('2d', { alpha: false });
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      
+      // 뭉개짐 방지를 위한 안티 스무딩 설정
+      ctx.imageSmoothingEnabled = false;
+
+      const transform = [outputScale, 0, 0, outputScale, 0, 0];
+      await page.render({
+        canvasContext: ctx,
+        viewport: viewport,
+        transform: transform
+      }).promise;
+    };
+
+    const renderAll = async () => {
+      try {
+        setPageRendering(true);
+
+        const p1 = await pdfDoc.getPage(currentPage);
+        if (!alive) return;
+        await renderPage(p1, canvasLeftRef.current);
+
+        const canvasRight = canvasRightRef.current;
+        if (canvasRight) {
+          if (isTwoPageMode && currentPage + 1 <= totalPages) {
+            const p2 = await pdfDoc.getPage(currentPage + 1);
+            if (!alive) return;
+            await renderPage(p2, canvasRight);
+          } else {
+            canvasRight.width = 0;
+            canvasRight.height = 0;
+            canvasRight.style.width = '0px';
+            canvasRight.style.height = '0px';
+          }
+        }
+      } catch (err) {
+        if (err.name !== 'RenderingCancelledException') console.warn('Render error:', err);
+      } finally {
+        if (alive) setPageRendering(false);
+      }
+    };
+
+    renderAll();
+    return () => { alive = false; };
+  }, [pdfDoc, currentPage, zoomScale, isTwoPageMode, totalPages]);
 
   const toggleTwoPageMode = () => {
     const next = !isTwoPageMode;
@@ -124,12 +208,6 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const handleNotesChange = (t) => { setNotes(t); localStorage.setItem(notesKey, t); };
   const pct = Math.min(100, Math.round((currentPage / (totalPages || 1)) * 100));
   const step = isTwoPageMode ? 2 : 1;
-
-  // Iframe에 전달할 완벽한 URL (툴바, 사이드바, 스크롤바 숨김 파라미터 적용)
-  // 양면 보기 시 좌우 배율이 틀어지는 현상을 막기 위해 높이 기준 동기화(FitV) 사용
-  const getIframeUrl = (pageNum) => {
-    return `${pdfData.url}#page=${pageNum}&toolbar=0&navpanes=0&scrollbar=0&view=FitV`;
-  };
 
   return (
     <div className="modal-overlay modal-backdrop" style={{ zIndex: 100000 }} onClick={onClose}>
@@ -163,7 +241,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               <h3 className="font-bold text-sm text-white flex align-center gap-2" style={{ margin: 0 }}>
                 {book.title || 'PDF 전자책'}
                 <span className="text-xs px-2 py-0.5 rounded font-normal" style={{ backgroundColor: '#0284c7', color: '#fff' }}>
-                  {isTwoPageMode ? '📖📖 양면 펼침 (100% Native)' : '📖 단면 보기 (100% Native)'}
+                  {isTwoPageMode ? '📖📖 양면 펼침' : '📖 단면 보기'}
                 </span>
               </h3>
               <div className="text-xs text-slate-400 flex align-center gap-2 mt-0.5">
@@ -175,7 +253,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
           </div>
 
           <div className="flex align-center gap-2 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700">
-            <button onClick={() => changePage(currentPage - step)} disabled={currentPage <= 1}
+            <button onClick={() => changePage(currentPage - step)} disabled={currentPage <= 1 || pageRendering}
               style={{ opacity: currentPage <= 1 ? 0.4 : 1, background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '4px' }}>
               <ChevronLeft size={20} />
             </button>
@@ -187,7 +265,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               <span className="text-slate-300">{totalPages}</span>
               <span className="text-slate-400 font-normal">p</span>
             </div>
-            <button onClick={() => changePage(currentPage + step)} disabled={currentPage >= totalPages}
+            <button onClick={() => changePage(currentPage + step)} disabled={currentPage >= totalPages || pageRendering}
               style={{ opacity: currentPage >= totalPages ? 0.4 : 1, background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '4px' }}>
               <ChevronRight size={20} />
             </button>
@@ -245,9 +323,9 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
           <div style={{ height: '100%', width: `${pct}%`, backgroundColor: '#0284c7', transition: 'width 0.3s ease' }} />
         </div>
 
-        {/* 본문 뷰포트 (100% Native Browser PDF Engine) */}
+        {/* 본문 뷰포트 (완벽 제어 Canvas 엔진) */}
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
-          {/* 좌측 클릭 영역 */}
+          {/* 좌측 클릭 영역 (이북 UX 45%) */}
           <div onClick={() => changePage(currentPage - step)}
             style={{
               position: 'absolute', left: 0, top: 0, bottom: 0, width: '45%', zIndex: 10,
@@ -264,61 +342,36 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             )}
           </div>
 
-          {/* 중앙 Iframe 영역 */}
+          {/* 중앙 Canvas (스크롤 가능 래퍼) */}
           <div style={{
             flex: 1, height: '100%', backgroundColor: '#020617', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', overflow: 'hidden', padding: '1rem', position: 'relative'
+            justifyContent: 'center', overflow: 'auto', padding: '1rem', position: 'relative'
           }}>
             {loadingPdf ? (
               <div style={{ textAlign: 'center', padding: '2rem' }}>
                 <BookOpen size={48} style={{ color: '#0284c7', marginBottom: '0.75rem' }} />
-                <p style={{ fontWeight: 700, color: '#cbd5e1' }}>책 정보를 분석 중입니다...</p>
+                <p style={{ fontWeight: 700, color: '#cbd5e1' }}>책 페이지를 로딩하는 중...</p>
               </div>
             ) : (
               <div style={{
-                backgroundColor: '#ffffff', borderRadius: '6px', position: 'relative', overflow: 'hidden',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: isTwoPageMode ? `calc(100% - 2rem)` : `auto`,
-                height: `calc(100%)`, 
-                aspectRatio: isTwoPageMode ? `${aspectRatio * 2} / 1` : `${aspectRatio} / 1`,
-                maxHeight: '100%', maxWidth: '100%',
-                transform: `scale(${zoomScale / 100})`, transformOrigin: 'center center', transition: 'transform 0.25s ease-out'
+                backgroundColor: '#ffffff', borderRadius: '6px', position: 'relative', overflow: 'visible',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                {/* 왼쪽 페이지 Iframe */}
-                <iframe
-                  key={`left_${currentPage}`}
-                  ref={iframeLeftRef}
-                  src={getIframeUrl(currentPage)}
-                  style={{ flex: 1, height: '100%', width: '100%', border: 'none', backgroundColor: '#ffffff', pointerEvents: 'none' }}
-                  title="PDF Page Left"
-                  tabIndex={-1}
-                  scrolling="no"
-                />
+                <canvas ref={canvasLeftRef} style={{ display: 'block', backgroundColor: '#fff', opacity: pageRendering ? 0.7 : 1 }} />
 
-                {/* 중앙 제본선 그림자 */}
                 {isTwoPageMode && (
                   <div style={{
-                    width: '12px', alignSelf: 'stretch', flexShrink: 0, zIndex: 5, pointerEvents: 'none',
-                    background: 'linear-gradient(to right, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.2) 100%)',
-                    boxShadow: 'inset 0 0 5px rgba(0,0,0,0.3)', position: 'absolute', left: '50%', transform: 'translateX(-50%)'
+                    width: '10px', alignSelf: 'stretch', flexShrink: 0, zIndex: 5,
+                    background: 'linear-gradient(to right, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.04) 50%, rgba(0,0,0,0.18) 100%)'
                   }} />
                 )}
 
-                {/* 오른쪽 페이지 Iframe (양면 모드일 경우) */}
-                <iframe
-                  key={`right_${currentPage + 1}`}
-                  ref={iframeRightRef}
-                  src={isTwoPageMode && currentPage + 1 <= totalPages ? getIframeUrl(currentPage + 1) : 'about:blank'}
-                  style={{ flex: 1, height: '100%', width: '100%', border: 'none', backgroundColor: '#ffffff', display: isTwoPageMode ? 'block' : 'none', pointerEvents: 'none' }}
-                  title="PDF Page Right"
-                  tabIndex={-1}
-                  scrolling="no"
-                />
+                <canvas ref={canvasRightRef} style={{ display: isTwoPageMode ? 'block' : 'none', backgroundColor: '#fff', opacity: pageRendering ? 0.7 : 1 }} />
               </div>
             )}
           </div>
 
-          {/* 우측 클릭 영역 */}
+          {/* 우측 클릭 영역 (이북 UX 45%) */}
           <div onClick={() => changePage(currentPage + step)}
             style={{
               position: 'absolute', right: showNotes ? '380px' : 0, top: 0, bottom: 0, width: '45%', zIndex: 10,
