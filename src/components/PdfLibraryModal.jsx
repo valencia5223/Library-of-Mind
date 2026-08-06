@@ -97,9 +97,9 @@ export default function PdfLibraryModal({ onClose }) {
         className="modal-card animate-scale-in"
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: '94%',
-          maxWidth: '960px',
-          maxHeight: '88vh',
+          width: '96vw',
+          maxWidth: '1280px',
+          maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
           padding: '1.75rem',
