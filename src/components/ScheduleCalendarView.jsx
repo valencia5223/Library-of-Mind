@@ -207,15 +207,27 @@ export default function ScheduleCalendarView({ userId = null }) {
           </div>
         </div>
 
-        <div className="calendar-nav-controls">
-          <button className="btn btn-secondary btn-sm" onClick={handlePrevMonth} title="이전달">
+        <div className="calendar-nav-controls flex align-center gap-2">
+          <button className="btn btn-secondary btn-sm" onClick={handlePrevMonth} title="이전달 이동">
             <ChevronLeft size={18} />
           </button>
-          <button className="btn btn-outline btn-sm font-bold" onClick={handleToday}>
-            오늘
-          </button>
-          <button className="btn btn-secondary btn-sm" onClick={handleNextMonth} title="다음달">
+          <span className="current-month-badge font-bold text-sm" style={{
+            background: '#e0f2fe',
+            color: '#0369a1',
+            padding: '0.35rem 0.85rem',
+            borderRadius: '12px',
+            border: '1px solid #bae6fd',
+            minWidth: '60px',
+            textAlign: 'center',
+            userSelect: 'none'
+          }}>
+            {month + 1}월
+          </span>
+          <button className="btn btn-secondary btn-sm" onClick={handleNextMonth} title="다음달 이동">
             <ChevronRight size={18} />
+          </button>
+          <button className="btn btn-outline btn-sm font-bold ml-1" onClick={handleToday} title="이번 달 / 오늘 날짜로 이동">
+            오늘
           </button>
         </div>
       </div>
@@ -313,9 +325,9 @@ export default function ScheduleCalendarView({ userId = null }) {
         })}
       </div>
 
-      {/* 일정 추가 / 편집 모달 */}
+      {/* 일정 추가 / 편집 모달 (화면 중앙 정렬) */}
       {showModal && (
-        <div className="modal-backdrop" onClick={() => setShowModal(false)}>
+        <div className="modal-overlay modal-backdrop" onClick={() => setShowModal(false)}>
           <div className="modal-card calendar-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px', width: '92%' }}>
             <div className="modal-header">
               <h3 className="modal-title flex align-center gap-2">

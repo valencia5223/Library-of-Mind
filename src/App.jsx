@@ -105,7 +105,32 @@ export default function App() {
       // 독서 세션(타임라인)은 오직 본인 통계용이므로 친구 것은 불필요
       const { data: sData } = await supabase.from('reading_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
 
-      if (bData) setBooks(bData);
+      if (bData) {
+        const orderKey = `user_book_order_${targetUserId}`;
+        const savedOrderStr = localStorage.getItem(orderKey);
+        if (savedOrderStr) {
+          try {
+            const savedOrderIds = JSON.parse(savedOrderStr);
+            const bookMap = new Map(bData.map(b => [String(b.id), b]));
+            const sortedBooks = [];
+            
+            savedOrderIds.forEach(id => {
+              const b = bookMap.get(String(id));
+              if (b) {
+                sortedBooks.push(b);
+                bookMap.delete(String(id));
+              }
+            });
+            // 새로 추가되어 저장된 순서에 없는 최신 책들은 앞에 배치
+            bookMap.forEach(b => sortedBooks.unshift(b));
+            setBooks(sortedBooks);
+          } catch (e) {
+            setBooks(bData);
+          }
+        } else {
+          setBooks(bData);
+        }
+      }
       if (nData) setNotes(nData);
       if (sData) setSessions(sData);
     } catch (e) {
@@ -325,7 +350,11 @@ export default function App() {
 
   const handleReorderBooks = (reorderedBooks) => {
     setBooks(reorderedBooks);
-    localStorage.setItem(`user_books_${user?.id || 'demo'}`, JSON.stringify(reorderedBooks));
+    const targetUserId = viewedFriend ? viewedFriend.id : user?.id || 'demo';
+    const orderKey = `user_book_order_${targetUserId}`;
+    const orderIds = reorderedBooks.map(b => String(b.id));
+    localStorage.setItem(orderKey, JSON.stringify(orderIds));
+    localStorage.setItem(`user_books_${targetUserId}`, JSON.stringify(reorderedBooks));
   };
 
   return (
