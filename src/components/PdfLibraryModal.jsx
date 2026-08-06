@@ -92,7 +92,7 @@ export default function PdfLibraryModal({ onClose }) {
   };
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 1150 }} onClick={onClose}>
+    <div className="modal-overlay" style={{ zIndex: 1150 }}>
       <div
         className="modal-card animate-scale-in"
         onClick={(e) => e.stopPropagation()}

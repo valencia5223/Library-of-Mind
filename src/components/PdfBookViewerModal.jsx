@@ -21,7 +21,9 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const [zoomScale, setZoomScale] = useState(100);
   const [isAutoPlay, setIsAutoPlay] = useState(false);
   const [autoSpeed, setAutoSpeed] = useState(2); // 1: 느림, 2: 보통, 3: 빠름
-  const [highlightTop, setHighlightTop] = useState(0);
+  const [textLines, setTextLines] = useState([]);
+  const [lineIdx, setLineIdx] = useState(0);
+  const [lineProgress, setLineProgress] = useState(0);
 
   const containerLeftRef = useRef(null);
   const containerRightRef = useRef(null);
@@ -224,6 +226,11 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             containerRight.style.display = 'none';
           }
         }
+        // 렌더링 후 SVG 텍스트 행(Line) 좌표 스캔
+        setTimeout(() => {
+          if (!alive) return;
+          scanSvgTextLines();
+        }, 150);
       } catch (err) {
         if (err.name !== 'RenderingCancelledException') console.warn('Render error:', err);
       } finally {
@@ -231,51 +238,109 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       }
     };
 
+    const scanSvgTextLines = () => {
+      const containerLeft = containerLeftRef.current;
+      const containerRight = containerRightRef.current;
+      const mainContainer = containerRef.current;
+      if (!containerLeft || !mainContainer) return;
+
+      const getLinesFromEl = (el) => {
+        if (!el) return [];
+        const svg = el.querySelector('svg');
+        if (!svg) return [];
+
+        const mainRect = mainContainer.getBoundingClientRect();
+        const textEls = Array.from(svg.querySelectorAll('text, tspan'));
+        const lineMap = new Map();
+
+        textEls.forEach((t) => {
+          const rect = t.getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) return;
+
+          const top = rect.top - mainRect.top + mainContainer.scrollTop;
+          const left = rect.left - mainRect.left + mainContainer.scrollLeft;
+          const roundedY = Math.round(top / 16) * 16; // 16px 단위 Y축 행 그룹화
+
+          if (!lineMap.has(roundedY)) {
+            lineMap.set(roundedY, {
+              top: top - 2,
+              minX: left,
+              maxX: left + rect.width,
+              height: Math.max(22, rect.height + 4)
+            });
+          } else {
+            const existing = lineMap.get(roundedY);
+            existing.minX = Math.min(existing.minX, left);
+            existing.maxX = Math.max(existing.maxX, left + rect.width);
+            existing.height = Math.max(existing.height, rect.height + 4);
+          }
+        });
+
+        return Array.from(lineMap.values()).sort((a, b) => a.top - b.top);
+      };
+
+      const leftLines = getLinesFromEl(containerLeft);
+      const rightLines = getLinesFromEl(containerRight);
+      const allLines = [...leftLines, ...rightLines].sort((a, b) => a.top - b.top);
+
+      setTextLines(allLines);
+      setLineIdx(0);
+      setLineProgress(0);
+    };
+
     renderAll();
     return () => { alive = false; };
   }, [pdfDoc, currentPage, zoomScale, isTwoPageMode, totalPages]);
 
-  // ★ E-Book 실제 자동재생 (형광펜 가이드 & 자동 페이지 넘김) 엔진 ★
+  // ★ 텍스트 기반 좌 ➔ 우 형광펜 긋기 (Sweep Highlighting) 타이머 엔진 ★
   useEffect(() => {
-    if (!isAutoPlay || !containerRef.current) return;
+    if (!isAutoPlay || textLines.length === 0 || !containerRef.current) return;
 
-    const speedMap = { 1: 1.5, 2: 3.0, 3: 5.0 };
-    const stepPx = speedMap[autoSpeed] || 3.0;
+    const speedStepMap = { 1: 6, 2: 14, 3: 25 };
+    const stepPct = speedStepMap[autoSpeed] || 14;
 
     const timer = setInterval(() => {
-      setHighlightTop((prev) => {
-        const nextTop = prev + stepPx;
-        const container = containerRef.current;
-        if (!container) return nextTop;
+      setLineProgress((prev) => {
+        const nextPct = prev + stepPct;
 
-        const maxScroll = container.scrollHeight - container.clientHeight;
+        if (nextPct >= 100) {
+          setLineIdx((curIdx) => {
+            const nextIdx = curIdx + 1;
 
-        // 형광펜이 뷰포트 중하단을 지나면 스크롤도 동기화하여 수평 이동
-        if (nextTop - container.scrollTop > container.clientHeight * 0.6) {
-          container.scrollBy({ top: stepPx, behavior: 'auto' });
+            if (nextIdx >= textLines.length) {
+              // 해당 페이지의 모든 줄 칠하기 완료 -> 다음 페이지로 자동 이동!
+              const cur = currentPageRef.current;
+              const total = totalPagesRef.current;
+              const step = isTwoPageModeRef.current ? 2 : 1;
+
+              if (cur + step <= total) {
+                changePage(cur + step);
+                if (containerRef.current) containerRef.current.scrollTop = 0;
+              } else {
+                setIsAutoPlay(false);
+              }
+              return 0;
+            }
+
+            // 다음 줄로 이동 시 뷰포트 수직 스크롤 자동 동기화
+            const nextLine = textLines[nextIdx];
+            if (nextLine && containerRef.current) {
+              const container = containerRef.current;
+              const targetY = nextLine.top - container.clientHeight * 0.4;
+              if (targetY > container.scrollTop) {
+                container.scrollTo({ top: targetY, behavior: 'smooth' });
+              }
+            }
+            return nextIdx;
+          });
+          return 0;
         }
-
-        // 끝 바닥에 닿으면 다음 페이지 자동 전환 및 리셋
-        if (container.scrollTop >= maxScroll - 15 && nextTop >= container.scrollHeight - 60) {
-          const cur = currentPageRef.current;
-          const total = totalPagesRef.current;
-          const step = isTwoPageModeRef.current ? 2 : 1;
-
-          if (cur + step <= total) {
-            changePage(cur + step);
-            container.scrollTop = 0;
-            return 0;
-          } else {
-            setIsAutoPlay(false);
-            return 0;
-          }
-        }
-        return nextTop;
+        return nextPct;
       });
     }, 60);
 
     return () => clearInterval(timer);
-  }, [isAutoPlay, autoSpeed, changePage]);
+  }, [isAutoPlay, textLines, autoSpeed, changePage]);
 
   const toggleTwoPageMode = () => {
     const next = !isTwoPageMode;
@@ -425,21 +490,21 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             flex: 1, height: '100%', backgroundColor: '#020617', display: 'flex', flexDirection: 'column',
             overflow: 'auto', padding: '1rem', position: 'relative', cursor: 'grab', userSelect: 'none'
           }}>
-            {/* 자동재생 형광펜 가이드 바 오버레이 */}
-            {isAutoPlay && (
+            {/* 텍스트 파싱 기반 좌 ➔ 우 실시간 형광펜 긋기 오버레이 */}
+            {isAutoPlay && textLines[lineIdx] && (
               <div style={{
                 position: 'absolute',
-                top: `${highlightTop}px`,
-                left: 0,
-                right: 0,
-                height: '36px',
-                backgroundColor: 'rgba(250, 204, 21, 0.28)',
-                borderTop: '1.5px dashed rgba(234, 179, 8, 0.8)',
-                borderBottom: '1.5px dashed rgba(234, 179, 8, 0.8)',
+                top: `${textLines[lineIdx].top}px`,
+                left: `${textLines[lineIdx].minX}px`,
+                width: `${Math.max(10, (textLines[lineIdx].maxX - textLines[lineIdx].minX) * (lineProgress / 100))}px`,
+                height: `${textLines[lineIdx].height}px`,
+                backgroundColor: 'rgba(250, 204, 21, 0.42)',
+                borderBottom: '2.5px solid rgba(234, 179, 8, 0.95)',
+                borderRadius: '4px',
                 pointerEvents: 'none',
-                transition: 'top 0.05s linear',
+                transition: 'width 0.05s linear',
                 zIndex: 30,
-                boxShadow: '0 0 14px rgba(250, 204, 21, 0.45)'
+                boxShadow: '0 0 14px rgba(250, 204, 21, 0.6)'
               }} />
             )}
             {loadingPdf ? (
