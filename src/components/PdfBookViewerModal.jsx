@@ -150,7 +150,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         }
       }
       if (window.pdfjsLib) window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
-      
+
       try {
         const doc = await window.pdfjsLib.getDocument({
           url: pdfData.url,
@@ -177,10 +177,14 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   }, [pdfData.url, progressKey]);
 
   /**
-   * ★ 완벽한 비율의 Canvas 회귀 렌더링 ★
-   * - Iframe은 본질적으로 페이지 전환 시 번쩍임(Reload Flash)과 확대 시 깨짐 발생.
-   * - Canvas로 회귀하되, 브라우저가 안티앨리어싱 필터를 왜곡하는 4x 스케일링을 폐기!
-   * - 1:1 완벽 정매칭 DPR 혹은 최소 2배수로만 그리기 (글씨 뭉개짐(Smudge) 완전 차단)
+   * ★ pdf.js 공식 HiDPI 패턴 기반 Canvas 렌더링 ★
+   * - viewport는 "CSS 표시 크기" 기준으로 딱 한 번만 계산한다.
+   * - 실제 캔버스 픽셀 수는 CSS 크기 * devicePixelRatio(정수/실수 상관없이 곱셈 한 번)로만 결정한다.
+   * - viewport를 두 번 따로 계산해서 각각 Math.floor()로 반올림하면
+   *   두 값 사이에 미세한 배율 오차가 생기고, 그 오차가 브라우저의 축소 리샘플링과 겹치며
+   *   텍스트 획이 이중으로 겹쳐 보이는(고스팅) 원인이 된다. → transform으로 캔버스 내부에서 스케일업.
+   * - 인위적으로 dpr을 2.5배 등으로 부풀리지 않는다. 실제 devicePixelRatio만 사용해야
+   *   정수 배율이 보장되어 오차가 없다.
    */
   useEffect(() => {
     if (!pdfDoc || !containerRef.current) return;
@@ -197,30 +201,29 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       const pageGap = 12;
       const raw = page.getViewport({ scale: 1.0 });
       const targetW = isTwoPageMode ? (maxW - pageGap) / 2 : maxW;
-      
+
       const userZoomMultiplier = zoomScale / 100;
 
       // 화면에 표시될 CSS 비례 배율 (CSS Pixel Scale)
       const scaleX = targetW / raw.width;
       const scaleY = maxH / raw.height;
-      
-      const fitScale = (fitMode === 'page' || isTwoPageMode) 
+
+      const fitScale = (fitMode === 'page' || isTwoPageMode)
         ? Math.min(scaleX, scaleY) * userZoomMultiplier
         : scaleX * userZoomMultiplier;
 
-      // 1. 화면 표시용 Viewport (CSS 크기)
+      // viewport는 "CSS 표시 크기" 기준으로 단 한 번만 계산한다 (이중 계산 금지)
       const viewport = page.getViewport({ scale: fitScale });
 
-      // 2. ★ YES24급 오버샘플링(Supersampling): 최소 2.5배 고해상도 Canvas 단일 파이프라인 ★
-      // 저해상도 모니터에서도 텍스트 엣지가 부드럽고 쨍하게 나타남
-      const dpr = Math.max(2.5, window.devicePixelRatio || 1.0);
-      const renderViewport = page.getViewport({ scale: fitScale * dpr });
+      // 실제 기기 배율만 사용 (인위적으로 2.5 등으로 부풀리면 반올림 오차로 고스팅 발생)
+      const outputScale = window.devicePixelRatio || 1;
 
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { alpha: false });
 
-      canvas.width = Math.floor(renderViewport.width);
-      canvas.height = Math.floor(renderViewport.height);
+      // 캔버스 실제 픽셀 수 = CSS 크기 * outputScale
+      canvas.width = Math.floor(viewport.width * outputScale);
+      canvas.height = Math.floor(viewport.height * outputScale);
       canvas.style.width = `${Math.floor(viewport.width)}px`;
       canvas.style.height = `${Math.floor(viewport.height)}px`;
       canvas.style.display = 'block';
@@ -228,8 +231,16 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
+      // 축소 리샘플링 없이 transform으로 캔버스 내부에서 직접 확대해서 그린다
+      const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
 
+      await page.render({
+        canvasContext: ctx,
+        transform,
+        viewport
+      }).promise;
+
+      if (!alive) return;
       containerEl.innerHTML = '';
       containerEl.appendChild(canvas);
     };
@@ -254,10 +265,10 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             containerRight.style.display = 'none';
           }
         }
-        // 렌더링 후 SVG 텍스트 행(Line) 좌표 스캔
+        // 렌더링 후 텍스트 행(Line) 좌표 스캔 (자동읽기 하이라이트용)
         setTimeout(() => {
           if (!alive) return;
-          scanSvgTextLines();
+          scanTextLines();
         }, 150);
       } catch (err) {
         if (err.name !== 'RenderingCancelledException') console.warn('Render error:', err);
@@ -266,56 +277,85 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       }
     };
 
-    const scanSvgTextLines = () => {
+    /**
+     * 자동읽기 하이라이트를 위한 텍스트 라인 좌표 스캔.
+     * getTextContent()의 아이템 좌표를 그대로 쓰지 않고, 실제 렌더된 캔버스 크기 대비
+     * 스케일을 계산해서 컨테이너 기준 좌표로 변환한다. (canvas 렌더링에는 DOM text 레이어가 없으므로
+     * page.getTextContent()를 이용해 좌표를 직접 계산해야 한다)
+     */
+    const scanTextLines = async () => {
       const containerLeft = containerLeftRef.current;
       const containerRight = containerRightRef.current;
       const mainContainer = containerRef.current;
       if (!containerLeft || !mainContainer) return;
 
-      const getLinesFromEl = (el) => {
-        if (!el) return [];
-        const svg = el.querySelector('svg');
-        if (!svg) return [];
+      const getLinesFromPage = async (page, containerEl) => {
+        if (!page || !containerEl) return [];
+        const canvas = containerEl.querySelector('canvas');
+        if (!canvas) return [];
 
         const mainRect = mainContainer.getBoundingClientRect();
-        const textEls = Array.from(svg.querySelectorAll('text, tspan'));
+        const canvasRect = canvas.getBoundingClientRect();
+        const offsetTop = canvasRect.top - mainRect.top + mainContainer.scrollTop;
+        const offsetLeft = canvasRect.left - mainRect.left + mainContainer.scrollLeft;
+
+        const raw = page.getViewport({ scale: 1.0 });
+        // CSS 표시 크기 기준 스케일 (canvas.style.width 기준)
+        const cssScale = canvasRect.width / raw.width;
+        const textViewport = page.getViewport({ scale: cssScale });
+
+        const textContent = await page.getTextContent();
         const lineMap = new Map();
 
-        textEls.forEach((t) => {
-          const rect = t.getBoundingClientRect();
-          if (rect.width === 0 || rect.height === 0) return;
+        textContent.items.forEach((item) => {
+          if (!item.str || !item.str.trim()) return;
+          const tx = window.pdfjsLib.Util.transform(textViewport.transform, item.transform);
+          const x = tx[4];
+          const y = tx[5];
+          const fontHeight = Math.hypot(tx[2], tx[3]) || 12;
+          const width = item.width * cssScale;
 
-          const top = rect.top - mainRect.top + mainContainer.scrollTop;
-          const left = rect.left - mainRect.left + mainContainer.scrollLeft;
-          const roundedY = Math.round(top / 16) * 16; // 16px 단위 Y축 행 그룹화
+          const top = offsetTop + (y - fontHeight);
+          const left = offsetLeft + x;
+          const roundedY = Math.round(top / 16) * 16;
 
           if (!lineMap.has(roundedY)) {
             lineMap.set(roundedY, {
               top: top - 2,
               minX: left,
-              maxX: left + rect.width,
-              height: Math.max(22, rect.height + 4)
+              maxX: left + width,
+              height: Math.max(22, fontHeight + 4)
             });
           } else {
             const existing = lineMap.get(roundedY);
             existing.minX = Math.min(existing.minX, left);
-            existing.maxX = Math.max(existing.maxX, left + rect.width);
-            existing.height = Math.max(existing.height, rect.height + 4);
+            existing.maxX = Math.max(existing.maxX, left + width);
+            existing.height = Math.max(existing.height, fontHeight + 4);
           }
         });
 
         return Array.from(lineMap.values()).sort((a, b) => a.top - b.top);
       };
 
-      const leftLines = getLinesFromEl(containerLeft);
-      const rightLines = getLinesFromEl(containerRight);
-      // 양면 보기일 경우 반드시 왼쪽 페이지 완독 후 오른쪽 페이지 순서로 읽기 수행
-      const allLines = isTwoPageMode ? [...leftLines, ...rightLines] : leftLines;
+      try {
+        const p1 = await pdfDoc.getPage(currentPage);
+        const leftLines = await getLinesFromPage(p1, containerLeft);
 
-      setLeftLinesCount(leftLines.length);
-      setTextLines(allLines);
-      setLineIdx(0);
-      setLineProgress(0);
+        let rightLines = [];
+        if (isTwoPageMode && currentPage + 1 <= totalPages) {
+          const p2 = await pdfDoc.getPage(currentPage + 1);
+          rightLines = await getLinesFromPage(p2, containerRight);
+        }
+
+        const allLines = isTwoPageMode ? [...leftLines, ...rightLines] : leftLines;
+
+        setLeftLinesCount(leftLines.length);
+        setTextLines(allLines);
+        setLineIdx(0);
+        setLineProgress(0);
+      } catch (e) {
+        console.warn('Text line scan failed:', e);
+      }
     };
 
     renderAll();
@@ -535,7 +575,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         {/* 본문 뷰포트 (완벽 제어 Canvas 엔진) */}
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
           {/* 중앙 Canvas (스크롤 가능 래퍼) */}
-          <div ref={containerRef} 
+          <div ref={containerRef}
             onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUpOrLeave} onMouseLeave={onMouseUpOrLeave}
             style={{
             flex: 1, height: '100%', backgroundColor: '#020617', display: 'flex', flexDirection: 'column',
