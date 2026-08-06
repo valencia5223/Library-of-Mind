@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, BookOpen, ChevronLeft, ChevronRight, FileText, CheckCircle2, Columns, Square, ZoomIn, ZoomOut, RotateCcw, Play, Pause } from 'lucide-react';
+import { X, BookOpen, ChevronLeft, ChevronRight, FileText, CheckCircle2, Columns, Square, ZoomIn, ZoomOut, RotateCcw, Play, Pause, Maximize2, Minimize2 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
@@ -20,6 +20,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const [pdfError, setPdfError] = useState(null);
   const [pageRendering, setPageRendering] = useState(false);
   const [zoomScale, setZoomScale] = useState(100);
+  const [fitMode, setFitMode] = useState('page'); // 'page': 한 화면 맞춤 (스크롤 0%), 'width': 가로 폭 맞춤
   const [isAutoPlay, setIsAutoPlay] = useState(false);
   const [autoSpeed, setAutoSpeed] = useState(2); // 1: 느림, 2: 보통, 3: 빠름
   const [textLines, setTextLines] = useState([]);
@@ -192,6 +193,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       if (!container) return;
 
       const maxW = container.clientWidth - (isTwoPageMode ? 60 : 40);
+      const maxH = container.clientHeight - 40;
       const pageGap = 10;
       const raw = page.getViewport({ scale: 1.0 });
       const targetW = isTwoPageMode ? (maxW - pageGap) / 2 : maxW;
@@ -199,7 +201,17 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       // 양면 보기 시 글자가 가로 좁아짐으로 인해 흐려 보이는 것을 보정하는 1.15배 선명도 부스트
       const twoPageBoost = isTwoPageMode ? 1.15 : 1.0;
       const userZoomMultiplier = zoomScale / 100;
-      const fitScale = (targetW / raw.width) * userZoomMultiplier * twoPageBoost;
+
+      let fitScale;
+      if (fitMode === 'page') {
+        // 한 화면에 딱 맞춤 (스크롤바 0%)
+        const scaleX = targetW / raw.width;
+        const scaleY = maxH / raw.height;
+        fitScale = Math.min(scaleX, scaleY) * userZoomMultiplier * twoPageBoost;
+      } else {
+        // 가로 폭 맞춤
+        fitScale = (targetW / raw.width) * userZoomMultiplier * twoPageBoost;
+      }
 
       const viewport = page.getViewport({ scale: fitScale });
 
@@ -324,7 +336,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
     renderAll();
     return () => { alive = false; };
-  }, [pdfDoc, currentPage, zoomScale, isTwoPageMode, totalPages]);
+  }, [pdfDoc, currentPage, zoomScale, isTwoPageMode, fitMode, totalPages]);
 
   // ★ 텍스트 기반 좌 ➔ 우 형광펜 긋기 (Sweep Highlighting) 타이머 엔진 ★
   useEffect(() => {
@@ -458,6 +470,16 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
           </div>
 
           <div className="flex align-center gap-2" style={{ flexShrink: 0 }}>
+            <button onClick={() => setFitMode(fitMode === 'page' ? 'width' : 'page')} title={fitMode === 'page' ? "가로 폭에 맞추기" : "한 화면에 딱 맞추기 (스크롤 없음)"}
+              style={{
+                backgroundColor: fitMode === 'page' ? '#0284c7' : '#334155', color: '#fff',
+                border: '1px solid #475569', padding: '0.3rem 0.5rem', borderRadius: '5px',
+                display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer'
+              }}>
+              {fitMode === 'page' ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+              <span>{fitMode === 'page' ? '한 화면 맞춤' : '폭 맞춤'}</span>
+            </button>
+
             <button onClick={toggleTwoPageMode} title="단면/양면 전환"
               style={{
                 backgroundColor: isTwoPageMode ? '#0284c7' : '#334155', color: '#fff',
