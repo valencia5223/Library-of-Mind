@@ -18,8 +18,8 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const [pageRendering, setPageRendering] = useState(false);
   const [zoomScale, setZoomScale] = useState(100);
 
-  const canvasLeftRef = useRef(null);
-  const canvasRightRef = useRef(null);
+  const containerLeftRef = useRef(null);
+  const containerRightRef = useRef(null);
   const containerRef = useRef(null);
   const modalCardRef = useRef(null);
 
@@ -151,49 +151,32 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     if (!pdfDoc || !containerRef.current) return;
     let alive = true;
 
-    const renderPage = async (page, canvas) => {
-      if (!canvas) return;
+    const renderPage = async (page, containerEl) => {
+      if (!containerEl) return;
 
       const container = containerRef.current;
       if (!container) return;
 
       const maxW = container.clientWidth - (isTwoPageMode ? 60 : 40);
-    const pageGap = 10; // 양면 보기 시 페이지 사이 간격
-      const maxH = container.clientHeight - 40;
-
+      const pageGap = 10;
       const raw = page.getViewport({ scale: 1.0 });
       const targetW = isTwoPageMode ? (maxW - pageGap) / 2 : maxW;
       
-      // ZoomScale이 바뀔 때마다 벡터 엔진에서 가장 깔끔한 스케일로 완전히 새로 그려서(Zoom Re-render) 화질 깨짐 픽스!
       const userZoomMultiplier = zoomScale / 100;
       const fitScale = (targetW / raw.width) * userZoomMultiplier;
 
       const viewport = page.getViewport({ scale: fitScale });
 
-      // ★ 핵심: 과도하게 높은 배율은 CSS 다운샘플링 과정에서 글씨 번짐을 유발합니다. ★
-      // 가장 또렷한 화질을 보장하는 모니터 절대 매칭(devicePixelRatio) 기반 2배수 제한 스케일링
-      const outputScale = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
+      // PDF.js SVGGraphics를 활용한 100% 벡터 DOM 렌더링 (글씨 깨짐 0%)
+      const svgG = new window.pdfjsLib.SVGGraphics(page.commonObjs, page.objs);
+      const svg = await svgG.getSVG(page, viewport);
 
-      canvas.width = Math.floor(viewport.width * outputScale);
-      canvas.height = Math.floor(viewport.height * outputScale);
+      svg.style.width = `${Math.floor(viewport.width)}px`;
+      svg.style.height = `${Math.floor(viewport.height)}px`;
+      svg.style.display = 'block';
 
-      // 소수점 픽셀에 의한 글씨 떨림 방지
-      canvas.style.width = `${Math.floor(viewport.width)}px`;
-      canvas.style.height = `${Math.floor(viewport.height)}px`;
-
-      const ctx = canvas.getContext('2d', { alpha: false });
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
-      // 뭉개짐 방지를 위한 안티 스무딩 설정
-      // ctx.imageSmoothingEnabled = false; // 이미지 스무딩 비활성화 제거 (필요 시 기본값 사용)
-
-      const transform = [outputScale, 0, 0, outputScale, 0, 0];
-      await page.render({
-        canvasContext: ctx,
-        viewport: viewport,
-        transform: transform
-      }).promise;
+      containerEl.innerHTML = '';
+      containerEl.appendChild(svg);
     };
 
     const renderAll = async () => {
@@ -202,19 +185,18 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
         const p1 = await pdfDoc.getPage(currentPage);
         if (!alive) return;
-        await renderPage(p1, canvasLeftRef.current);
+        await renderPage(p1, containerLeftRef.current);
 
-        const canvasRight = canvasRightRef.current;
-        if (canvasRight) {
+        const containerRight = containerRightRef.current;
+        if (containerRight) {
           if (isTwoPageMode && currentPage + 1 <= totalPages) {
             const p2 = await pdfDoc.getPage(currentPage + 1);
             if (!alive) return;
-            await renderPage(p2, canvasRight);
+            await renderPage(p2, containerRight);
+            containerRight.style.display = 'block';
           } else {
-            canvasRight.width = 0;
-            canvasRight.height = 0;
-            canvasRight.style.width = '0px';
-            canvasRight.style.height = '0px';
+            containerRight.innerHTML = '';
+            containerRight.style.display = 'none';
           }
         }
       } catch (err) {
@@ -368,9 +350,9 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               <div style={{
                 margin: 'auto', /* 플렉스 오버플로우 시 위쪽 짤림 방지 (Safe Centering) */
                 backgroundColor: '#ffffff', borderRadius: '6px', position: 'relative', overflow: 'visible',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                boxShadow: '0 20px 40px rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, width: 'max-content'
               }}>
-                <canvas ref={canvasLeftRef} style={{ display: 'block', backgroundColor: '#fff', opacity: pageRendering ? 0.7 : 1 }} />
+                <div ref={containerLeftRef} style={{ display: 'block', flexShrink: 0, backgroundColor: '#fff', opacity: pageRendering ? 0.7 : 1 }} />
 
                 {isTwoPageMode && (
                   <div style={{
@@ -379,7 +361,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                   }} />
                 )}
 
-                <canvas ref={canvasRightRef} style={{ display: isTwoPageMode ? 'block' : 'none', backgroundColor: '#fff', opacity: pageRendering ? 0.7 : 1 }} />
+                <div ref={containerRightRef} style={{ display: isTwoPageMode ? 'block' : 'none', flexShrink: 0, backgroundColor: '#fff', opacity: pageRendering ? 0.7 : 1 }} />
               </div>
             )}
           </div>
