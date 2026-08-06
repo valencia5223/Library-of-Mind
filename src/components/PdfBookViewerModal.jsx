@@ -16,7 +16,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const [notes, setNotes] = useState('');
   const [loadingPdf, setLoadingPdf] = useState(true);
   const [pageRendering, setPageRendering] = useState(false);
-  const [zoomScale, setZoomScale] = useState(100);
+  const [zoomScale, setZoomScale] = useState(145);
 
   const canvasLeftRef = useRef(null);
   const canvasRightRef = useRef(null);
@@ -217,10 +217,10 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         className="modal-card pdf-viewer-card"
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: '99vw', maxWidth: showNotes ? '1800px' : '1600px', height: '98vh',
+          width: '94vw', maxWidth: showNotes ? '1500px' : '1380px', height: '99vh',
           display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden',
           backgroundColor: '#0f172a', color: '#f8fafc',
-          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', borderRadius: '16px',
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', borderRadius: '12px',
           transition: 'all 0.3s ease', outline: 'none'
         }}
       >
