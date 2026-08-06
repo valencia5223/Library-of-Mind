@@ -158,20 +158,21 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       if (!container) return;
 
       const maxW = container.clientWidth - (isTwoPageMode ? 60 : 40);
+    const pageGap = 10; // 양면 보기 시 페이지 사이 간격
       const maxH = container.clientHeight - 40;
 
       const raw = page.getViewport({ scale: 1.0 });
-      const targetW = isTwoPageMode ? maxW / 2 : maxW;
+      const targetW = isTwoPageMode ? (maxW - pageGap) / 2 : maxW;
       
       // ZoomScale이 바뀔 때마다 벡터 엔진에서 가장 깔끔한 스케일로 완전히 새로 그려서(Zoom Re-render) 화질 깨짐 픽스!
       const userZoomMultiplier = zoomScale / 100;
-      const fitScale = Math.min(targetW / raw.width, maxH / raw.height) * userZoomMultiplier;
+      const fitScale = (targetW / raw.width) * userZoomMultiplier;
 
       const viewport = page.getViewport({ scale: fitScale });
 
       // ★ 핵심: 과도하게 높은 배율은 CSS 다운샘플링 과정에서 글씨 번짐을 유발합니다. ★
       // 가장 또렷한 화질을 보장하는 모니터 절대 매칭(devicePixelRatio) 기반 2배수 제한 스케일링
-      const outputScale = Math.max(window.devicePixelRatio || 1, 3);
+      const outputScale = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
 
       canvas.width = Math.floor(viewport.width * outputScale);
       canvas.height = Math.floor(viewport.height * outputScale);
@@ -185,7 +186,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       // 뭉개짐 방지를 위한 안티 스무딩 설정
-      ctx.imageSmoothingEnabled = false;
+      // ctx.imageSmoothingEnabled = false; // 이미지 스무딩 비활성화 제거 (필요 시 기본값 사용)
 
       const transform = [outputScale, 0, 0, outputScale, 0, 0];
       await page.render({
