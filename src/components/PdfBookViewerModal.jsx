@@ -439,7 +439,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         className="modal-card pdf-viewer-card"
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: '96vw', maxWidth: showNotes ? '1650px' : '1550px', height: '82vh',
+          width: '98vw', maxWidth: showNotes ? '1750px' : '1650px', height: '76vh',
           display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden',
           backgroundColor: '#0f172a', color: '#f8fafc',
           boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)', borderRadius: '12px',
