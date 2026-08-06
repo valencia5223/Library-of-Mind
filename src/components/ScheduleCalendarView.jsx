@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 // 클라이언트 단 엔드투엔드(E2E) 암호화 / 복호화 헬퍼 (DB 관리자도 읽을 수 없도록 보안 보장)
@@ -277,13 +277,25 @@ export default function ScheduleCalendarView({ userId = null }) {
 
     if (isSupabaseConfigured() && userId) {
       try {
-        // Supabase DB 저장 시에는 암호화 처리 (공유 일정 시 E2E 공용키 활용)
+        // 1) 내 계정 레코드 DB 업서트 (E2E 암호화)
         const dbSchedulePayload = {
           ...newSchedule,
           title: encryptText(newSchedule.title, userId, isShared),
           memo: encryptText(newSchedule.memo, userId, isShared)
         };
         await supabase.from('user_schedules').upsert(dbSchedulePayload);
+
+        // 2) 친구와 공유 시, 상대방 계정 기준 레코드도 듀얼 업서트하여 RLS 제약에 상관없이 상대 캘린더에 100% 즉시 표시 보장
+        if (isShared && sharedFriendId) {
+          const friendSchedulePayload = {
+            ...dbSchedulePayload,
+            id: `sh_${newSchedule.id}`,
+            user_id: sharedFriendId,
+            shared_friend_id: userId,
+            is_shared: true
+          };
+          await supabase.from('user_schedules').upsert(friendSchedulePayload);
+        }
       } catch (err) {
         console.warn('Supabase 일정 저장 실패 (로컬 유지됨):', err.message);
       }
@@ -304,7 +316,8 @@ export default function ScheduleCalendarView({ userId = null }) {
     if (isSupabaseConfigured() && userId) {
       const target = updated.find(s => s.id === scheduleId);
       if (target) {
-        await supabase.from('user_schedules').update({ is_completed: target.is_completed }).eq('id', scheduleId);
+        const altId = scheduleId.startsWith('sh_') ? scheduleId.replace('sh_', '') : `sh_${scheduleId}`;
+        await supabase.from('user_schedules').update({ is_completed: target.is_completed }).in('id', [scheduleId, altId]);
       }
     }
   };
@@ -318,7 +331,8 @@ export default function ScheduleCalendarView({ userId = null }) {
     saveSchedulesToLocal(updated);
 
     if (isSupabaseConfigured() && userId) {
-      await supabase.from('user_schedules').delete().eq('id', scheduleId);
+      const altId = scheduleId.startsWith('sh_') ? scheduleId.replace('sh_', '') : `sh_${scheduleId}`;
+      await supabase.from('user_schedules').delete().in('id', [scheduleId, altId]);
     }
   };
 
@@ -441,7 +455,7 @@ export default function ScheduleCalendarView({ userId = null }) {
                         e.stopPropagation();
                         handleOpenAddModal(dateObj, sch);
                       }}
-                      title={`${sch.time ? '[' + sch.time + '] ' : ''}${isSharedItem ? '🤝 [공유] ' : ''}${sch.title}${sch.memo ? ' - ' + sch.memo : ''}`}
+                      title={`${sch.time ? '[' + sch.time + '] ' : ''}${isSharedItem ? '[공유] ' : ''}${sch.title}${sch.memo ? ' - ' + sch.memo : ''}`}
                     >
                       <button
                         className="check-toggle-btn"
@@ -455,7 +469,7 @@ export default function ScheduleCalendarView({ userId = null }) {
                       </button>
                       <span className="schedule-time">{sch.time}</span>
                       <span className="schedule-title">
-                        {isSharedItem && <span style={{ fontWeight: 800, marginRight: '3px' }}>🤝</span>}
+                        {isSharedItem && <Users size={12} style={{ color: '#0284c7', marginRight: '4px', verticalAlign: 'middle', display: 'inline' }} title="공유 일정" />}
                         {sch.title}
                       </span>
                       <button
@@ -542,7 +556,7 @@ export default function ScheduleCalendarView({ userId = null }) {
 
               <div>
                 <label className="form-label font-bold text-xs flex align-center gap-1">
-                  🤝 등록된 친구와 일정 공유 (선택)
+                  <Users size={14} className="text-sky-600" /> 등록된 친구와 일정 공유 (선택)
                 </label>
                 <select
                   className="input-field mt-1 font-bold"
@@ -557,7 +571,7 @@ export default function ScheduleCalendarView({ userId = null }) {
                   <option value="">🔒 공유 안함 (나만의 개인 일정)</option>
                   {friendsList.map(f => (
                     <option key={f.id} value={f.id}>
-                      🤝 {f.name || f.email.split('@')[0]} 님과 공유 ({f.email})
+                      👥 {f.name || f.email.split('@')[0]} 님과 공유 ({f.email})
                     </option>
                   ))}
                 </select>
