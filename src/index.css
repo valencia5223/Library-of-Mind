@@ -281,21 +281,23 @@ img {
   padding: 1.5rem 2rem;
 }
 
-/* 네비게이션 헤더 (1줄 레이아웃 유지) */
+/* 네비게이션 헤더 (1줄 레이아웃 유지 및 창 축소 시 가로 스크롤 보장) */
 .navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: nowrap;
   gap: 1rem;
-  padding: 1rem 1.6rem;
-  background: rgba(255, 255, 255, 0.92);
+  padding: 0.8rem 1.4rem;
+  background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: var(--radius-lg);
   margin-bottom: 1.5rem;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .brand-logo {
@@ -313,25 +315,43 @@ img {
   flex-shrink: 0;
 }
 
+/* 창 크기가 줄어들었을 때 탭 영역 수평 스크롤 지원 */
+.navbar-tabs-container,
 .nav-links {
   display: flex;
   align-items: center;
-  flex-wrap: nowrap;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
   white-space: nowrap;
-  gap: 0.3rem;
-  flex-shrink: 0;
+  padding: 0.3rem 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(2, 132, 199, 0.3) transparent;
 }
 
+.navbar-tabs-container::-webkit-scrollbar,
+.nav-links::-webkit-scrollbar {
+  height: 4px;
+}
+
+.navbar-tabs-container::-webkit-scrollbar-thumb,
+.nav-links::-webkit-scrollbar-thumb {
+  background: rgba(2, 132, 199, 0.3);
+  border-radius: 4px;
+}
+
+.nav-tab-capsule,
 .nav-item {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.55rem 1rem;
+  gap: 0.45rem;
+  padding: 0.5rem 0.9rem;
   border-radius: 30px;
-  border: none;
-  background: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.03);
   color: var(--text-sub);
-  font-size: 0.88rem;
+  font-size: 0.86rem;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -339,15 +359,18 @@ img {
   transition: all 0.2s ease;
 }
 
+.nav-tab-capsule:hover,
 .nav-item:hover {
   color: var(--text-main);
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.08);
 }
 
+.nav-tab-capsule.active,
 .nav-item.active {
   color: #fff;
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
   box-shadow: 0 4px 14px rgba(0, 120, 166, 0.3);
+  border-color: transparent;
 }
 
 /* 강제 로그인 게이트 화면 */

@@ -265,6 +265,63 @@ export default function ScheduleCalendarView({ userId = null }) {
     days.push(new Date(year, month, d));
   }
 
+// 대한민국 법정 공휴일 & 주요 음력 명절 / 대체공휴일 맵 (2025 ~ 2030년)
+const KOREAN_HOLIDAYS_MAP = {
+  // 양력 고정 공휴일
+  '01-01': '신정',
+  '03-01': '삼일절',
+  '05-05': '어린이날',
+  '06-06': '현충일',
+  '08-15': '광복절',
+  '10-03': '개천절',
+  '10-09': '한글날',
+  '12-25': '성탄절',
+
+  // 2025년 음력 명절 & 대체공휴일
+  '2025-01-28': '설날 연휴', '2025-01-29': '설날', '2025-01-30': '설날 연휴',
+  '2025-03-03': '대체공휴일',
+  '2025-05-06': '대체공휴일',
+  '2025-10-05': '추석 연휴', '2025-10-06': '추석', '2025-10-07': '추석 연휴',
+  '2025-10-08': '대체공휴일',
+
+  // 2026년 음력 명절 & 대체공휴일
+  '2026-02-16': '설날 연휴', '2026-02-17': '설날', '2026-02-18': '설날 연휴',
+  '2026-03-02': '대체공휴일',
+  '2026-05-24': '부처님오신날', '2026-05-25': '대체공휴일',
+  '2026-09-24': '추석 연휴', '2026-09-25': '추석', '2026-09-26': '추석 연휴',
+  '2026-09-28': '대체공휴일',
+  '2026-10-05': '대체공휴일',
+
+  // 2027년 음력 명절 & 대체공휴일
+  '2027-02-06': '설날 연휴', '2027-02-07': '설날', '2027-02-08': '설날 연휴', '2027-02-09': '대체공휴일',
+  '2027-05-13': '부처님오신날',
+  '2027-09-14': '추석 연휴', '2027-09-15': '추석', '2027-09-16': '추석 연휴',
+  '2027-10-04': '대체공휴일', '2027-10-11': '대체공휴일',
+
+  // 2028년 음력 명절 & 대체공휴일
+  '2028-01-26': '설날 연휴', '2028-01-27': '설날', '2028-01-28': '설날 연휴',
+  '2028-05-02': '부처님오신날',
+  '2028-10-02': '추석 연휴', '2028-10-03': '추석/개천절', '2028-10-04': '추석 연휴', '2028-10-05': '대체공휴일'
+};
+
+const getKoreanHoliday = (dateObj) => {
+  if (!dateObj) return null;
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const d = String(dateObj.getDate()).padStart(2, '0');
+
+  const fullKey = `${y}-${m}-${d}`;
+  const monthDayKey = `${m}-${d}`;
+
+  if (KOREAN_HOLIDAYS_MAP[fullKey]) {
+    return KOREAN_HOLIDAYS_MAP[fullKey];
+  }
+  if (KOREAN_HOLIDAYS_MAP[monthDayKey]) {
+    return KOREAN_HOLIDAYS_MAP[monthDayKey];
+  }
+  return null;
+};
+
   // 날짜 스트링 헬퍼 (YYYY-MM-DD)
   const formatDateString = (dateObj) => {
     if (!dateObj) return '';
@@ -470,6 +527,8 @@ export default function ScheduleCalendarView({ userId = null }) {
           const isToday = dateStr === todayStr;
           const dayNum = dateObj.getDate();
           const dayOfWeek = dateObj.getDay();
+          const holidayName = getKoreanHoliday(dateObj);
+          const isHoliday = Boolean(holidayName) || dayOfWeek === 0;
 
           // 해당 날짜의 일정 목록
           const daySchedules = schedules.filter(s => s.date === dateStr);
@@ -477,11 +536,30 @@ export default function ScheduleCalendarView({ userId = null }) {
           return (
             <div
               key={dateStr}
-              className={`calendar-day-cell ${isToday ? 'is-today' : ''} ${dayOfWeek === 0 ? 'is-sun' : ''} ${dayOfWeek === 6 ? 'is-sat' : ''}`}
+              className={`calendar-day-cell ${isToday ? 'is-today' : ''} ${isHoliday ? 'is-sun' : ''} ${dayOfWeek === 6 ? 'is-sat' : ''}`}
               onClick={() => handleOpenAddModal(dateObj)}
+              style={holidayName ? { backgroundColor: 'rgba(254, 242, 242, 0.6)' } : {}}
             >
-              <div className="day-cell-top">
-                <span className={`day-number ${isToday ? 'today-pill' : ''}`}>{dayNum}</span>
+              <div className="day-cell-top flex justify-between align-center">
+                <div className="flex align-center gap-1">
+                  <span className={`day-number ${isToday ? 'today-pill' : ''}`} style={holidayName ? { color: '#dc2626', fontWeight: 800 } : {}}>
+                    {dayNum}
+                  </span>
+                  {holidayName && (
+                    <span className="holiday-badge" style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      color: '#dc2626',
+                      backgroundColor: '#fee2e2',
+                      border: '1px solid #fca5a5',
+                      padding: '0.1rem 0.35rem',
+                      borderRadius: '6px',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      🚩 {holidayName}
+                    </span>
+                  )}
+                </div>
                 <button
                   className="add-schedule-mini-btn"
                   onClick={(e) => {
