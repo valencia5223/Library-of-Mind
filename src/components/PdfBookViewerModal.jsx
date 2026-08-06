@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, BookOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, FileText, CheckCircle2, RotateCcw, Columns, Square, FileCode } from 'lucide-react';
+import { X, BookOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, FileText, CheckCircle2, RotateCcw, Columns, Square } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
@@ -13,7 +13,6 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const [totalPages, setTotalPages] = useState(pdfData.totalPages || 1);
   const [zoomScale, setZoomScale] = useState(100); // 100% = Fit to Page
   const [isTwoPageMode, setIsTwoPageMode] = useState(false); // 양면 보기 (2-Page Spread)
-  const [renderEngine, setRenderEngine] = useState('native'); // 'native' (100% 원본 벡터) | 'canvas' (E-Book 모드)
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState('');
   const [loadingPdf, setLoadingPdf] = useState(true);
@@ -28,7 +27,6 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const progressKey = `book_pdf_progress_${book.id || book.isbn || 'demo'}`;
   const notesKey = `book_pdf_notes_${book.id || book.isbn || 'demo'}`;
   const modeKey = `book_pdf_twopage_${book.id || book.isbn || 'demo'}`;
-  const engineKey = `book_pdf_engine_${book.id || book.isbn || 'demo'}`;
 
   const currentPageRef = useRef(currentPage);
   const totalPagesRef = useRef(totalPages);
@@ -71,9 +69,6 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     try {
       const savedMode = localStorage.getItem(modeKey);
       if (savedMode !== null) setIsTwoPageMode(savedMode === 'true');
-
-      const savedEngine = localStorage.getItem(engineKey);
-      if (savedEngine) setRenderEngine(savedEngine);
     } catch (e) {}
 
     const handleKeyDown = (e) => {
@@ -103,7 +98,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     return () => {
       window.removeEventListener('keydown', handleKeyDown, true);
     };
-  }, [changePage, onClose, modeKey, engineKey]);
+  }, [changePage, onClose, modeKey]);
 
   // 2. PDF.js CDN 동적 로드 및 문서 로드
   useEffect(() => {
@@ -163,9 +158,9 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     };
   }, [pdfData.url, progressKey, notesKey]);
 
-  // 3. Canvas 렌더링 (부드러운 고해상도 안티앨리어싱 레티나 렌더링)
+  // 3. Canvas 렌더링 엔진 (Alpha: False 순백색 불투명 캔버스 + 3.5x Ultra Retina outputScale)
   useEffect(() => {
-    if (!pdfDoc || !containerRef.current || renderEngine !== 'canvas') return;
+    if (!pdfDoc || !containerRef.current) return;
 
     let isSubscribed = true;
 
@@ -178,13 +173,16 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         const maxAvailWidth = container.clientWidth - (isTwoPageMode ? 60 : 40);
         const maxAvailHeight = container.clientHeight - 40;
 
+        // 초고화질 Retina outputScale 계수 (글자 희미함/번짐 100% 원천 차단)
+        const dpr = window.devicePixelRatio || 1;
+        const ultraMultiplier = Math.max(dpr, 2.0) * 1.75; // 약 3.5x ~ 4.0x 비트맵 밀도
+
         // --- 왼쪽 페이지 렌더링 ---
         const page1 = await pdfDoc.getPage(currentPage);
         if (!isSubscribed) return;
 
         const canvasLeft = canvasLeftRef.current;
         if (canvasLeft) {
-          const ctx1 = canvasLeft.getContext('2d');
           const unscaledViewport1 = page1.getViewport({ scale: 1.0 });
 
           const targetWidth = isTwoPageMode ? maxAvailWidth / 2 : maxAvailWidth;
@@ -194,18 +192,18 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
           const baseScale = Math.min(widthScale, heightScale);
           const displayScale = baseScale * (zoomScale / 100);
 
-          // 3.0x 부드러운 고화질 픽셀 스케일링
-          const renderScale = displayScale * 3.0;
-
-          const renderViewport1 = page1.getViewport({ scale: renderScale });
+          const renderViewport1 = page1.getViewport({ scale: displayScale * ultraMultiplier });
           const displayViewport1 = page1.getViewport({ scale: displayScale });
 
           canvasLeft.width = Math.floor(renderViewport1.width);
           canvasLeft.height = Math.floor(renderViewport1.height);
           canvasLeft.style.width = `${Math.floor(displayViewport1.width)}px`;
           canvasLeft.style.height = `${Math.floor(displayViewport1.height)}px`;
-          canvasLeft.style.imageRendering = 'auto';
 
+          // { alpha: false }로 서브픽셀 폰트 안티앨리어싱 100% 선명 보장
+          const ctx1 = canvasLeft.getContext('2d', { alpha: false });
+          ctx1.fillStyle = '#ffffff';
+          ctx1.fillRect(0, 0, canvasLeft.width, canvasLeft.height);
           ctx1.imageSmoothingEnabled = true;
           ctx1.imageSmoothingQuality = 'high';
 
@@ -218,8 +216,6 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         // --- 오른쪽 페이지 렌더링 (양면 모드일 경우) ---
         const canvasRight = canvasRightRef.current;
         if (canvasRight) {
-          const ctx2 = canvasRight.getContext('2d');
-
           if (isTwoPageMode && currentPage + 1 <= totalPages) {
             const page2 = await pdfDoc.getPage(currentPage + 1);
             if (!isSubscribed) return;
@@ -232,17 +228,18 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
             const baseScale = Math.min(widthScale, heightScale);
             const displayScale = baseScale * (zoomScale / 100);
-            const renderScale = displayScale * 3.0;
 
-            const renderViewport2 = page2.getViewport({ scale: renderScale });
+            const renderViewport2 = page2.getViewport({ scale: displayScale * ultraMultiplier });
             const displayViewport2 = page2.getViewport({ scale: displayScale });
 
             canvasRight.width = Math.floor(renderViewport2.width);
             canvasRight.height = Math.floor(renderViewport2.height);
             canvasRight.style.width = `${Math.floor(displayViewport2.width)}px`;
             canvasRight.style.height = `${Math.floor(displayViewport2.height)}px`;
-            canvasRight.style.imageRendering = 'auto';
 
+            const ctx2 = canvasRight.getContext('2d', { alpha: false });
+            ctx2.fillStyle = '#ffffff';
+            ctx2.fillRect(0, 0, canvasRight.width, canvasRight.height);
             ctx2.imageSmoothingEnabled = true;
             ctx2.imageSmoothingQuality = 'high';
 
@@ -251,7 +248,11 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               viewport: renderViewport2
             }).promise;
           } else {
-            ctx2.clearRect(0, 0, canvasRight.width, canvasRight.height);
+            const ctx2 = canvasRight.getContext('2d', { alpha: false });
+            if (ctx2) {
+              ctx2.fillStyle = '#ffffff';
+              ctx2.fillRect(0, 0, canvasRight.width, canvasRight.height);
+            }
             canvasRight.style.width = '0px';
             canvasRight.style.height = '0px';
           }
@@ -270,18 +271,12 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     return () => {
       isSubscribed = false;
     };
-  }, [pdfDoc, currentPage, zoomScale, isTwoPageMode, totalPages, renderEngine]);
+  }, [pdfDoc, currentPage, zoomScale, isTwoPageMode, totalPages]);
 
   const toggleTwoPageMode = () => {
     const nextMode = !isTwoPageMode;
     setIsTwoPageMode(nextMode);
     localStorage.setItem(modeKey, nextMode.toString());
-  };
-
-  const toggleEngine = () => {
-    const nextEngine = renderEngine === 'native' ? 'canvas' : 'native';
-    setRenderEngine(nextEngine);
-    localStorage.setItem(engineKey, nextEngine);
   };
 
   const handleNotesChange = (text) => {
@@ -348,7 +343,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               <h3 className="font-bold text-sm text-white flex align-center gap-2" style={{ margin: 0 }}>
                 {book.title || 'PDF 전자책'}
                 <span className="text-xs px-2 py-0.5 rounded font-normal" style={{ backgroundColor: '#0284c7', color: '#ffffff' }}>
-                  {renderEngine === 'native' ? '📄 100% 원본 Vector' : '🖼️ Canvas E-Book'}
+                  {isTwoPageMode ? '📖📖 2Page Spread' : '📖 1Page View'}
                 </span>
               </h3>
               <div className="text-xs text-slate-400 flex align-center gap-2 mt-0.5">
@@ -391,25 +386,8 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             </button>
           </div>
 
-          {/* 우측 컨트롤 및 엔진 토글/양면보기 옵션 & 독서 메모 */}
+          {/* 우측 컨트롤 및 양면보기 옵션 & 독서 메모 */}
           <div className="flex align-center gap-2.5" style={{ flexShrink: 0 }}>
-            {/* 100% 원본 Vector vs Canvas 뷰어 전환 토글 */}
-            <button
-              className="btn btn-sm font-bold flex align-center gap-1.5"
-              onClick={toggleEngine}
-              title="100% 원본 Vector 화질과 Canvas 뷰어 간 렌더링 전환"
-              style={{
-                backgroundColor: renderEngine === 'native' ? '#0369a1' : '#334155',
-                color: '#ffffff',
-                border: '1px solid #38bdf8',
-                padding: '0.4rem 0.75rem',
-                borderRadius: '6px'
-              }}
-            >
-              <FileCode size={15} />
-              <span>{renderEngine === 'native' ? '📄 원본 Vector' : '🖼️ Canvas 모드'}</span>
-            </button>
-
             {/* 단면 / 양면 보기 옵션 토글 */}
             <button
               className="btn btn-sm font-bold flex align-center gap-1.5"
@@ -427,34 +405,32 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               <span>{isTwoPageMode ? '양면 보기' : '단면 보기'}</span>
             </button>
 
-            {renderEngine === 'canvas' && (
-              <div className="flex align-center gap-1 bg-slate-900 px-2 py-1 rounded border border-slate-700">
-                <button
-                  className="btn btn-icon btn-xs text-slate-300 hover:text-white"
-                  onClick={() => setZoomScale(Math.max(60, zoomScale - 15))}
-                  title="축소"
-                >
-                  <ZoomOut size={15} />
-                </button>
-                <span className="text-xs font-bold px-1 text-slate-300" style={{ minWidth: '40px', textAlign: 'center' }}>
-                  {zoomScale}%
-                </span>
-                <button
-                  className="btn btn-icon btn-xs text-slate-300 hover:text-white"
-                  onClick={() => setZoomScale(Math.min(220, zoomScale + 15))}
-                  title="확대"
-                >
-                  <ZoomIn size={15} />
-                </button>
-                <button
-                  className="btn btn-icon btn-xs text-slate-400 hover:text-white ml-1"
-                  onClick={() => setZoomScale(100)}
-                  title="100% 화면 맞춤 (Fit to Page)"
-                >
-                  <RotateCcw size={13} />
-                </button>
-              </div>
-            )}
+            <div className="flex align-center gap-1 bg-slate-900 px-2 py-1 rounded border border-slate-700">
+              <button
+                className="btn btn-icon btn-xs text-slate-300 hover:text-white"
+                onClick={() => setZoomScale(Math.max(60, zoomScale - 15))}
+                title="축소"
+              >
+                <ZoomOut size={15} />
+              </button>
+              <span className="text-xs font-bold px-1 text-slate-300" style={{ minWidth: '40px', textAlign: 'center' }}>
+                {zoomScale}%
+              </span>
+              <button
+                className="btn btn-icon btn-xs text-slate-300 hover:text-white"
+                onClick={() => setZoomScale(Math.min(220, zoomScale + 15))}
+                title="확대"
+              >
+                <ZoomIn size={15} />
+              </button>
+              <button
+                className="btn btn-icon btn-xs text-slate-400 hover:text-white ml-1"
+                onClick={() => setZoomScale(100)}
+                title="100% 화면 맞춤 (Fit to Page)"
+              >
+                <RotateCcw size={13} />
+              </button>
+            </div>
 
             <button
               className={`btn btn-sm font-bold flex align-center gap-1.5 ${showNotes ? 'btn-primary' : 'btn-secondary'}`}
@@ -507,7 +483,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
           />
         </div>
 
-        {/* E-Book 리더 본문 뷰포트 (100% Native Vector PDF vs Canvas) */}
+        {/* E-Book 리더 본문 뷰포트 (Pure Ultra Retina Canvas 모드) */}
         <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
           {/* 좌측 이전 페이지 터치/클릭 영역 */}
           <div
@@ -539,7 +515,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             )}
           </div>
 
-          {/* 중앙 뷰포트 영역 */}
+          {/* 중앙 E-Book Canvas 영역 */}
           <div
             ref={containerRef}
             style={{
@@ -550,7 +526,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               alignItems: 'center',
               justifyContent: 'center',
               overflow: 'hidden',
-              padding: renderEngine === 'native' ? '0' : '1rem',
+              padding: '1rem',
               position: 'relative'
             }}
           >
@@ -559,25 +535,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                 <BookOpen size={48} className="mx-auto mb-3 text-sky-500 animate-bounce" />
                 <p className="font-bold text-slate-300 text-base">E-Book 책 페이지를 읽어오는 중...</p>
               </div>
-            ) : renderEngine === 'native' ? (
-              /* 📄 100% 원본 Native Vector PDF 임베드 뷰어 (글자 무한 100% 선명도) */
-              <object
-                data={`${pdfData.url}#page=${currentPage}`}
-                type="application/pdf"
-                width="100%"
-                height="100%"
-                style={{ border: 'none', backgroundColor: '#0f172a' }}
-              >
-                <iframe
-                  src={`${pdfData.url}#page=${currentPage}`}
-                  width="100%"
-                  height="100%"
-                  style={{ border: 'none' }}
-                  title="PDF Native Viewer"
-                />
-              </object>
             ) : (
-              /* 🖼️ Canvas E-Book 모드 뷰어 */
               <div
                 className={`ebook-paper-frame ${pageDirection === 'next' ? 'flip-next' : 'flip-prev'} flex align-center justify-center`}
                 style={{
@@ -589,6 +547,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                   gap: isTwoPageMode ? '2px' : '0'
                 }}
               >
+                {/* 종이책 가장자리 그림자 효과 */}
                 <div
                   style={{
                     position: 'absolute',
@@ -602,8 +561,10 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                   }}
                 />
 
-                <canvas ref={canvasLeftRef} style={{ display: 'block' }} />
+                {/* 왼쪽 페이지 Canvas */}
+                <canvas ref={canvasLeftRef} style={{ display: 'block', backgroundColor: '#ffffff' }} />
 
+                {/* 중앙 제본선 섀도우 (양면 보기 모드 일 때만 표시) */}
                 <div
                   style={{
                     width: '12px',
@@ -615,9 +576,10 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                   }}
                 />
 
+                {/* 오른쪽 페이지 Canvas */}
                 <canvas
                   ref={canvasRightRef}
-                  style={{ display: isTwoPageMode ? 'block' : 'none' }}
+                  style={{ display: isTwoPageMode ? 'block' : 'none', backgroundColor: '#ffffff' }}
                 />
               </div>
             )}
