@@ -146,8 +146,8 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       // 1) 화면 표시용 viewport (이 좌표계로 글꼴과 경로가 렌더링됨)
       const viewport = page.getViewport({ scale: fitScale });
 
-      // 2) 고해상도 outputScale (최소 5배 - 원본과 동일 수준 극상 선명도)
-      const outputScale = Math.max(window.devicePixelRatio || 1, 5);
+      // 2) 고해상도 outputScale (3배 = GPU 텍스처 한계 내 최적 선명도)
+      const outputScale = Math.max(window.devicePixelRatio || 1, 3);
 
       // 3) 캔버스 물리 픽셀 = 표시 크기 × outputScale
       canvas.width = Math.floor(viewport.width * outputScale);
