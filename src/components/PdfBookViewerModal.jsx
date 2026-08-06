@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, BookOpen, ChevronLeft, ChevronRight, FileText, CheckCircle2, Columns, Square, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { X, BookOpen, ChevronLeft, ChevronRight, FileText, CheckCircle2, Columns, Square, ZoomIn, ZoomOut, RotateCcw, Play, Pause } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
@@ -19,6 +19,9 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const [loadingPdf, setLoadingPdf] = useState(true);
   const [pageRendering, setPageRendering] = useState(false);
   const [zoomScale, setZoomScale] = useState(100);
+  const [isAutoPlay, setIsAutoPlay] = useState(false);
+  const [autoSpeed, setAutoSpeed] = useState(2); // 1: 느림, 2: 보통, 3: 빠름
+  const [highlightTop, setHighlightTop] = useState(0);
 
   const containerLeftRef = useRef(null);
   const containerRightRef = useRef(null);
@@ -103,6 +106,16 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
         e.preventDefault();
         if (cur > 1) changePage(cur - step);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (containerRef.current) {
+          containerRef.current.scrollBy({ top: 140, behavior: 'smooth' });
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (containerRef.current) {
+          containerRef.current.scrollBy({ top: -140, behavior: 'smooth' });
+        }
       } else if (e.key === 'Escape') {
         onClose();
       }
@@ -169,8 +182,10 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       const raw = page.getViewport({ scale: 1.0 });
       const targetW = isTwoPageMode ? (maxW - pageGap) / 2 : maxW;
       
+      // 양면 보기 시 글자가 가로 좁아짐으로 인해 흐려 보이는 것을 보정하는 1.15배 선명도 부스트
+      const twoPageBoost = isTwoPageMode ? 1.15 : 1.0;
       const userZoomMultiplier = zoomScale / 100;
-      const fitScale = (targetW / raw.width) * userZoomMultiplier;
+      const fitScale = (targetW / raw.width) * userZoomMultiplier * twoPageBoost;
 
       const viewport = page.getViewport({ scale: fitScale });
 
@@ -220,6 +235,48 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     return () => { alive = false; };
   }, [pdfDoc, currentPage, zoomScale, isTwoPageMode, totalPages]);
 
+  // ★ E-Book 실제 자동재생 (형광펜 가이드 & 자동 페이지 넘김) 엔진 ★
+  useEffect(() => {
+    if (!isAutoPlay || !containerRef.current) return;
+
+    const speedMap = { 1: 1.5, 2: 3.0, 3: 5.0 };
+    const stepPx = speedMap[autoSpeed] || 3.0;
+
+    const timer = setInterval(() => {
+      setHighlightTop((prev) => {
+        const nextTop = prev + stepPx;
+        const container = containerRef.current;
+        if (!container) return nextTop;
+
+        const maxScroll = container.scrollHeight - container.clientHeight;
+
+        // 형광펜이 뷰포트 중하단을 지나면 스크롤도 동기화하여 수평 이동
+        if (nextTop - container.scrollTop > container.clientHeight * 0.6) {
+          container.scrollBy({ top: stepPx, behavior: 'auto' });
+        }
+
+        // 끝 바닥에 닿으면 다음 페이지 자동 전환 및 리셋
+        if (container.scrollTop >= maxScroll - 15 && nextTop >= container.scrollHeight - 60) {
+          const cur = currentPageRef.current;
+          const total = totalPagesRef.current;
+          const step = isTwoPageModeRef.current ? 2 : 1;
+
+          if (cur + step <= total) {
+            changePage(cur + step);
+            container.scrollTop = 0;
+            return 0;
+          } else {
+            setIsAutoPlay(false);
+            return 0;
+          }
+        }
+        return nextTop;
+      });
+    }, 60);
+
+    return () => clearInterval(timer);
+  }, [isAutoPlay, autoSpeed, changePage]);
+
   const toggleTwoPageMode = () => {
     const next = !isTwoPageMode;
     setIsTwoPageMode(next);
@@ -231,7 +288,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const step = isTwoPageMode ? 2 : 1;
 
   return (
-    <div className="modal-overlay modal-backdrop" style={{ zIndex: 100000 }} onClick={onClose}>
+    <div className="modal-overlay modal-backdrop" style={{ zIndex: 100000 }}>
       <div
         ref={modalCardRef}
         tabIndex={0}
@@ -301,6 +358,23 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               <span>{isTwoPageMode ? '양면 보기' : '단면 보기'}</span>
             </button>
 
+            {/* 자동 읽기 (형광펜 가이드 스크롤) 컨트롤 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: isAutoPlay ? '#0284c7' : '#334155', borderRadius: '5px', padding: '2px 6px', border: '1px solid #475569' }}>
+              <button onClick={() => setIsAutoPlay(!isAutoPlay)} title={isAutoPlay ? "일시정지" : "자동 읽기 시작"}
+                style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '0.75rem' }}>
+                {isAutoPlay ? <Pause size={13} /> : <Play size={13} />}
+                <span>{isAutoPlay ? '일시정지' : '자동읽기'}</span>
+              </button>
+              {isAutoPlay && (
+                <select value={autoSpeed} onChange={(e) => setAutoSpeed(Number(e.target.value))}
+                  style={{ backgroundColor: '#0f172a', color: '#38bdf8', border: 'none', borderRadius: '3px', fontSize: '0.7rem', padding: '1px 3px', cursor: 'pointer' }}>
+                  <option value={1}>1x (느림)</option>
+                  <option value={2}>2x (보통)</option>
+                  <option value={3}>3x (빠름)</option>
+                </select>
+              )}
+            </div>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#0f172a', padding: '2px 6px', borderRadius: '5px', border: '1px solid #334155' }}>
                <button onClick={() => setZoomScale(Math.max(60, zoomScale - 15))}
                  style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '1px' }}>
@@ -351,6 +425,23 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             flex: 1, height: '100%', backgroundColor: '#020617', display: 'flex', flexDirection: 'column',
             overflow: 'auto', padding: '1rem', position: 'relative', cursor: 'grab', userSelect: 'none'
           }}>
+            {/* 자동재생 형광펜 가이드 바 오버레이 */}
+            {isAutoPlay && (
+              <div style={{
+                position: 'absolute',
+                top: `${highlightTop}px`,
+                left: 0,
+                right: 0,
+                height: '36px',
+                backgroundColor: 'rgba(250, 204, 21, 0.28)',
+                borderTop: '1.5px dashed rgba(234, 179, 8, 0.8)',
+                borderBottom: '1.5px dashed rgba(234, 179, 8, 0.8)',
+                pointerEvents: 'none',
+                transition: 'top 0.05s linear',
+                zIndex: 30,
+                boxShadow: '0 0 14px rgba(250, 204, 21, 0.45)'
+              }} />
+            )}
             {loadingPdf ? (
               <div style={{ margin: 'auto', textAlign: 'center', padding: '2rem' }}>
                 <BookOpen size={48} style={{ color: '#0284c7', marginBottom: '0.75rem', margin: '0 auto' }} />
