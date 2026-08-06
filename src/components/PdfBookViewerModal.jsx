@@ -290,6 +290,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                   style={{ flex: 1, height: '100%', width: '100%', border: 'none', backgroundColor: '#ffffff', pointerEvents: 'none' }}
                   title="PDF Page Left"
                   tabIndex={-1}
+                  scrolling="no"
                 />
 
                 {/* 중앙 제본선 그림자 */}
@@ -308,6 +309,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                   style={{ flex: 1, height: '100%', width: '100%', border: 'none', backgroundColor: '#ffffff', display: isTwoPageMode ? 'block' : 'none', pointerEvents: 'none' }}
                   title="PDF Page Right"
                   tabIndex={-1}
+                  scrolling="no"
                 />
               </div>
             )}
