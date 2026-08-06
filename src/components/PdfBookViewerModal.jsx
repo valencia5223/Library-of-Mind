@@ -202,39 +202,41 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
       // YES24 스펙: 화면 가로 및 세로 폭에 100% 쏙 들어가는 비례 배율 계산 (스크롤바 0%)
       const scaleX = targetW / raw.width;
+      // 1. 화면에 표시될 CSS 비례 배율 (CSS Pixel Scale)
+      const scaleX = targetW / raw.width;
       const scaleY = maxH / raw.height;
       
       const fitScale = (fitMode === 'page' || isTwoPageMode) 
         ? Math.min(scaleX, scaleY) * userZoomMultiplier
         : scaleX * userZoomMultiplier;
 
-      // 외형 화면 핏 Viewport
+      // 2. 화면 표시용 Viewport (CSS 크기)
       const viewport = page.getViewport({ scale: fitScale });
 
-      // ★ YES24 핵심: 3.5배 레티나 초고해상도 벡터로 폰트 획을 세밀하게 그려 글씨 깨짐/흐림을 100% 차단! ★
-      const retinaScale = Math.max(3.5, window.devicePixelRatio || 2);
-      const highResViewport = page.getViewport({ scale: fitScale * retinaScale });
+      // 3. ★ 핵심: 1:1 디바이스 픽셀 매칭 (Exact Device Pixel Ratio) ★
+      // 과도한 다운스케일링 픽셀 보간 뭉개짐(Downsampling Blur)을 100% 원천 차단!
+      const dpr = Math.max(1.0, window.devicePixelRatio || 1.0);
+      const exactViewport = page.getViewport({ scale: fitScale * dpr });
 
       try {
-        // 1차 시도: 100% 벡터 품질 SVGGraphics 렌더링
+        // 1차 시도: 1:1 디바이스 픽셀 매칭 100% SVGGraphics 렌더링
         const opList = await page.getOperatorList();
         const svgG = new window.pdfjsLib.SVGGraphics(page.commonObjs, page.objs);
-        const svg = await svgG.getSVG(opList, highResViewport);
+        const svg = await svgG.getSVG(opList, exactViewport);
 
-        // 외형 크기는 딱 화면에 핏 되도록 CSS style 지정 (스크롤 0% & 깨짐 0%)
-        svg.setAttribute('viewBox', `0 0 ${highResViewport.width} ${highResViewport.height}`);
+        // 1:1 디바이스 픽셀 exact 매칭 viewBox & CSS 크기 동기화 (다운샘플링 뭉개짐 0%)
+        svg.setAttribute('viewBox', `0 0 ${exactViewport.width} ${exactViewport.height}`);
         svg.setAttribute('width', `${Math.floor(viewport.width)}px`);
         svg.setAttribute('height', `${Math.floor(viewport.height)}px`);
         svg.style.width = `${Math.floor(viewport.width)}px`;
         svg.style.height = `${Math.floor(viewport.height)}px`;
         svg.style.display = 'block';
 
-        // 폰트 안티앨리어싱 및 가독성 100% 극대화를 위한 SVG 스타일 및 파라미터 주입
+        // 폰트 안티앨리어싱 및 가독성 100% 극대화를 위한 SVG 힌트
         svg.setAttribute('shape-rendering', 'geometricPrecision');
         svg.setAttribute('text-rendering', 'optimizeLegibility');
-        svg.setAttribute('image-rendering', 'high-quality');
+        svg.setAttribute('image-rendering', 'crisp-edges');
 
-        // SVG 안쪽에 폰트 선명도 스타일 주입
         const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
         styleEl.textContent = `
           text, tspan {
@@ -249,19 +251,21 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         containerEl.innerHTML = '';
         containerEl.appendChild(svg);
       } catch (svgErr) {
-        console.warn('SVGGraphics render failed for image/complex page, fallback to Canvas:', svgErr);
-        // 2차 시도 (Fallback): 표지/고용량 이미지 페이지 전용 레티나 Canvas 렌더링
+        console.warn('SVGGraphics render failed for image/complex page, fallback to 1:1 Exact Canvas:', svgErr);
+        // 2차 시도 (Fallback): Chrome/Edge 내장 PDFium급 1:1 Exact Device Pixel Canvas 렌더링
         const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { alpha: false });
 
-        canvas.width = Math.floor(viewport.width * retinaScale);
-        canvas.height = Math.floor(viewport.height * retinaScale);
+        canvas.width = Math.floor(viewport.width * dpr);
+        canvas.height = Math.floor(viewport.height * dpr);
         canvas.style.width = `${Math.floor(viewport.width)}px`;
         canvas.style.height = `${Math.floor(viewport.height)}px`;
         canvas.style.display = 'block';
 
-        ctx.scale(retinaScale, retinaScale);
-        await page.render({ canvasContext: ctx, viewport }).promise;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        await page.render({ canvasContext: ctx, viewport: exactViewport }).promise;
 
         containerEl.innerHTML = '';
         containerEl.appendChild(canvas);
