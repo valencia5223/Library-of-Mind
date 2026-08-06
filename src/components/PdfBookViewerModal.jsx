@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, BookOpen, ChevronLeft, ChevronRight, FileText, CheckCircle2, Columns, Square } from 'lucide-react';
+import { X, BookOpen, ChevronLeft, ChevronRight, FileText, CheckCircle2, Columns, Square, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
@@ -15,6 +15,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const [notes, setNotes] = useState('');
   const [loadingPdf, setLoadingPdf] = useState(true);
   const [aspectRatio, setAspectRatio] = useState(0.707); // 기본 A4 비율
+  const [zoomScale, setZoomScale] = useState(100);
 
   const modalCardRef = useRef(null);
   const iframeLeftRef = useRef(null);
@@ -202,6 +203,22 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               <span>{isTwoPageMode ? '양면 보기' : '단면 보기'}</span>
             </button>
 
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#0f172a', padding: '4px 8px', borderRadius: '6px', border: '1px solid #334155' }}>
+               <button onClick={() => setZoomScale(Math.max(60, zoomScale - 15))}
+                 style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px' }}>
+                 <ZoomOut size={15} />
+               </button>
+               <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#cbd5e1', minWidth: '40px', textAlign: 'center' }}>{zoomScale}%</span>
+               <button onClick={() => setZoomScale(Math.min(220, zoomScale + 15))}
+                 style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px' }}>
+                 <ZoomIn size={15} />
+               </button>
+               <button onClick={() => setZoomScale(100)} title="화면 맞춤"
+                 style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px', marginLeft: '2px' }}>
+                 <RotateCcw size={13} />
+               </button>
+            </div>
+
             <button onClick={() => setShowNotes(!showNotes)}
               style={{
                 backgroundColor: showNotes ? '#0284c7' : '#334155', color: '#fff', border: 'none',
@@ -232,10 +249,10 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
           {/* 좌측 클릭 영역 */}
           <div onClick={() => changePage(currentPage - step)}
             style={{
-              position: 'absolute', left: 0, top: 0, bottom: 0, width: '8%', zIndex: 10,
+              position: 'absolute', left: 0, top: 0, bottom: 0, width: '45%', zIndex: 10,
               cursor: currentPage > 1 ? 'pointer' : 'default', display: 'flex', alignItems: 'center',
-              justifyContent: 'flex-start', paddingLeft: '1.25rem',
-              background: 'linear-gradient(to right, rgba(0,0,0,0.3), transparent)', opacity: 0, transition: 'opacity 0.2s'
+              justifyContent: 'flex-start', paddingLeft: '1.25rem', outline: 'none',
+              background: 'linear-gradient(to right, rgba(0,0,0,0.3) 0%, transparent 15%)', opacity: 0, transition: 'opacity 0.2s'
             }}
             onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
             onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}>
@@ -263,15 +280,16 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                 width: isTwoPageMode ? `calc(100% - 2rem)` : `auto`,
                 height: `calc(100%)`, 
                 aspectRatio: isTwoPageMode ? `${aspectRatio * 2} / 1` : `${aspectRatio} / 1`,
-                maxHeight: '100%',
-                maxWidth: '100%'
+                maxHeight: '100%', maxWidth: '100%',
+                transform: `scale(${zoomScale / 100})`, transformOrigin: 'center center', transition: 'transform 0.25s ease-out'
               }}>
                 {/* 왼쪽 페이지 Iframe */}
                 <iframe
                   ref={iframeLeftRef}
                   src={getIframeUrl(currentPage)}
-                  style={{ flex: 1, height: '100%', width: '100%', border: 'none', backgroundColor: '#ffffff' }}
+                  style={{ flex: 1, height: '100%', width: '100%', border: 'none', backgroundColor: '#ffffff', pointerEvents: 'none' }}
                   title="PDF Page Left"
+                  tabIndex={-1}
                 />
 
                 {/* 중앙 제본선 그림자 */}
@@ -287,8 +305,9 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                 <iframe
                   ref={iframeRightRef}
                   src={isTwoPageMode && currentPage + 1 <= totalPages ? getIframeUrl(currentPage + 1) : 'about:blank'}
-                  style={{ flex: 1, height: '100%', width: '100%', border: 'none', backgroundColor: '#ffffff', display: isTwoPageMode ? 'block' : 'none' }}
+                  style={{ flex: 1, height: '100%', width: '100%', border: 'none', backgroundColor: '#ffffff', display: isTwoPageMode ? 'block' : 'none', pointerEvents: 'none' }}
                   title="PDF Page Right"
+                  tabIndex={-1}
                 />
               </div>
             )}
@@ -297,10 +316,10 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
           {/* 우측 클릭 영역 */}
           <div onClick={() => changePage(currentPage + step)}
             style={{
-              position: 'absolute', right: showNotes ? '380px' : 0, top: 0, bottom: 0, width: '8%', zIndex: 10,
+              position: 'absolute', right: showNotes ? '380px' : 0, top: 0, bottom: 0, width: '45%', zIndex: 10,
               cursor: currentPage < totalPages ? 'pointer' : 'default', display: 'flex', alignItems: 'center',
-              justifyContent: 'flex-end', paddingRight: '1.25rem',
-              background: 'linear-gradient(to left, rgba(0,0,0,0.3), transparent)', opacity: 0, transition: 'opacity 0.2s'
+              justifyContent: 'flex-end', paddingRight: '1.25rem', outline: 'none',
+              background: 'linear-gradient(to left, rgba(0,0,0,0.3) 0%, transparent 15%)', opacity: 0, transition: 'opacity 0.2s'
             }}
             onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
             onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}>
