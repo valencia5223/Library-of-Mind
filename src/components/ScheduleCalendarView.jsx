@@ -15,52 +15,74 @@ const encryptText = (plainText, userSecret = 'default', isShared = false) => {
       const charCode = plainText.charCodeAt(i) ^ fullKey.charCodeAt(i % fullKey.length);
       xorResult += String.fromCharCode(charCode);
     }
-    return 'enc_v1:' + btoa(encodeURIComponent(xorResult));
+    const prefix = isShared ? 'enc_sh_v1:' : 'enc_v1:';
+    return prefix + btoa(encodeURIComponent(xorResult));
   } catch (e) {
     return plainText;
   }
 };
 
 const decryptText = (cipherText, userSecret = 'default') => {
-  if (!cipherText) return '';
-  if (typeof cipherText !== 'string' || !cipherText.startsWith('enc_v1:')) return cipherText; // 일반 텍스트 하위 호환
-  try {
-    const rawCipher = cipherText.replace('enc_v1:', '');
-    const decodedStr = decodeURIComponent(atob(rawCipher));
-    
-    // 1차 개인키 복호화 시도
-    const fullKey = `${userSecret}_${SECRET_SALT}`;
-    let plainText = '';
-    for (let i = 0; i < decodedStr.length; i++) {
-      const charCode = decodedStr.charCodeAt(i) ^ fullKey.charCodeAt(i % fullKey.length);
-      plainText += String.fromCharCode(charCode);
-    }
-    
-    // 깨진 텍스트일 경우 공유 키 복호화 시도
-    if (plainText.includes('\uFFFD') || plainText.includes('')) {
-      let sharedPlain = '';
-      for (let i = 0; i < decodedStr.length; i++) {
-        const charCode = decodedStr.charCodeAt(i) ^ SHARED_SALT.charCodeAt(i % SHARED_SALT.length);
-        sharedPlain += String.fromCharCode(charCode);
-      }
-      return sharedPlain;
-    }
-    return plainText;
-  } catch (e) {
-    // 공유 키 2차 시도
+  if (!cipherText || typeof cipherText !== 'string') return cipherText;
+
+  // 1) 공유 일정 태그(enc_sh_v1:)인 경우 항상 SHARED_SALT로 복호화
+  if (cipherText.startsWith('enc_sh_v1:')) {
     try {
-      const rawCipher = cipherText.replace('enc_v1:', '');
+      const rawCipher = cipherText.replace('enc_sh_v1:', '');
       const decodedStr = decodeURIComponent(atob(rawCipher));
-      let sharedPlain = '';
+      let plainText = '';
       for (let i = 0; i < decodedStr.length; i++) {
         const charCode = decodedStr.charCodeAt(i) ^ SHARED_SALT.charCodeAt(i % SHARED_SALT.length);
-        sharedPlain += String.fromCharCode(charCode);
+        plainText += String.fromCharCode(charCode);
       }
-      return sharedPlain;
-    } catch (err) {
+      return plainText;
+    } catch (e) {
       return cipherText;
     }
   }
+
+  // 2) 개인 일정 태그(enc_v1:)인 경우
+  if (cipherText.startsWith('enc_v1:')) {
+    try {
+      const rawCipher = cipherText.replace('enc_v1:', '');
+      const decodedStr = decodeURIComponent(atob(rawCipher));
+      
+      // 1차: 개인키 복호화
+      const fullKey = `${userSecret}_${SECRET_SALT}`;
+      let plainText = '';
+      for (let i = 0; i < decodedStr.length; i++) {
+        const charCode = decodedStr.charCodeAt(i) ^ fullKey.charCodeAt(i % fullKey.length);
+        plainText += String.fromCharCode(charCode);
+      }
+      
+      // 복호화 결과 깨짐 시 SHARED_SALT 2차 복호화
+      if (plainText.includes('\uFFFD') || !plainText) {
+        let sharedPlain = '';
+        for (let i = 0; i < decodedStr.length; i++) {
+          const charCode = decodedStr.charCodeAt(i) ^ SHARED_SALT.charCodeAt(i % SHARED_SALT.length);
+          sharedPlain += String.fromCharCode(charCode);
+        }
+        return sharedPlain;
+      }
+      return plainText;
+    } catch (e) {
+      // 2차 시도
+      try {
+        const rawCipher = cipherText.replace('enc_v1:', '');
+        const decodedStr = decodeURIComponent(atob(rawCipher));
+        let sharedPlain = '';
+        for (let i = 0; i < decodedStr.length; i++) {
+          const charCode = decodedStr.charCodeAt(i) ^ SHARED_SALT.charCodeAt(i % SHARED_SALT.length);
+          sharedPlain += String.fromCharCode(charCode);
+        }
+        return sharedPlain;
+      } catch (err) {
+        return cipherText;
+      }
+    }
+  }
+
+  return cipherText; // 일반 텍스트
 };
 
 export default function ScheduleCalendarView({ userId = null }) {
