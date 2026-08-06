@@ -8,8 +8,6 @@ export default function AdminApprovalModal({ isOpen, onClose, user }) {
   const [processingId, setProcessingId] = useState(null);
   const [actionMessage, setActionMessage] = useState(null);
 
-  if (!isOpen) return null;
-
   // 가입 승인 대기 유저 목록 조회
   const fetchPendingUsers = async () => {
     setLoading(true);
@@ -53,9 +51,14 @@ export default function AdminApprovalModal({ isOpen, onClose, user }) {
     }
   };
 
+  // React Hook은 반드시 조건문(if (!isOpen) return null) 위에 배치되어야 함 (Rules of Hooks 준수)
   useEffect(() => {
-    fetchPendingUsers();
+    if (isOpen) {
+      fetchPendingUsers();
+    }
   }, [isOpen]);
+
+  if (!isOpen) return null;
 
   // 가입 승인 동의 처리 (is_approved: true로 갱신)
   const handleApprove = async (targetUser) => {

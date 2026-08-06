@@ -416,16 +416,6 @@ export default function App() {
             >
               <Users size={16} /> 이웃 서재
             </button>
-
-            {isAdmin && (
-              <button
-                className={`nav-tab-capsule admin-tab-capsule`}
-                onClick={() => setIsAdminOpen(true)}
-                title="신규 회원가입 신청 1초 승인 센터"
-              >
-                <ShieldCheck size={16} /> 👑 가입 승인 관리
-              </button>
-            )}
           </nav>
         )}
 
@@ -536,6 +526,8 @@ export default function App() {
         onClose={() => setIsAuthOpen(false)}
         user={user}
         setUser={setUser}
+        isAdmin={isAdmin}
+        onOpenAdmin={() => setIsAdminOpen(true)}
       />
 
       {/* 관리자 전용 회원 승인 관리 모달 */}

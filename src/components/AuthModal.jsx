@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { X, Lock, Mail, User, CheckCircle2, AlertCircle } from 'lucide-react';
 
-export default function AuthModal({ isOpen, onClose, user, setUser }) {
+export default function AuthModal({ isOpen, onClose, user, setUser, isAdmin = false, onOpenAdmin = () => {} }) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -109,6 +109,26 @@ export default function AuthModal({ isOpen, onClose, user, setUser }) {
               <span className="badge-pill">🔒 자동로그인 세션 유지</span>
               <span className="badge-pill">⚡ 이메일 즉시 승인</span>
             </div>
+
+            {isAdmin && (
+              <button
+                className="btn btn-warning mt-3 w-full justify-center font-bold flex align-center gap-1"
+                onClick={() => {
+                  onClose();
+                  onOpenAdmin();
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '0.65rem 1rem',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)'
+                }}
+              >
+                👑 회원가입 승인 관리 센터
+              </button>
+            )}
 
             <button className="btn btn-secondary mt-4 w-full justify-center" onClick={handleLogout}>
               로그아웃
