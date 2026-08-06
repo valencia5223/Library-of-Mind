@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, BookOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, FileText, CheckCircle2, RotateCcw, Columns, Square } from 'lucide-react';
+import { X, BookOpen, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, FileText, CheckCircle2, RotateCcw, Columns, Square, ExternalLink } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
@@ -158,7 +158,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     };
   }, [pdfData.url, progressKey, notesKey]);
 
-  // 3. Canvas 렌더링 (300% Ultra HD 고화질 렌더링 & 양면 우측 화면 100% 보장)
+  // 3. Canvas 렌더링 (4.0x 4K Ultra HD & intent:'print' 매개변수 적용으로 100% 원본급 해상도)
   useEffect(() => {
     if (!pdfDoc || !containerRef.current) return;
 
@@ -189,8 +189,8 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
           const baseScale = Math.min(widthScale, heightScale);
           const displayScale = baseScale * (zoomScale / 100);
 
-          // 3.0x 초고해상도 픽셀 스케일링 (글자 깨짐 및 열화 100% 제거)
-          const renderScale = displayScale * 3.0;
+          // 4.0x 4K 울트라 HD 픽셀 스케일링 (원본 비트맵 400% 조밀 선명화)
+          const renderScale = displayScale * 4.0;
 
           const renderViewport1 = page1.getViewport({ scale: renderScale });
           const displayViewport1 = page1.getViewport({ scale: displayScale });
@@ -200,12 +200,17 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
           canvasLeft.style.width = `${Math.floor(displayViewport1.width)}px`;
           canvasLeft.style.height = `${Math.floor(displayViewport1.height)}px`;
 
+          // Canvas 폰트 스트로크 날카로운 안티앨리어싱 지정
+          canvasLeft.style.imageRendering = '-webkit-optimize-contrast';
+          canvasLeft.style.imageRendering = 'crisp-edges';
+
           ctx1.imageSmoothingEnabled = true;
           ctx1.imageSmoothingQuality = 'high';
 
           await page1.render({
             canvasContext: ctx1,
-            viewport: renderViewport1
+            viewport: renderViewport1,
+            intent: 'print'
           }).promise;
         }
 
@@ -226,7 +231,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
             const baseScale = Math.min(widthScale, heightScale);
             const displayScale = baseScale * (zoomScale / 100);
-            const renderScale = displayScale * 3.0;
+            const renderScale = displayScale * 4.0;
 
             const renderViewport2 = page2.getViewport({ scale: renderScale });
             const displayViewport2 = page2.getViewport({ scale: displayScale });
@@ -236,12 +241,16 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             canvasRight.style.width = `${Math.floor(displayViewport2.width)}px`;
             canvasRight.style.height = `${Math.floor(displayViewport2.height)}px`;
 
+            canvasRight.style.imageRendering = '-webkit-optimize-contrast';
+            canvasRight.style.imageRendering = 'crisp-edges';
+
             ctx2.imageSmoothingEnabled = true;
             ctx2.imageSmoothingQuality = 'high';
 
             await page2.render({
               canvasContext: ctx2,
-              viewport: renderViewport2
+              viewport: renderViewport2,
+              intent: 'print'
             }).promise;
           } else {
             ctx2.clearRect(0, 0, canvasRight.width, canvasRight.height);
@@ -274,6 +283,12 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const handleNotesChange = (text) => {
     setNotes(text);
     localStorage.setItem(notesKey, text);
+  };
+
+  const openNativePdfInNewTab = () => {
+    if (pdfData.url) {
+      window.open(pdfData.url, '_blank');
+    }
   };
 
   const progressPercent = Math.min(100, Math.round((currentPage / (totalPages || 1)) * 100));
@@ -378,8 +393,25 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             </button>
           </div>
 
-          {/* 우측 컨트롤 및 양면보기 옵션 & 독서 메모 */}
+          {/* 우측 컨트롤 및 원본보기/양면보기 옵션 & 독서 메모 */}
           <div className="flex align-center gap-2.5" style={{ flexShrink: 0 }}>
+            {/* 원본 HD 새창 열기 버튼 */}
+            <button
+              className="btn btn-sm font-bold flex align-center gap-1.5"
+              onClick={openNativePdfInNewTab}
+              title="브라우저 원본 PDF 뷰어로 새 탭에서 열기 (100% 벡터 고화질)"
+              style={{
+                backgroundColor: '#1e293b',
+                color: '#38bdf8',
+                border: '1px solid #0284c7',
+                padding: '0.4rem 0.75rem',
+                borderRadius: '6px'
+              }}
+            >
+              <ExternalLink size={14} />
+              <span>원본 HD 새창</span>
+            </button>
+
             {/* 단면 / 양면 보기 옵션 토글 */}
             <button
               className="btn btn-sm font-bold flex align-center gap-1.5"
@@ -410,7 +442,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               </span>
               <button
                 className="btn btn-icon btn-xs text-slate-300 hover:text-white"
-                onClick={() => setZoomScale(Math.min(180, zoomScale + 15))}
+                onClick={() => setZoomScale(Math.min(220, zoomScale + 15))}
                 title="확대"
               >
                 <ZoomIn size={15} />
