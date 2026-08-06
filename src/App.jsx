@@ -9,7 +9,8 @@ import ReadingStats from './components/ReadingStats';
 import FriendManager from './components/FriendManager';
 import AdminApprovalModal from './components/AdminApprovalModal';
 import ScheduleCalendarView from './components/ScheduleCalendarView';
-import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon } from 'lucide-react';
+import PdfLibraryModal from './components/PdfLibraryModal';
+import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon, FileText } from 'lucide-react';
 import NewsTicker from './components/NewsTicker';
 import WeatherWidget from './components/WeatherWidget';
 
@@ -19,6 +20,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [showPdfLibrary, setShowPdfLibrary] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // 관리자 권한 확인 (valencia5223@gmail.com 또는 admin 키워드)
@@ -416,6 +418,14 @@ export default function App() {
             >
               <Users size={16} /> 이웃 서재
             </button>
+
+            <button
+              className="nav-tab-capsule"
+              onClick={() => setShowPdfLibrary(true)}
+              style={{ backgroundColor: 'rgba(2, 132, 199, 0.12)', color: '#0284c7', borderColor: 'rgba(2, 132, 199, 0.3)' }}
+            >
+              <FileText size={16} /> PDF 서재
+            </button>
           </nav>
         )}
 
@@ -536,6 +546,11 @@ export default function App() {
         onClose={() => setIsAdminOpen(false)}
         user={user}
       />
+
+      {/* 독립 PDF 서재 보관함 모달 */}
+      {showPdfLibrary && (
+        <PdfLibraryModal onClose={() => setShowPdfLibrary(false)} />
+      )}
     </div>
   );
 }
