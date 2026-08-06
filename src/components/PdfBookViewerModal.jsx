@@ -4,6 +4,7 @@ import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
 const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const PDFJS_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css';
 
 export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressUpdate }) {
   if (!book || !pdfData) return null;
@@ -21,6 +22,8 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
   const canvasLeftRef = useRef(null);
   const canvasRightRef = useRef(null);
+  const textLayerLeftRef = useRef(null);
+  const textLayerRightRef = useRef(null);
   const containerRef = useRef(null);
   const modalCardRef = useRef(null);
 
@@ -85,6 +88,16 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     let isMounted = true;
     const loadPdf = async () => {
       setLoadingPdf(true);
+
+      // CSS 동적 로드
+      if (!document.getElementById('pdfjs-viewer-css')) {
+        const link = document.createElement('link');
+        link.id = 'pdfjs-viewer-css';
+        link.rel = 'stylesheet';
+        link.href = PDFJS_CSS;
+        document.head.appendChild(link);
+      }
+
       if (!window.pdfjsLib) {
         await new Promise((resolve, reject) => {
           const s = document.createElement('script');
@@ -115,22 +128,13 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   }, [pdfData.url, progressKey, notesKey]);
 
   /**
-   * ★★★ 핵심 렌더링 엔진 - PDF.js 공식 transform 파라미터 HiDPI 방식 ★★★
-   *
-   * 기존 버그 원인:  viewport를 3~5x로 부풀려 거대한 캔버스를 생성 → CSS로 축소 표시
-   *                  → 브라우저가 비트맵을 다운샘플링할 때 글자가 뭉개짐
-   *
-   * 정석 해결:  viewport는 화면 표시 크기 그대로 유지
-   *            canvas 해상도만 outputScale배로 키우되
-   *            page.render()에 transform 행렬을 전달하여
-   *            PDF.js가 벡터 경로/글꼴을 직접 고해상도로 그리게 함
-   *            → 브라우저 다운샘플링 불필요, 원본 동일 선명도
+   * ★ Dynamic GPU Safe-Scale + TextLayer 벡터 힌팅 복합 렌더링 엔진 ★
    */
   useEffect(() => {
     if (!pdfDoc || !containerRef.current) return;
     let alive = true;
 
-    const renderPage = async (page, canvas) => {
+    const renderPage = async (page, canvas, textLayerDiv) => {
       if (!canvas) return;
 
       const container = containerRef.current;
@@ -143,32 +147,61 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
       const targetW = isTwoPageMode ? maxW / 2 : maxW;
       const fitScale = Math.min(targetW / raw.width, maxH / raw.height) * (zoomScale / 100);
 
-      // 1) 화면 표시용 viewport (이 좌표계로 글꼴과 경로가 렌더링됨)
+      // 1) 화면 표시용 기본 viewport
       const viewport = page.getViewport({ scale: fitScale });
 
-      // 2) 고해상도 outputScale (3배 = GPU 텍스처 한계 내 최적 선명도)
-      const outputScale = Math.max(window.devicePixelRatio || 1, 3);
+      // 2) GPU 4096px 한계선 마진 고려 최댓값 배율 동적 계산 (Safety GPU Safe-Scale)
+      const MAX_GPU_DIMENSION = 4096;
+      const dpr = Math.max(window.devicePixelRatio || 1, 2.0);
+      const maxPossibleScaleX = MAX_GPU_DIMENSION / Math.max(1, viewport.width);
+      const maxPossibleScaleY = MAX_GPU_DIMENSION / Math.max(1, viewport.height);
+      const safeMaxScale = Math.min(maxPossibleScaleX, maxPossibleScaleY, 3.8);
+      const outputScale = Math.max(dpr * 1.5, Math.min(3.8, safeMaxScale));
 
-      // 3) 캔버스 물리 픽셀 = 표시 크기 × outputScale
+      // 3) 캔버스 물리 픽셀 세팅
       canvas.width = Math.floor(viewport.width * outputScale);
       canvas.height = Math.floor(viewport.height * outputScale);
 
-      // 4) CSS 표시 크기 = viewport 크기 그대로
+      // 4) CSS 표시 크기 고정
       canvas.style.width = `${Math.floor(viewport.width)}px`;
       canvas.style.height = `${Math.floor(viewport.height)}px`;
 
-      // 5) 불투명 캔버스 (서브픽셀 안티앨리어싱 최적화)
+      // 5) 불투명 캔버스 + 폰트 힌팅 강화
       const ctx = canvas.getContext('2d', { alpha: false });
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
-      // 6) ★ 핵심: transform 행렬로 PDF.js가 직접 고밀도 렌더링 수행
-      //    viewport 좌표계는 그대로 유지하되, 출력 픽셀만 outputScale배 조밀하게
+      // 6) transform 기반 고밀도 캔버스 렌더링
       const transform = [outputScale, 0, 0, outputScale, 0, 0];
-
       await page.render({
         canvasContext: ctx,
         viewport: viewport,
         transform: transform
       }).promise;
+
+      // 7) TextLayer 오버레이 (벡터 폰트 힌팅 & 또렷한 글꼴 정렬 보장)
+      if (textLayerDiv && window.pdfjsLib) {
+        textLayerDiv.innerHTML = '';
+        textLayerDiv.style.width = `${Math.floor(viewport.width)}px`;
+        textLayerDiv.style.height = `${Math.floor(viewport.height)}px`;
+        textLayerDiv.style.setProperty('--scale-factor', fitScale);
+
+        try {
+          const textContent = await page.getTextContent();
+          if (alive && window.pdfjsLib.renderTextLayer) {
+            await window.pdfjsLib.renderTextLayer({
+              textContent: textContent,
+              container: textLayerDiv,
+              viewport: viewport,
+              textDivs: []
+            }).promise;
+          }
+        } catch (e) {
+          console.warn('TextLayer render note:', e);
+        }
+      }
     };
 
     const renderAll = async () => {
@@ -178,20 +211,22 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         // 왼쪽 페이지
         const p1 = await pdfDoc.getPage(currentPage);
         if (!alive) return;
-        await renderPage(p1, canvasLeftRef.current);
+        await renderPage(p1, canvasLeftRef.current, textLayerLeftRef.current);
 
         // 오른쪽 페이지 (양면 모드)
         const canvasRight = canvasRightRef.current;
+        const textLayerRight = textLayerRightRef.current;
         if (canvasRight) {
           if (isTwoPageMode && currentPage + 1 <= totalPages) {
             const p2 = await pdfDoc.getPage(currentPage + 1);
             if (!alive) return;
-            await renderPage(p2, canvasRight);
+            await renderPage(p2, canvasRight, textLayerRight);
           } else {
             canvasRight.width = 0;
             canvasRight.height = 0;
             canvasRight.style.width = '0px';
             canvasRight.style.height = '0px';
+            if (textLayerRight) textLayerRight.innerHTML = '';
           }
         }
       } catch (err) {
@@ -349,11 +384,12 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             )}
           </div>
 
-          {/* 중앙 Canvas */}
+          {/* 중앙 Canvas + TextLayer 오버레이 영역 */}
           <div ref={containerRef}
             style={{
               flex: 1, height: '100%', backgroundColor: '#020617', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', overflow: 'hidden', padding: '1rem', position: 'relative'
+              justifyContent: 'center', overflow: 'hidden', padding: '1rem', position: 'relative',
+              WebkitFontSmoothing: 'antialiased', MozOsxFontSmoothing: 'grayscale', textRendering: 'optimizeLegibility'
             }}>
             {loadingPdf ? (
               <div style={{ textAlign: 'center', padding: '2rem' }}>
@@ -363,19 +399,27 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             ) : (
               <div style={{
                 backgroundColor: '#ffffff', borderRadius: '6px', position: 'relative', overflow: 'hidden',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                gap: isTwoPageMode ? '0' : '0'
+                boxShadow: '0 20px 40px rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                <canvas ref={canvasLeftRef} style={{ display: 'block', backgroundColor: '#fff' }} />
+                {/* 왼쪽 페이지 래퍼 */}
+                <div style={{ position: 'relative', overflow: 'hidden' }}>
+                  <canvas ref={canvasLeftRef} style={{ display: 'block', backgroundColor: '#fff' }} />
+                  <div ref={textLayerLeftRef} className="textLayer" style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, opacity: 0.95 }} />
+                </div>
 
+                {/* 중앙 제본선 그림자 */}
                 {isTwoPageMode && (
                   <div style={{
-                    width: '10px', alignSelf: 'stretch', flexShrink: 0,
+                    width: '10px', alignSelf: 'stretch', flexShrink: 0, zIndex: 5,
                     background: 'linear-gradient(to right, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.04) 50%, rgba(0,0,0,0.18) 100%)'
                   }} />
                 )}
 
-                <canvas ref={canvasRightRef} style={{ display: isTwoPageMode ? 'block' : 'none', backgroundColor: '#fff' }} />
+                {/* 오른쪽 페이지 래퍼 */}
+                <div style={{ position: 'relative', overflow: 'hidden', display: isTwoPageMode ? 'block' : 'none' }}>
+                  <canvas ref={canvasRightRef} style={{ display: isTwoPageMode ? 'block' : 'none', backgroundColor: '#fff' }} />
+                  <div ref={textLayerRightRef} className="textLayer" style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0, opacity: 0.95 }} />
+                </div>
               </div>
             )}
           </div>
