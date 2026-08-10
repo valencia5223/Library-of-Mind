@@ -10,7 +10,8 @@ import FriendManager from './components/FriendManager';
 import AdminApprovalModal from './components/AdminApprovalModal';
 import ScheduleCalendarView from './components/ScheduleCalendarView';
 import PdfLibraryModal from './components/PdfLibraryModal';
-import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon, FileText } from 'lucide-react';
+import DailyHabitBoardModal from './components/DailyHabitBoardModal';
+import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon, FileText, CheckSquare } from 'lucide-react';
 import NewsTicker from './components/NewsTicker';
 import WeatherWidget from './components/WeatherWidget';
 
@@ -21,6 +22,7 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [showPdfLibrary, setShowPdfLibrary] = useState(false);
+  const [showHabitBoardModal, setShowHabitBoardModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // 관리자 권한 확인 (valencia5223@gmail.com 또는 admin 키워드)
@@ -478,19 +480,35 @@ export default function App() {
 
         <div className="flex align-center gap-2" style={{ flexWrap: 'nowrap', flexShrink: 0 }}>
           {user && (
-            <button
-              className="nav-tab-capsule"
-              onClick={() => setShowPdfLibrary(true)}
-              style={{
-                backgroundColor: 'rgba(2, 132, 199, 0.14)',
-                color: '#0284c7',
-                borderColor: 'rgba(2, 132, 199, 0.4)',
-                fontWeight: 700,
-                flexShrink: 0
-              }}
-            >
-              <FileText size={16} /> PDF 서재
-            </button>
+            <>
+              <button
+                className="nav-tab-capsule"
+                onClick={() => setShowHabitBoardModal(true)}
+                style={{
+                  backgroundColor: 'rgba(16, 185, 129, 0.14)',
+                  color: '#059669',
+                  borderColor: 'rgba(16, 185, 129, 0.4)',
+                  fontWeight: 700,
+                  flexShrink: 0
+                }}
+              >
+                <CheckSquare size={16} /> ✅ 루틴 & 할 일
+              </button>
+
+              <button
+                className="nav-tab-capsule"
+                onClick={() => setShowPdfLibrary(true)}
+                style={{
+                  backgroundColor: 'rgba(2, 132, 199, 0.14)',
+                  color: '#0284c7',
+                  borderColor: 'rgba(2, 132, 199, 0.4)',
+                  fontWeight: 700,
+                  flexShrink: 0
+                }}
+              >
+                <FileText size={16} /> PDF 서재
+              </button>
+            </>
           )}
 
           <WeatherWidget />
@@ -608,6 +626,12 @@ export default function App() {
       {showPdfLibrary && (
         <PdfLibraryModal onClose={() => setShowPdfLibrary(false)} />
       )}
+
+      {/* 3D 포스트잇 오늘의 할 일 & 루틴 체크리스트 모달 */}
+      <DailyHabitBoardModal
+        isOpen={showHabitBoardModal}
+        onClose={() => setShowHabitBoardModal(false)}
+      />
     </div>
   );
 }
