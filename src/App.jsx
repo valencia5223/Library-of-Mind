@@ -454,13 +454,6 @@ export default function App() {
             </button>
 
             <button
-              className={`nav-tab-capsule ${activeTab === 'search' ? 'active' : ''}`}
-              onClick={() => setActiveTab('search')}
-            >
-              <Search size={16} /> 탐색
-            </button>
-
-            <button
               className={`nav-tab-capsule ${activeTab === 'focus' ? 'active' : ''}`}
               onClick={() => setActiveTab('focus')}
             >
