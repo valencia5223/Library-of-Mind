@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { BookOpen, Star, ExternalLink, PlusCircle, Plus, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BookOpen, Star, ExternalLink, PlusCircle, Plus, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw, X, Sparkles } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import BookDetailModal from './BookDetailModal';
 import ThoughtLedger from './ThoughtLedger';
+import ShelfGuestbookModal, { POSTIT_COLORS } from './ShelfGuestbookModal';
 
 export default function BookshelfView({ 
   books, 
@@ -23,6 +24,65 @@ export default function BookshelfView({
   const [showAddModal, setShowAddModal] = useState(false);
   const [showThoughtLedgerModal, setShowThoughtLedgerModal] = useState(false);
   const [isEditingReview, setIsEditingReview] = useState(false);
+
+  // 이웃 서재 3D 포스트잇 방명록 상태 관리
+  const ownerKey = viewedFriend ? (viewedFriend.id || viewedFriend.email) : (userId || 'my_shelf');
+  const guestbookStorageKey = `shelf_guestbook_${ownerKey}`;
+
+  const [guestbookNotes, setGuestbookNotes] = useState(() => {
+    try {
+      const saved = localStorage.getItem(guestbookStorageKey);
+      return saved ? JSON.parse(saved) : [
+        {
+          id: 'sample_gb_1',
+          authorName: '달빛 독서가 🌙',
+          content: '서재 분위기가 너무 아늑하네요! 추천 책 잘 구경하고 갑니다 📚✨',
+          color: 'yellow',
+          createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
+          rotDeg: -3
+        },
+        {
+          id: 'sample_gb_2',
+          authorName: '클래식 본문 📜',
+          content: '3D 원목 서재 감성 최고네요! 자주 놀러올게요 😊',
+          color: 'pink',
+          createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+          rotDeg: 2
+        }
+      ];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const [showGuestbookModal, setShowGuestbookModal] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(guestbookStorageKey);
+      if (saved) setGuestbookNotes(JSON.parse(saved));
+    } catch (e) {}
+  }, [guestbookStorageKey]);
+
+  const handleAddGuestbookNote = (newNote) => {
+    setGuestbookNotes((prev) => {
+      const updated = [newNote, ...prev];
+      try {
+        localStorage.setItem(guestbookStorageKey, JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
+
+  const handleDeleteGuestbookNote = (noteId) => {
+    setGuestbookNotes((prev) => {
+      const updated = prev.filter(n => n.id !== noteId);
+      try {
+        localStorage.setItem(guestbookStorageKey, JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
 
   // 3D 책장 드래그 앤 드롭 순서 재배치 상태
   const [draggedBookId, setDraggedBookId] = useState(null);
@@ -935,51 +995,75 @@ export default function BookshelfView({
             </div>
           )}
 
-          {/* 3. 독서 기록장 & 수동 책 추가 액션 버튼 */}
-          {!viewedFriend && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', whiteSpace: 'nowrap' }}>
-              <button
-                className="btn btn-outline"
-                onClick={() => setShowThoughtLedgerModal(true)}
-                style={{
-                  height: '38px',
-                  padding: '0 0.9rem',
-                  backgroundColor: 'rgba(2, 132, 199, 0.1)',
-                  color: '#0284c7',
-                  borderColor: 'rgba(2, 132, 199, 0.3)',
-                  fontWeight: 700,
-                  fontSize: '0.825rem',
-                  whiteSpace: 'nowrap',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  borderRadius: '8px',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <MessageSquare size={15} /> 📝 독서 기록장 (문장 & 생각)
-              </button>
+          {/* 3. 이웃 방명록 & 독서 기록장 & 수동 책 추가 액션 버튼 */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', whiteSpace: 'nowrap' }}>
+            <button
+              className="btn btn-outline"
+              onClick={() => setShowGuestbookModal(true)}
+              style={{
+                height: '38px',
+                padding: '0 0.9rem',
+                backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                color: '#d97706',
+                borderColor: 'rgba(245, 158, 11, 0.35)',
+                fontWeight: 700,
+                fontSize: '0.825rem',
+                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                borderRadius: '8px',
+                boxSizing: 'border-box'
+              }}
+            >
+              <Sparkles size={15} /> {viewedFriend ? '📌 이웃 방명록 남기기' : `💌 내 방명록 (${guestbookNotes.length})`}
+            </button>
 
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowAddModal(true)}
-                style={{
-                  height: '38px',
-                  padding: '0 0.9rem',
-                  fontWeight: 700,
-                  fontSize: '0.825rem',
-                  whiteSpace: 'nowrap',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  borderRadius: '8px',
-                  boxSizing: 'border-box'
-                }}
-              >
-                <PlusCircle size={15} /> 수동 책 추가
-              </button>
-            </div>
-          )}
+            {!viewedFriend && (
+              <>
+                <button
+                  className="btn btn-outline"
+                  onClick={() => setShowThoughtLedgerModal(true)}
+                  style={{
+                    height: '38px',
+                    padding: '0 0.9rem',
+                    backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                    color: '#0284c7',
+                    borderColor: 'rgba(2, 132, 199, 0.3)',
+                    fontWeight: 700,
+                    fontSize: '0.825rem',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    borderRadius: '8px',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <MessageSquare size={15} /> 📝 독서 기록장 (문장 & 생각)
+                </button>
+
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setShowAddModal(true)}
+                  style={{
+                    height: '38px',
+                    padding: '0 0.9rem',
+                    fontWeight: 700,
+                    fontSize: '0.825rem',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    borderRadius: '8px',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <PlusCircle size={15} /> 수동 책 추가
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1007,6 +1091,58 @@ export default function BookshelfView({
             {viewMode === '3d' ? (
               chunks.map((shelfBooks, chunkIdx) => (
                 <div key={`${cat.key}-shelf-${chunkIdx}`} className={`wood-shelf shelf-theme-${shelfTheme}`} style={{ marginBottom: '2rem', position: 'relative' }}>
+                  {/* 3D 원목 선반 위 3D 손글씨 포스트잇 방명록 연출 */}
+                  {chunkIdx === 0 && guestbookNotes.length > 0 && (
+                    <div style={{ position: 'absolute', top: '-38px', right: '140px', display: 'flex', gap: '12px', zIndex: 14, pointerEvents: 'auto' }}>
+                      {guestbookNotes.slice(0, 3).map((note, noteIdx) => {
+                        const colorObj = POSTIT_COLORS.find(c => c.id === note.color) || POSTIT_COLORS[0];
+                        return (
+                          <div
+                            key={note.id}
+                            onClick={() => setShowGuestbookModal(true)}
+                            title={`${note.authorName}: ${note.content}`}
+                            style={{
+                              backgroundColor: colorObj.bg,
+                              color: colorObj.text,
+                              border: `1.5px solid ${colorObj.border}`,
+                              borderRadius: '7px',
+                              padding: '0.3rem 0.55rem',
+                              width: '105px',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              boxShadow: `2px 4px 10px ${colorObj.shadow}`,
+                              transform: `rotate(${note.rotDeg || (noteIdx % 2 === 0 ? -3 : 3)}deg)`,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              userSelect: 'none',
+                              lineHeight: '1.3'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = `rotate(0deg) scale(1.12)`;
+                              e.currentTarget.style.zIndex = '20';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = `rotate(${note.rotDeg || (noteIdx % 2 === 0 ? -3 : 3)}deg) scale(1)`;
+                              e.currentTarget.style.zIndex = '14';
+                            }}
+                          >
+                            {/* 포스트잇 테이프 연출 */}
+                            <div style={{
+                              position: 'absolute', top: '-5px', left: '50%', transform: 'translateX(-50%)',
+                              width: '30px', height: '9px', backgroundColor: 'rgba(255,255,255,0.7)', border: '1px solid rgba(0,0,0,0.08)'
+                            }} />
+                            <div style={{ fontSize: '0.68rem', opacity: 0.85, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              📌 {note.authorName}
+                            </div>
+                            <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '1px' }}>
+                              {note.content}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   {/* 포차코 & 헬로키티 캐릭터 전용 귀여운 3D 데코 스티커 */}
                   {shelfTheme === 'pochacco' && (
                     <div className="pochacco-decor" style={{ position: 'absolute', top: '-24px', right: '18px', zIndex: 12, background: 'rgba(255,255,255,0.95)', padding: '4px 10px', borderRadius: '16px', border: '2px solid #5ba8b7', boxShadow: '0 6px 14px rgba(0,0,0,0.12)', fontWeight: 800, fontSize: '0.82rem', color: '#2c6e7a', display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
@@ -1676,6 +1812,16 @@ export default function BookshelfView({
           </div>
         </div>
       )}
+
+      {/* 3D 이웃 서재 포스트잇 방명록 모달 */}
+      <ShelfGuestbookModal
+        isOpen={showGuestbookModal}
+        onClose={() => setShowGuestbookModal(false)}
+        viewedFriend={viewedFriend}
+        guestbookNotes={guestbookNotes}
+        onAddGuestbookNote={handleAddGuestbookNote}
+        onDeleteGuestbookNote={handleDeleteGuestbookNote}
+      />
     </div>
   );
 }
