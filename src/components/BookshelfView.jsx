@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Star, ExternalLink, PlusCircle, Plus, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw, X, Sparkles } from 'lucide-react';
+import { BookOpen, Star, ExternalLink, PlusCircle, Plus, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw, X, Sparkles, Search } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import BookDetailModal from './BookDetailModal';
 import ThoughtLedger from './ThoughtLedger';
@@ -24,6 +24,7 @@ export default function BookshelfView({
   const [showAddModal, setShowAddModal] = useState(false);
   const [showThoughtLedgerModal, setShowThoughtLedgerModal] = useState(false);
   const [isEditingReview, setIsEditingReview] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // 이웃 서재 3D 포스트잇 방명록 상태 관리
   const ownerKey = viewedFriend ? (viewedFriend.id || viewedFriend.email) : (userId || 'my_shelf');
@@ -929,6 +930,50 @@ export default function BookshelfView({
 
         {/* 우측 정렬 툴바 제어 수평 행 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+          {/* 내 서재 전용 도서 실시간 검색창 */}
+          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+            <Search size={15} style={{ position: 'absolute', left: '10px', color: '#94a3b8', pointerEvents: 'none' }} />
+            <input
+              type="text"
+              placeholder="내 서재 도서 검색 (제목, 저자, 출판사)..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                height: '38px',
+                paddingLeft: '32px',
+                paddingRight: searchQuery ? '30px' : '12px',
+                fontSize: '0.825rem',
+                borderRadius: '8px',
+                border: '1.5px solid #cbd5e1',
+                backgroundColor: '#ffffff',
+                color: '#1e293b',
+                fontWeight: 600,
+                outline: 'none',
+                width: '230px',
+                boxSizing: 'border-box'
+              }}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                style={{
+                  position: 'absolute',
+                  right: '8px',
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: '2px',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                title="검색어 초기화"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
           {/* 1. 3D / 그리드 뷰 토글 모듈 */}
           <div className="toggle-group" style={{ height: '38px', display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box' }}>
             <button
@@ -1067,287 +1112,313 @@ export default function BookshelfView({
         </div>
       </div>
 
-      {/* 서재 책장 층별 렌더링 */}
-      {statusCategories.map((cat) => {
-        const catBooks = books.filter((b) => b.status === cat.key);
+      {/* 실시간 서재 필터링 로직 연동 */}
+      {(() => {
+        const filteredBooks = books.filter((b) => {
+          if (!searchQuery.trim()) return true;
+          const q = searchQuery.toLowerCase().trim();
+          return (
+            (b.title || '').toLowerCase().includes(q) ||
+            (b.author || '').toLowerCase().includes(q) ||
+            (b.publisher || '').toLowerCase().includes(q)
+          );
+        });
 
-        // 12권씩 한 층(선반)으로 구성 및 분배
-        const chunks = [];
-        const chunkSize = 12;
-        for (let i = 0; i < catBooks.length; i += chunkSize) {
-          chunks.push(catBooks.slice(i, i + chunkSize));
-        }
-        if (chunks.length === 0) {
-          chunks.push([]); // 빈 선반 1개 표시 보장
-        }
-
-        return (
-          <div key={cat.key} className="shelf-section">
-            <div className="shelf-badge" style={{ borderColor: cat.color, color: cat.color, backgroundColor: cat.bg }}>
-              <span>{cat.title}</span>
-              <span className="shelf-count">{catBooks.length}권</span>
+        if (searchQuery.trim() && filteredBooks.length === 0) {
+          return (
+            <div style={{ padding: '3rem 1rem', textAlign: 'center', backgroundColor: '#ffffff', borderRadius: '16px', border: '1.5px dashed #cbd5e1', marginTop: '1.5rem' }}>
+              <Search size={36} style={{ margin: '0 auto 0.75rem', color: '#94a3b8', display: 'block' }} />
+              <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#334155' }}>
+                '{searchQuery}' 검색 결과와 일치하는 도서가 없습니다.
+              </h4>
+              <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+                제목, 저자, 출판사 키워드를 확인하시거나 검색어를 지워 전체 목록을 확인하세요.
+              </p>
             </div>
+          );
+        }
 
-            {viewMode === '3d' ? (
-              chunks.map((shelfBooks, chunkIdx) => (
-                <div key={`${cat.key}-shelf-${chunkIdx}`} className={`wood-shelf shelf-theme-${shelfTheme}`} style={{ marginBottom: '2rem', position: 'relative' }}>
-                  {/* 3D 원목 선반 위 3D 손글씨 포스트잇 방명록 연출 */}
-                  {chunkIdx === 0 && guestbookNotes.length > 0 && (
-                    <div style={{ position: 'absolute', top: '-38px', right: '140px', display: 'flex', gap: '12px', zIndex: 14, pointerEvents: 'auto' }}>
-                      {guestbookNotes.slice(0, 3).map((note, noteIdx) => {
-                        const colorObj = POSTIT_COLORS.find(c => c.id === note.color) || POSTIT_COLORS[0];
-                        return (
-                          <div
-                            key={note.id}
-                            onClick={() => setShowGuestbookModal(true)}
-                            title={`${note.authorName}: ${note.content}`}
-                            style={{
-                              backgroundColor: colorObj.bg,
-                              color: colorObj.text,
-                              border: `1.5px solid ${colorObj.border}`,
-                              borderRadius: '7px',
-                              padding: '0.3rem 0.55rem',
-                              width: '105px',
-                              fontSize: '0.72rem',
-                              fontWeight: 700,
-                              boxShadow: `2px 4px 10px ${colorObj.shadow}`,
-                              transform: `rotate(${note.rotDeg || (noteIdx % 2 === 0 ? -3 : 3)}deg)`,
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              userSelect: 'none',
-                              lineHeight: '1.3'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = `rotate(0deg) scale(1.12)`;
-                              e.currentTarget.style.zIndex = '20';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = `rotate(${note.rotDeg || (noteIdx % 2 === 0 ? -3 : 3)}deg) scale(1)`;
-                              e.currentTarget.style.zIndex = '14';
-                            }}
-                          >
-                            {/* 포스트잇 테이프 연출 */}
-                            <div style={{
-                              position: 'absolute', top: '-5px', left: '50%', transform: 'translateX(-50%)',
-                              width: '30px', height: '9px', backgroundColor: 'rgba(255,255,255,0.7)', border: '1px solid rgba(0,0,0,0.08)'
-                            }} />
-                            <div style={{ fontSize: '0.68rem', opacity: 0.85, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              📌 {note.authorName}
-                            </div>
-                            <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '1px' }}>
-                              {note.content}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+        return statusCategories.map((cat) => {
+          const catBooks = filteredBooks.filter((b) => b.status === cat.key);
 
-                  {/* 포차코 & 헬로키티 캐릭터 전용 귀여운 3D 데코 스티커 */}
-                  {shelfTheme === 'pochacco' && (
-                    <div className="pochacco-decor" style={{ position: 'absolute', top: '-24px', right: '18px', zIndex: 12, background: 'rgba(255,255,255,0.95)', padding: '4px 10px', borderRadius: '16px', border: '2px solid #5ba8b7', boxShadow: '0 6px 14px rgba(0,0,0,0.12)', fontWeight: 800, fontSize: '0.82rem', color: '#2c6e7a', display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
-                      <img src="/assets/pochacco_sticker.png" alt="Pojangmacha" style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '50%' }} />
-                      <span>POJANGMACHA 🐾</span>
-                    </div>
-                  )}
-                  {shelfTheme === 'kitty' && (
-                    <div className="kitty-decor" style={{ position: 'absolute', top: '-24px', right: '18px', zIndex: 12, background: 'rgba(255,255,255,0.95)', padding: '4px 10px', borderRadius: '16px', border: '2px solid #f472b6', boxShadow: '0 6px 14px rgba(0,0,0,0.12)', fontWeight: 800, fontSize: '0.82rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
-                      <img src="/assets/hello_kitty_sticker.png" alt="Annyeong Kitty" style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '50%' }} />
-                      <span>ANNYEONG KITTY 🎀</span>
-                    </div>
-                  )}
+          // 12권씩 한 층(선반)으로 구성 및 분배
+          const chunks = [];
+          const chunkSize = 12;
+          for (let i = 0; i < catBooks.length; i += chunkSize) {
+            chunks.push(catBooks.slice(i, i + chunkSize));
+          }
+          if (chunks.length === 0) {
+            chunks.push([]); // 빈 선반 1개 표시 보장
+          }
 
-                  <div className="shelf-surface" style={{ position: 'relative', overflow: 'hidden' }}>
-                    {/* 책장 안쪽 벽면 포차코 & 헬로키티 은은한 워터마크 캐릭터 배경 벽지 */}
-                    {shelfTheme === 'pochacco' && (
-                      <div
-                        className="shelf-wall-character pochacco-wall"
-                        style={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -55%)',
-                          width: '180px',
-                          height: '180px',
-                          backgroundImage: 'url(/assets/pochacco_sticker.png)',
-                          backgroundSize: 'contain',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'center',
-                          opacity: 0.28,
-                          pointerEvents: 'none',
-                          filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.15))',
-                          zIndex: 1
-                        }}
-                      />
-                    )}
-                    {shelfTheme === 'kitty' && (
-                      <div
-                        className="shelf-wall-character kitty-wall"
-                        style={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -55%)',
-                          width: '180px',
-                          height: '180px',
-                          backgroundImage: 'url(/assets/hello_kitty_sticker.png)',
-                          backgroundSize: 'contain',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'center',
-                          opacity: 0.28,
-                          pointerEvents: 'none',
-                          filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.15))',
-                          zIndex: 1
-                        }}
-                      />
-                    )}
-                    {shelfBooks.length === 0 ? (
-                      <div className="empty-shelf-text">이 책장은 비어 있습니다. 탐색 탭에서 책을 찾아 꽂아보세요!</div>
-                    ) : (
-                      <div className="spine-row">
-                        {shelfBooks.map((book) => {
-                          const spineHeight = Math.min(190, Math.max(145, 135 + ((book.total_pages || 300) / 10)));
-                          const spineWidth = Math.min(64, Math.max(44, 38 + ((book.total_pages || 300) / 18)));
+          return (
+            <div key={cat.key} className="shelf-section">
+              <div className="shelf-badge" style={{ borderColor: cat.color, color: cat.color, backgroundColor: cat.bg }}>
+                <span>{cat.title}</span>
+                <span className="shelf-count">{catBooks.length}권</span>
+              </div>
 
-                          const bookIdStr = String(book.id || 'abc');
-                          const charSum = bookIdStr.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-                          const isLeaning = charSum % 4 === 0;
-                          const tiltAngle = isLeaning ? (charSum % 2 === 0 ? 5 : -5) : 0;
-
-                          const spineStyle = getSpineStyle(book.cover_url, bookIdStr);
-                          if (book.cover_url && !coverColors[bookIdStr]) {
-                            extractMainColor(bookIdStr, book.cover_url);
-                          }
-                          
-                          const extracted = coverColors[bookIdStr];
-                          const finalBg = (extracted && extracted.bg) ? extracted.bg : (typeof extracted === 'string' ? extracted : spineStyle.bg);
-                          const titleColor = (extracted && extracted.titleColor) ? extracted.titleColor : spineStyle.titleColor;
-                          const authorColor = (extracted && extracted.authorColor) ? extracted.authorColor : spineStyle.authorColor;
-                          const textShadow = (extracted && extracted.textShadow) ? extracted.textShadow : spineStyle.textShadow;
-
+              {viewMode === '3d' ? (
+                chunks.map((shelfBooks, chunkIdx) => (
+                  <div key={`${cat.key}-shelf-${chunkIdx}`} className={`wood-shelf shelf-theme-${shelfTheme}`} style={{ marginBottom: '2rem', position: 'relative' }}>
+                    {/* 3D 원목 선반 위 3D 손글씨 포스트잇 방명록 연출 */}
+                    {chunkIdx === 0 && guestbookNotes.length > 0 && (
+                      <div style={{ position: 'absolute', top: '-38px', right: '140px', display: 'flex', gap: '12px', zIndex: 14, pointerEvents: 'auto' }}>
+                        {guestbookNotes.slice(0, 3).map((note, noteIdx) => {
+                          const colorObj = POSTIT_COLORS.find(c => c.id === note.color) || POSTIT_COLORS[0];
                           return (
                             <div
-                              key={book.id}
-                              className={`book-3d-container ${draggedBookId === book.id ? 'is-dragging' : ''} ${dragOverBookId === book.id ? 'drag-over-target' : ''}`}
-                              draggable={true}
-                              onDragStart={(e) => handleDragStart(e, book)}
-                              onDragOver={(e) => handleDragOver(e, book)}
-                              onDragLeave={(e) => handleDragLeave(e, book)}
-                              onDrop={(e) => handleDrop(e, book)}
-                              onDragEnd={handleDragEnd}
-                              onClick={() => handleOpenDetail(book)}
-                              title={`${book.title} - ${book.author} (드래그하여 위치 이동 가능)`}
+                              key={note.id}
+                              onClick={() => setShowGuestbookModal(true)}
+                              title={`${note.authorName}: ${note.content}`}
                               style={{
-                                height: `${spineHeight}px`,
-                                width: `${spineWidth}px`,
-                                '--tilt-angle': `${tiltAngle}deg`
+                                backgroundColor: colorObj.bg,
+                                color: colorObj.text,
+                                border: `1.5px solid ${colorObj.border}`,
+                                borderRadius: '7px',
+                                padding: '0.3rem 0.55rem',
+                                width: '105px',
+                                fontSize: '0.72rem',
+                                fontWeight: 700,
+                                boxShadow: `2px 4px 10px ${colorObj.shadow}`,
+                                transform: `rotate(${note.rotDeg || (noteIdx % 2 === 0 ? -3 : 3)}deg)`,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                userSelect: 'none',
+                                lineHeight: '1.3'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = `rotate(0deg) scale(1.12)`;
+                                e.currentTarget.style.zIndex = '20';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = `rotate(${note.rotDeg || (noteIdx % 2 === 0 ? -3 : 3)}deg) scale(1)`;
+                                e.currentTarget.style.zIndex = '14';
                               }}
                             >
-                              <div className="book-3d-box">
-                                {/* 3D 책등 책등 본연의 그라데이션 바탕과 세로 텍스트 정렬만 출력 */}
-                                <div
-                                  className="book-3d-spine"
-                                  style={{
-                                    background: finalBg
-                                  }}
-                                >
-                                  <div className="spine-ridge"></div>
-                                  <div className="spine-highlight"></div>
-                                  <div className="spine-content">
-                                    <span className="spine-author" style={{ color: authorColor, textShadow: textShadow }}>{formatAuthor(book.author)}</span>
-                                    <span className="spine-title" style={{ color: titleColor, textShadow: textShadow }}>{book.title}</span>
-                                  </div>
-                                </div>
-
-                                {/* 3D 책표지 (호버 시 회전하여 표지가 눈앞에 노출됨) */}
-                                <div
-                                  className="book-3d-cover"
-                                  style={{
-                                    width: `${spineHeight * 0.72}px`
-                                  }}
-                                >
-                                  <img
-                                    src={book.cover_url}
-                                    alt={book.title}
-                                    referrerPolicy="no-referrer"
-                                    onError={(e) => handleImgError(e, book.fallback_cover)}
-                                  />
-                                </div>
-
-                                {/* 3D 종이속지 옆면 */}
-                                <div
-                                  className="book-3d-pages"
-                                  style={{
-                                    width: `${spineHeight * 0.7}px`
-                                  }}
-                                ></div>
+                              {/* 포스트잇 테이프 연출 */}
+                              <div style={{
+                                position: 'absolute', top: '-5px', left: '50%', transform: 'translateX(-50%)',
+                                width: '30px', height: '9px', backgroundColor: 'rgba(255,255,255,0.7)', border: '1px solid rgba(0,0,0,0.08)'
+                              }} />
+                              <div style={{ fontSize: '0.68rem', opacity: 0.85, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                📌 {note.authorName}
+                              </div>
+                              <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '1px' }}>
+                                {note.content}
                               </div>
                             </div>
                           );
                         })}
                       </div>
                     )}
-                  </div>
-                  <div className="shelf-plank"></div>
-                </div>
-              ))
-            ) : (
-              <div className="book-grid mt-3">
-                {catBooks.length === 0 ? (
-                  <div className="empty-shelf-text p-4">등록된 도서가 없습니다.</div>
-                ) : (
-                  catBooks.map((book) => (
-                    <div key={book.id} className="book-card" onClick={() => handleOpenDetail(book)}>
-                      <div className="book-card-cover-wrapper">
-                        <img
-                          src={book.cover_url}
-                          alt={book.title}
-                          referrerPolicy="no-referrer"
-                          onError={(e) => handleImgError(e, book.fallback_cover)}
-                          className="book-card-cover"
+
+                    {/* 포차코 & 헬로키티 캐릭터 전용 귀여운 3D 데코 스티커 */}
+                    {shelfTheme === 'pochacco' && (
+                      <div className="pochacco-decor" style={{ position: 'absolute', top: '-24px', right: '18px', zIndex: 12, background: 'rgba(255,255,255,0.95)', padding: '4px 10px', borderRadius: '16px', border: '2px solid #5ba8b7', boxShadow: '0 6px 14px rgba(0,0,0,0.12)', fontWeight: 800, fontSize: '0.82rem', color: '#2c6e7a', display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
+                        <img src="/assets/pochacco_sticker.png" alt="Pojangmacha" style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '50%' }} />
+                        <span>POJANGMACHA 🐾</span>
+                      </div>
+                    )}
+                    {shelfTheme === 'kitty' && (
+                      <div className="kitty-decor" style={{ position: 'absolute', top: '-24px', right: '18px', zIndex: 12, background: 'rgba(255,255,255,0.95)', padding: '4px 10px', borderRadius: '16px', border: '2px solid #f472b6', boxShadow: '0 6px 14px rgba(0,0,0,0.12)', fontWeight: 800, fontSize: '0.82rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
+                        <img src="/assets/hello_kitty_sticker.png" alt="Annyeong Kitty" style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '50%' }} />
+                        <span>ANNYEONG KITTY 🎀</span>
+                      </div>
+                    )}
+
+                    <div className="shelf-surface" style={{ position: 'relative', overflow: 'hidden' }}>
+                      {/* 책장 안쪽 벽면 포차코 & 헬로키티 은은한 워터마크 캐릭터 배경 벽지 */}
+                      {shelfTheme === 'pochacco' && (
+                        <div
+                          className="shelf-wall-character pochacco-wall"
+                          style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -55%)',
+                            width: '180px',
+                            height: '180px',
+                            backgroundImage: 'url(/assets/pochacco_sticker.png)',
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            opacity: 0.28,
+                            pointerEvents: 'none',
+                            filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.15))',
+                            zIndex: 1
+                          }}
                         />
-                        <span className="rating-pill">
-                          {renderStars(book.rating ?? 0)} <span className="ms-1" style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{(book.rating ?? 0).toFixed ? (book.rating ?? 0).toFixed(1) : parseFloat(book.rating ?? 0).toFixed(1)}</span>
-                        </span>
-                      </div>
-                      <div className="book-card-info">
-                        <h4 className="book-title">{book.title}</h4>
-                        <p className="book-author">{book.author}</p>
-                        {viewedFriend && (
-                          <button
-                            className="btn btn-primary btn-sm w-full mt-2 font-bold flex justify-center align-center gap-1"
-                            style={{ fontSize: '0.78rem', padding: '0.35rem 0.5rem', borderRadius: '6px' }}
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              if (onAddManualBook) {
-                                await onAddManualBook({
-                                  title: book.title,
-                                  author: book.author,
-                                  publisher: book.publisher,
-                                  cover_url: book.cover_url,
-                                  isbn: book.isbn,
-                                  total_pages: book.total_pages,
-                                  status: 'TO_READ',
-                                  buy_link: book.buy_link,
-                                  pub_date: book.pub_date,
-                                  description: book.description
-                                });
-                                alert(`✅ '${book.title}' 도서가 내 서재에 성공적으로 추가되었습니다!`);
-                              }
-                            }}
-                          >
-                            <Plus size={14} /> 내 서재 담기
-                          </button>
-                        )}
-                      </div>
+                      )}
+                      {shelfTheme === 'kitty' && (
+                        <div
+                          className="shelf-wall-character kitty-wall"
+                          style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -55%)',
+                            width: '180px',
+                            height: '180px',
+                            backgroundImage: 'url(/assets/hello_kitty_sticker.png)',
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            opacity: 0.28,
+                            pointerEvents: 'none',
+                            filter: 'drop-shadow(0 6px 12px rgba(0,0,0,0.15))',
+                            zIndex: 1
+                          }}
+                        />
+                      )}
+                      {shelfBooks.length === 0 ? (
+                        <div className="empty-shelf-text">이 책장은 비어 있습니다. 탐색 탭에서 책을 찾아 꽂아보세요!</div>
+                      ) : (
+                        <div className="spine-row">
+                          {shelfBooks.map((book) => {
+                            const spineHeight = Math.min(190, Math.max(145, 135 + ((book.total_pages || 300) / 10)));
+                            const spineWidth = Math.min(64, Math.max(44, 38 + ((book.total_pages || 300) / 18)));
+
+                            const bookIdStr = String(book.id || 'abc');
+                            const charSum = bookIdStr.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                            const isLeaning = charSum % 4 === 0;
+                            const tiltAngle = isLeaning ? (charSum % 2 === 0 ? 5 : -5) : 0;
+
+                            const spineStyle = getSpineStyle(book.cover_url, bookIdStr);
+                            if (book.cover_url && !coverColors[bookIdStr]) {
+                              extractMainColor(bookIdStr, book.cover_url);
+                            }
+                            
+                            const extracted = coverColors[bookIdStr];
+                            const finalBg = (extracted && extracted.bg) ? extracted.bg : (typeof extracted === 'string' ? extracted : spineStyle.bg);
+                            const titleColor = (extracted && extracted.titleColor) ? extracted.titleColor : spineStyle.titleColor;
+                            const authorColor = (extracted && extracted.authorColor) ? extracted.authorColor : spineStyle.authorColor;
+                            const textShadow = (extracted && extracted.textShadow) ? extracted.textShadow : spineStyle.textShadow;
+
+                            return (
+                              <div
+                                key={book.id}
+                                className={`book-3d-container ${draggedBookId === book.id ? 'is-dragging' : ''} ${dragOverBookId === book.id ? 'drag-over-target' : ''}`}
+                                draggable={true}
+                                onDragStart={(e) => handleDragStart(e, book)}
+                                onDragOver={(e) => handleDragOver(e, book)}
+                                onDragLeave={(e) => handleDragLeave(e, book)}
+                                onDrop={(e) => handleDrop(e, book)}
+                                onDragEnd={handleDragEnd}
+                                onClick={() => handleOpenDetail(book)}
+                                title={`${book.title} - ${book.author} (드래그하여 위치 이동 가능)`}
+                                style={{
+                                  height: `${spineHeight}px`,
+                                  width: `${spineWidth}px`,
+                                  '--tilt-angle': `${tiltAngle}deg`
+                                }}
+                              >
+                                <div className="book-3d-box">
+                                  {/* 3D 책등 책등 본연의 그라데이션 바탕과 세로 텍스트 정렬만 출력 */}
+                                  <div
+                                    className="book-3d-spine"
+                                    style={{
+                                      background: finalBg
+                                    }}
+                                  >
+                                    <div className="spine-ridge"></div>
+                                    <div className="spine-highlight"></div>
+                                    <div className="spine-content">
+                                      <span className="spine-author" style={{ color: authorColor, textShadow: textShadow }}>{formatAuthor(book.author)}</span>
+                                      <span className="spine-title" style={{ color: titleColor, textShadow: textShadow }}>{book.title}</span>
+                                    </div>
+                                  </div>
+
+                                  {/* 3D 책표지 (호버 시 회전하여 표지가 눈앞에 노출됨) */}
+                                  <div
+                                    className="book-3d-cover"
+                                    style={{
+                                      width: `${spineHeight * 0.72}px`
+                                    }}
+                                  >
+                                    <img
+                                      src={book.cover_url}
+                                      alt={book.title}
+                                      referrerPolicy="no-referrer"
+                                      onError={(e) => handleImgError(e, book.fallback_cover)}
+                                    />
+                                  </div>
+
+                                  {/* 3D 종이속지 옆면 */}
+                                  <div
+                                    className="book-3d-pages"
+                                    style={{
+                                      width: `${spineHeight * 0.7}px`
+                                    }}
+                                  ></div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })}
+                    <div className="shelf-plank"></div>
+                  </div>
+                ))
+              ) : (
+                <div className="book-grid mt-3">
+                  {catBooks.length === 0 ? (
+                    <div className="empty-shelf-text p-4">등록된 도서가 없습니다.</div>
+                  ) : (
+                    catBooks.map((book) => (
+                      <div key={book.id} className="book-card" onClick={() => handleOpenDetail(book)}>
+                        <div className="book-card-cover-wrapper">
+                          <img
+                            src={book.cover_url}
+                            alt={book.title}
+                            referrerPolicy="no-referrer"
+                            onError={(e) => handleImgError(e, book.fallback_cover)}
+                            className="book-card-cover"
+                          />
+                          <span className="rating-pill">
+                            {renderStars(book.rating ?? 0)} <span className="ms-1" style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{(book.rating ?? 0).toFixed ? (book.rating ?? 0).toFixed(1) : parseFloat(book.rating ?? 0).toFixed(1)}</span>
+                          </span>
+                        </div>
+                        <div className="book-card-info">
+                          <h4 className="book-title">{book.title}</h4>
+                          <p className="book-author">{book.author}</p>
+                          {viewedFriend && (
+                            <button
+                              className="btn btn-primary btn-sm w-full mt-2 font-bold flex justify-center align-center gap-1"
+                              style={{ fontSize: '0.78rem', padding: '0.35rem 0.5rem', borderRadius: '6px' }}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (onAddManualBook) {
+                                  await onAddManualBook({
+                                    title: book.title,
+                                    author: book.author,
+                                    publisher: book.publisher,
+                                    cover_url: book.cover_url,
+                                    isbn: book.isbn,
+                                    total_pages: book.total_pages,
+                                    status: 'TO_READ',
+                                    buy_link: book.buy_link,
+                                    pub_date: book.pub_date,
+                                    description: book.description
+                                  });
+                                  alert(`✅ '${book.title}' 도서가 내 서재에 성공적으로 추가되었습니다!`);
+                                }
+                              }}
+                            >
+                              <Plus size={14} /> 내 서재 담기
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        });
+      })()}
 
       {/* 도서 상세 및 리뷰 모달 */}
       {selectedBook && (
