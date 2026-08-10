@@ -2,7 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { Sun, Cloud, CloudSun, CloudRain, Snowflake, CloudLightning } from 'lucide-react';
 
 export default function WeatherWidget() {
-  const [weather, setWeather] = useState(null);
+  const [weather, setWeather] = useState(() => {
+    try {
+      const cached = localStorage.getItem('cached_weather_widget');
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
+    // 최초 방문 시 레이아웃 튀는 현상 차단을 위한 품격 있는 세일트 톤 기본값
+    return {
+      temp: 22,
+      code: 0,
+      isDay: true,
+      cityName: '서울'
+    };
+  });
 
   useEffect(() => {
     const fetchWeatherForCoords = async (lat, lon, locationName = '') => {
@@ -33,12 +45,16 @@ export default function WeatherWidget() {
         if (res.ok) {
           const data = await res.json();
           if (data.current_weather) {
-            setWeather({
+            const newWeather = {
               temp: Math.round(data.current_weather.temperature),
               code: data.current_weather.weathercode,
               isDay: data.current_weather.is_day === 1,
               cityName: city || '서울'
-            });
+            };
+            setWeather(newWeather);
+            try {
+              localStorage.setItem('cached_weather_widget', JSON.stringify(newWeather));
+            } catch (e) {}
           }
         }
       } catch (err) {
@@ -68,8 +84,6 @@ export default function WeatherWidget() {
     return () => clearInterval(interval);
   }, []);
 
-  if (!weather) return null;
-
   // WMO Weather interpretation codes
   const getWeatherInfo = (code) => {
     if (code === 0) return { icon: <Sun size={13} className="text-amber-400" />, label: '맑음' };
@@ -83,13 +97,15 @@ export default function WeatherWidget() {
     return { icon: <Sun size={13} className="text-amber-400" />, label: '맑음' };
   };
 
-  const info = getWeatherInfo(weather.code);
+  const info = getWeatherInfo(weather ? weather.code : 0);
+  const currentTemp = weather ? weather.temp : 22;
+  const currentCity = weather ? weather.cityName : '서울';
 
   return (
     <div className="weather-widget">
-      <span className="weather-location">{weather.cityName}</span>
+      <span className="weather-location">{currentCity}</span>
       <span className="weather-icon-box">{info.icon}</span>
-      <span className="weather-temp">{weather.temp}°C</span>
+      <span className="weather-temp">{currentTemp}°C</span>
       <span className="weather-desc">{info.label}</span>
     </div>
   );
