@@ -857,14 +857,14 @@ export default function BookshelfView({
         } else if (clampRating >= i - 0.5) {
           stars.push(
             <span key={i} style={{ display: 'inline-flex', position: 'relative', width: '15px', height: '15px' }} className="me-0.5">
-              <Star size={15} color="#f59e0b" style={{ position: 'absolute' }} />
+              <Star size={15} color="#cbd5e1" style={{ position: 'absolute' }} />
               <span style={{ width: '7.5px', overflow: 'hidden', position: 'absolute', display: 'inline-block' }}>
                 <Star size={15} fill="#f59e0b" color="#f59e0b" />
               </span>
             </span>
           );
         } else {
-          stars.push(<Star key={i} size={15} fill="none" color="#f59e0b" style={{ display: 'inline' }} />);
+          stars.push(<Star key={i} size={15} fill="none" color="#cbd5e1" style={{ display: 'inline' }} />);
         }
     }
     return stars;
@@ -1570,9 +1570,9 @@ export default function BookshelfView({
                   ) : (
                     <div className="saved-review-view mt-2">
                       <div className="flex align-center gap-1 mb-1" style={{ display: 'flex', alignItems: 'center' }}>
-                        {renderStars(selectedBook.rating ?? 0)}
-                        <span className="ms-2 font-bold" style={{ marginLeft: '0.5rem' }}>
-                          {isNaN(parseFloat(selectedBook.rating)) ? '0.0' : parseFloat(selectedBook.rating).toFixed(1)}
+                        {renderStars(parseFloat(selectedBook.rating) || 0)}
+                        <span className="ms-2 font-bold" style={{ marginLeft: '0.5rem', color: (parseFloat(selectedBook.rating) || 0) > 0 ? '#f59e0b' : '#94a3b8' }}>
+                          {(parseFloat(selectedBook.rating) || 0).toFixed(1)}점 {(parseFloat(selectedBook.rating) || 0) === 0 ? '(미평가)' : ''}
                         </span>
                       </div>
                       {selectedBook.status === 'READ' && selectedBook.completed_at && (

@@ -280,7 +280,8 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
     onAddBook({
       ...book,
       total_pages: realPages,
-      status: 'TO_READ'
+      status: 'TO_READ',
+      rating: 0
     });
   };
 
