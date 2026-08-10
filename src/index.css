@@ -1241,6 +1241,52 @@ input:focus, select:focus, textarea:focus {
   pointer-events: auto;
 }
 
+/* 3D 실크 가름끈 (Bookmark Ribbon) 및 완독 골드 엠블럼 연출 */
+.spine-bookmark-ribbon {
+  position: absolute;
+  top: 0;
+  left: 6px;
+  width: 7px;
+  height: 28px;
+  background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%);
+  border-radius: 0 0 3px 3px;
+  box-shadow: 1px 2px 5px rgba(0, 0, 0, 0.4), inset -1px 0 2px rgba(255, 255, 255, 0.3);
+  z-index: 12;
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+
+.spine-bookmark-ribbon::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 0;
+  border-left: 3.5px solid transparent;
+  border-right: 3.5px solid transparent;
+  border-top: 4px solid #b91c1c;
+}
+
+.spine-completion-seal {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 14px;
+  height: 14px;
+  background: radial-gradient(circle at 35% 35%, #fef08a 0%, #eab308 60%, #a16207 100%);
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5), inset 0 0 2px rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  color: #78350f;
+  z-index: 12;
+  border: 1px solid #fef08a;
+  pointer-events: auto;
+}
+
 /* 3D 책 우측 표지 (호버 시 입체 노출) */
 .book-3d-cover {
   position: absolute;

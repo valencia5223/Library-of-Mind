@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Star, ExternalLink, PlusCircle, Plus, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw, X, Sparkles, Search } from 'lucide-react';
+import { BookOpen, Star, ExternalLink, PlusCircle, Plus, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw, X, Sparkles, Search, Compass } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import BookDetailModal from './BookDetailModal';
 import ThoughtLedger from './ThoughtLedger';
 import ShelfGuestbookModal, { POSTIT_COLORS } from './ShelfGuestbookModal';
+import ReadingTasteGalaxyModal from './ReadingTasteGalaxyModal';
 
 export default function BookshelfView({ 
   books, 
@@ -23,6 +24,7 @@ export default function BookshelfView({
   const [selectedBook, setSelectedBook] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showThoughtLedgerModal, setShowThoughtLedgerModal] = useState(false);
+  const [showTasteGalaxyModal, setShowTasteGalaxyModal] = useState(false);
   const [isEditingReview, setIsEditingReview] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -1068,6 +1070,29 @@ export default function BookshelfView({
               <>
                 <button
                   className="btn btn-outline"
+                  onClick={() => setShowTasteGalaxyModal(true)}
+                  style={{
+                    height: '38px',
+                    padding: '0 0.9rem',
+                    backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                    color: '#a855f7',
+                    borderColor: 'rgba(168, 85, 247, 0.3)',
+                    fontWeight: 700,
+                    fontSize: '0.825rem',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    borderRadius: '8px',
+                    boxSizing: 'border-box'
+                  }}
+                  title="내 서재 카테고리별 독서 성향 및 취향 성운 시각화"
+                >
+                  <Compass size={15} /> 🌌 내 취향 지도
+                </button>
+
+                <button
+                  className="btn btn-outline"
                   onClick={() => setShowThoughtLedgerModal(true)}
                   style={{
                     height: '38px',
@@ -1321,6 +1346,14 @@ export default function BookshelfView({
                                       background: finalBg
                                     }}
                                   >
+                                    {/* 독서 상태별 3D 가름끈(북마크) & 완독 골드 엠블럼 연출 */}
+                                    {book.status === 'READING' && (
+                                      <div className="spine-bookmark-ribbon" title="독서 진행 중 (실크 가름끈 노출)" />
+                                    )}
+                                    {book.status === 'COMPLETED' && (
+                                      <div className="spine-completion-seal" title="완독 엠블럼">✨</div>
+                                    )}
+
                                     <div className="spine-ridge"></div>
                                     <div className="spine-highlight"></div>
                                     <div className="spine-content">
@@ -1893,6 +1926,14 @@ export default function BookshelfView({
         onAddGuestbookNote={handleAddGuestbookNote}
         onDeleteGuestbookNote={handleDeleteGuestbookNote}
       />
+
+      {/* 내 지적 취향 성운 (Reading Taste Galaxy) 시각화 모달 */}
+      {showTasteGalaxyModal && (
+        <ReadingTasteGalaxyModal
+          books={books}
+          onClose={() => setShowTasteGalaxyModal(false)}
+        />
+      )}
     </div>
   );
 }
