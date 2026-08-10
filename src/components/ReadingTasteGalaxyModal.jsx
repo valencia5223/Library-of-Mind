@@ -25,39 +25,49 @@ export default function ReadingTasteGalaxyModal({ books = [], onClose }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // 도서 카테고리/장르 통계 분석
+  // 도서 카테고리/장르 통계 및 실제 읽은 누적 페이지 수 분석
   const categoryStats = React.useMemo(() => {
     const counts = {};
     let totalCount = 0;
-    let totalPages = 0;
+    let totalPagesRead = 0;
     let ratedBooksCount = 0;
     let sumRating = 0;
 
     books.forEach((book) => {
       totalCount += 1;
-      totalPages += Number(book.total_pages) || 0;
+      
+      // 실제 읽은 누적 페이지 계산 (완독=전체페이지, 읽는중=현재페이지)
+      const totalP = Number(book.total_pages) || 0;
+      const currentP = Number(book.current_pages || book.current_page) || 0;
+      
+      if (book.status === 'READ' || book.status === 'COMPLETED') {
+        totalPagesRead += totalP;
+      } else if (book.status === 'READING') {
+        totalPagesRead += currentP > 0 ? Math.min(currentP, totalP) : Math.round(totalP * 0.3); // 현재 페이지 또는 추정값
+      }
+
       if (book.rating && Number(book.rating) > 0) {
         ratedBooksCount += 1;
         sumRating += Number(book.rating);
       }
 
-      // 장르 키워드 매핑
+      // 알라딘 API categoryName 또는 수동 입력 장르 키워드 정교화 매핑
       let genreKey = '기타/일반';
-      const rawCat = (book.categoryName || book.publisher || book.title || '').toLowerCase();
+      const rawCat = (book.categoryName || book.category || book.publisher || book.title || '').toLowerCase();
       
-      if (rawCat.includes('소설') || rawCat.includes('문학') || rawCat.includes('fiction')) {
+      if (rawCat.includes('소설') || rawCat.includes('시/희곡') || rawCat.includes('문학') || rawCat.includes('fiction')) {
         genreKey = '소설/문학';
-      } else if (rawCat.includes('인문') || rawCat.includes('철학') || rawCat.includes('역사') || rawCat.includes('사회')) {
+      } else if (rawCat.includes('인문') || rawCat.includes('철학') || rawCat.includes('역사') || rawCat.includes('사회') || rawCat.includes('정치')) {
         genreKey = '인문/철학';
-      } else if (rawCat.includes('과학') || rawCat.includes('공학') || rawCat.includes('컴퓨터') || rawCat.includes('it') || rawCat.includes('수학')) {
+      } else if (rawCat.includes('과학') || rawCat.includes('공학') || rawCat.includes('컴퓨터') || rawCat.includes('it') || rawCat.includes('모바일') || rawCat.includes('수학')) {
         genreKey = '과학/IT';
-      } else if (rawCat.includes('경제') || rawCat.includes('경영') || rawCat.includes('주식') || rawCat.includes('트렌드') || rawCat.includes('비즈니스')) {
+      } else if (rawCat.includes('경제') || rawCat.includes('경영') || rawCat.includes('주식') || rawCat.includes('트렌드') || rawCat.includes('재테크') || rawCat.includes('비즈니스')) {
         genreKey = '경제/경영';
-      } else if (rawCat.includes('자기계발') || rawCat.includes('성공') || rawCat.includes('습관') || rawCat.includes('동기')) {
+      } else if (rawCat.includes('자기계발') || rawCat.includes('성공') || rawCat.includes('습관') || rawCat.includes('처세')) {
         genreKey = '자기계발';
-      } else if (rawCat.includes('에세이') || rawCat.includes('시') || rawCat.includes('수필') || rawCat.includes('일기')) {
+      } else if (rawCat.includes('에세이') || rawCat.includes('수필') || rawCat.includes('여행') || rawCat.includes('일기')) {
         genreKey = '에세이/시';
-      } else if (rawCat.includes('예술') || rawCat.includes('음악') || rawCat.includes('미술') || rawCat.includes('디자인')) {
+      } else if (rawCat.includes('예술') || rawCat.includes('음악') || rawCat.includes('미술') || rawCat.includes('디자인') || rawCat.includes('영화')) {
         genreKey = '예술/문화';
       }
 
@@ -94,7 +104,7 @@ export default function ReadingTasteGalaxyModal({ books = [], onClose }) {
     return {
       list,
       totalCount,
-      totalPages,
+      totalPagesRead,
       avgRating,
       persona
     };
@@ -221,8 +231,8 @@ export default function ReadingTasteGalaxyModal({ books = [], onClose }) {
                 <div style={{ fontSize: '1rem', fontWeight: 800, color: '#38bdf8' }}>{categoryStats.totalCount}권</div>
               </div>
               <div style={{ textAlign: 'right', borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: '1rem' }}>
-                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>누적 페이지</div>
-                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#34d399' }}>{categoryStats.totalPages.toLocaleString()} p</div>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>읽은 누적 페이지</div>
+                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#34d399' }}>{categoryStats.totalPagesRead.toLocaleString()} p</div>
               </div>
               <div style={{ textAlign: 'right', borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: '1rem' }}>
                 <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>평균 별점</div>

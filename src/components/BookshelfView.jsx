@@ -1350,7 +1350,7 @@ export default function BookshelfView({
                                     {book.status === 'READING' && (
                                       <div className="spine-bookmark-ribbon" title="독서 진행 중 (실크 가름끈 노출)" />
                                     )}
-                                    {book.status === 'COMPLETED' && (
+                                    {(book.status === 'READ' || book.status === 'COMPLETED') && (
                                       <div className="spine-completion-seal" title="완독 엠블럼">✨</div>
                                     )}
 
