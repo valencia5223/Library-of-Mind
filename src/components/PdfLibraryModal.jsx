@@ -4,6 +4,68 @@ import PdfBookViewerModal from './PdfBookViewerModal';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 const STORAGE_KEY = 'standalone_pdf_library_v1';
+const IDB_NAME = 'LibraryOfMind_PdfStorage';
+const IDB_STORE = 'pdf_blobs';
+
+function openPdfIDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(IDB_NAME, 1);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function savePdfBlobToIDB(id, blob) {
+  try {
+    const db = await openPdfIDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.put(blob, id);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) {
+    console.warn('IndexedDB PDF 저장 실패:', e);
+    return false;
+  }
+}
+
+async function getPdfBlobFromIDB(id) {
+  try {
+    const db = await openPdfIDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.get(id);
+      req.onsuccess = () => resolve(req.result || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch (e) {
+    return null;
+  }
+}
+
+async function deletePdfBlobFromIDB(id) {
+  try {
+    const db = await openPdfIDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.delete(id);
+      req.onsuccess = () => resolve(true);
+      req.onerror = () => resolve(false);
+    });
+  } catch (e) {
+    return false;
+  }
+}
 
 export default function PdfLibraryModal({ onClose }) {
   const [pdfList, setPdfList] = useState([]);
@@ -38,6 +100,26 @@ export default function PdfLibraryModal({ onClose }) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newList));
   };
 
+  const handleOpenPdf = async (item) => {
+    if (item.url && item.url.startsWith('http') && !item.url.startsWith('blob:')) {
+      setSelectedPdf(item);
+      return;
+    }
+
+    const storedBlob = await getPdfBlobFromIDB(item.id);
+    if (storedBlob) {
+      const freshUrl = URL.createObjectURL(storedBlob);
+      setSelectedPdf({ ...item, url: freshUrl });
+      return;
+    }
+
+    if (item.url) {
+      setSelectedPdf(item);
+    } else {
+      alert('⚠️ 저장된 PDF 파일 데이터를 찾을 수 없습니다. 다시 등록해 주세요.');
+    }
+  };
+
   const handleFileUpload = async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -49,13 +131,19 @@ export default function PdfLibraryModal({ onClose }) {
 
     setIsUploading(true);
     try {
+      const pdfId = `pdf_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+
+      // IndexedDB에 바이너리 파일 영구 저장
+      await savePdfBlobToIDB(pdfId, file);
+
       const localObjectUrl = URL.createObjectURL(file);
       const newPdfItem = {
-        id: `pdf_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+        id: pdfId,
         title: file.name.replace(/\.pdf$/i, ''),
         fileName: file.name,
         fileSize: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
         url: localObjectUrl,
+        hasIdbBlob: true,
         currentPage: 1,
         totalPages: 100,
         createdAt: new Date().toISOString()
@@ -84,8 +172,9 @@ export default function PdfLibraryModal({ onClose }) {
     }
   };
 
-  const handleDeletePdf = (id, title) => {
+  const handleDeletePdf = async (id, title) => {
     if (window.confirm(`'${title}' PDF 문서를 삭제하시겠습니까?`)) {
+      await deletePdfBlobFromIDB(id);
       const filtered = pdfList.filter(item => item.id !== id);
       savePdfList(filtered);
     }
@@ -288,7 +377,7 @@ export default function PdfLibraryModal({ onClose }) {
                     {/* 우측: 뷰어로 열기 및 삭제 버튼 */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                       <button
-                        onClick={() => setSelectedPdf(item)}
+                        onClick={() => handleOpenPdf(item)}
                         style={{
                           display: 'flex',
                           alignItems: 'center',

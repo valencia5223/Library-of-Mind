@@ -53,15 +53,56 @@ export default function App() {
   // 전역 흔들기/깜박임 알람 상태
   const [isNudgeShaking, setIsNudgeShaking] = useState(false);
 
+  // 작업표시줄 아이콘 & 탭 제목 깜박임 (document.title 교체)
+  const triggerTaskbarBlink = (senderEmail) => {
+    const originalTitle = 'Library of Mind';
+    const senderName = senderEmail ? senderEmail.split('@')[0] : '친구';
+    const alertTitle = `🔔 [콕 찌르기!] ${senderName}님의 알림!`;
+
+    let count = 0;
+    const interval = setInterval(() => {
+      document.title = count % 2 === 0 ? alertTitle : originalTitle;
+      count++;
+      if (count >= 10) {
+        clearInterval(interval);
+        document.title = originalTitle;
+      }
+    }, 500);
+  };
+
+  // 웹 데스크톱 알림 발송 (OS 작업표시줄 및 알림 센터에 노출)
+  const triggerWebNotification = (senderEmail) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const senderName = senderEmail ? senderEmail.split('@')[0] : '친구';
+      new Notification('⚡ 콕 찌르기 알림!', {
+        body: `${senderName}님이 콕 찌르기 알림을 보냈습니다!`,
+        icon: '/favicon.ico'
+      });
+    }
+  };
+
   // 로그인 시 메모창 미오픈 상태에서도 흔들기/알람 수신 가능한 전역 Supabase 채널 구독
   useEffect(() => {
     if (user && isSupabaseConfigured()) {
+      // 알림 권한 요청 (최초 1회)
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+
       const channel = supabase.channel(`global_user_nudge:${user.id}`)
-        .on('broadcast', { event: 'nudge_received' }, () => {
+        .on('broadcast', { event: 'nudge_received' }, (payload) => {
+          // 1. 화면 전체 진동 애니메이션
           setIsNudgeShaking(true);
           setTimeout(() => {
             setIsNudgeShaking(false);
           }, 1400);
+
+          // 2. 작업표시줄 & 브라우저 탭 제목 깜박임
+          const senderEmail = payload.payload?.sender_email;
+          triggerTaskbarBlink(senderEmail);
+
+          // 3. 데스크톱 알림 (Windows 작업표시줄 하이라이트)
+          triggerWebNotification(senderEmail);
         })
         .subscribe();
 
@@ -413,10 +454,10 @@ export default function App() {
             </button>
 
             <button
-              className={`nav-tab-capsule ${activeTab === 'ledger' ? 'active' : ''}`}
-              onClick={() => setActiveTab('ledger')}
+              className={`nav-tab-capsule ${activeTab === 'search' ? 'active' : ''}`}
+              onClick={() => setActiveTab('search')}
             >
-              <MessageSquare size={16} /> 생각 저장소
+              <Search size={16} /> 탐색
             </button>
 
             <button
@@ -480,7 +521,7 @@ export default function App() {
             </div>
             <h2>나만의 비주얼 서재에 오신 것을 환영합니다</h2>
             <p className="sub-text mt-2 max-w-md mx-auto">
-              보안 인증을 통과해야 본인 전용 3D 서재, 생각 저장소 및 개인 독서 기록을 이용하실 수 있습니다.
+              보안 인증을 통과해야 본인 전용 3D 서재 및 개인 독서 기록을 이용하실 수 있습니다.
             </p>
 
             <div className="gate-feature-badges mt-4">
@@ -504,6 +545,9 @@ export default function App() {
           {activeTab === 'bookshelf' && (
             <BookshelfView
               books={books}
+              notes={notes}
+              onAddNote={handleAddNote}
+              onDeleteNote={handleDeleteNote}
               onUpdateStatus={handleUpdateStatus}
               onDeleteBook={handleDeleteBook}
               onAddManualBook={handleAddBook}
@@ -519,15 +563,6 @@ export default function App() {
             <BookSearch
               onAddBook={handleAddBook}
               existingBooks={books}
-            />
-          )}
-
-          {activeTab === 'ledger' && (
-            <ThoughtLedger
-              notes={notes}
-              books={books}
-              onAddNote={handleAddNote}
-              onDeleteNote={handleDeleteNote}
             />
           )}
 

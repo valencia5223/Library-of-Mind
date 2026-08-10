@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { BookOpen, Star, ExternalLink, PlusCircle, Plus, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw } from 'lucide-react';
+import { BookOpen, Star, ExternalLink, PlusCircle, Plus, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw, X } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import BookDetailModal from './BookDetailModal';
+import ThoughtLedger from './ThoughtLedger';
 
 export default function BookshelfView({ 
   books, 
+  notes = [],
+  onAddNote,
+  onDeleteNote,
   onUpdateStatus, 
   onDeleteBook, 
   onAddManualBook, 
@@ -17,6 +21,7 @@ export default function BookshelfView({
   const [viewMode, setViewMode] = useState('3d'); // '3d' | 'grid'
   const [selectedBook, setSelectedBook] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showThoughtLedgerModal, setShowThoughtLedgerModal] = useState(false);
   const [isEditingReview, setIsEditingReview] = useState(false);
 
   // 3D 책장 드래그 앤 드롭 순서 재배치 상태
@@ -925,9 +930,25 @@ export default function BookshelfView({
           </div>
 
           {!viewedFriend && (
-            <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-              <PlusCircle size={18} /> 수동 책 추가
-            </button>
+            <div className="flex gap-2 align-center">
+              <button
+                className="btn btn-outline flex align-center gap-1.5 font-bold"
+                onClick={() => setShowThoughtLedgerModal(true)}
+                style={{
+                  backgroundColor: 'rgba(2, 132, 199, 0.12)',
+                  color: '#0284c7',
+                  borderColor: 'rgba(2, 132, 199, 0.35)',
+                  fontWeight: 700,
+                  fontSize: '0.85rem'
+                }}
+              >
+                <MessageSquare size={16} /> 📝 독서 기록장 (문장 & 생각)
+              </button>
+
+              <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
+                <PlusCircle size={18} /> 수동 책 추가
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -1572,6 +1593,56 @@ export default function BookshelfView({
                 서재에 꽂기
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 📝 독서 기록장 (문장 & 생각) 모달 */}
+      {showThoughtLedgerModal && (
+        <div className="modal-overlay" onClick={() => setShowThoughtLedgerModal(false)} style={{ zIndex: 1100 }}>
+          <div
+            className="modal-card animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '92%',
+              maxWidth: '920px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              padding: '1.75rem',
+              borderRadius: '16px',
+              backgroundColor: '#ffffff',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)',
+              position: 'relative'
+            }}
+          >
+            <button
+              onClick={() => setShowThoughtLedgerModal(false)}
+              style={{
+                position: 'absolute',
+                top: '1.25rem',
+                right: '1.25rem',
+                background: '#f1f5f9',
+                border: 'none',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#64748b',
+                zIndex: 10
+              }}
+            >
+              <X size={20} />
+            </button>
+
+            <ThoughtLedger
+              notes={notes}
+              books={books}
+              onAddNote={onAddNote}
+              onDeleteNote={onDeleteNote}
+            />
           </div>
         </div>
       )}

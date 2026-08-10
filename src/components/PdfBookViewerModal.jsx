@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, BookOpen, ChevronLeft, ChevronRight, FileText, CheckCircle2, Columns, Square, ZoomIn, ZoomOut, RotateCcw, Play, Pause, Maximize2, Minimize2 } from 'lucide-react';
+import { X, BookOpen, ChevronLeft, ChevronRight, FileText, CheckCircle2, Columns, Square, ZoomIn, ZoomOut, RotateCcw, Play, Pause, Maximize2, Minimize2, List, Trash2, Bookmark, Edit3 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
@@ -15,7 +15,8 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const [totalPages, setTotalPages] = useState(pdfData.totalPages || 1);
   const [isTwoPageMode, setIsTwoPageMode] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
-  const [notes, setNotes] = useState('');
+  const [pageNotes, setPageNotes] = useState({}); // { [pageNum]: string }
+  const [notesTab, setNotesTab] = useState('current'); // 'current' | 'list'
   const [loadingPdf, setLoadingPdf] = useState(true);
   const [pdfError, setPdfError] = useState(null);
   const [pageRendering, setPageRendering] = useState(false);
@@ -41,6 +42,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
   const progressKey = `book_pdf_progress_${book.id || book.isbn || 'demo'}`;
   const notesKey = `book_pdf_notes_${book.id || book.isbn || 'demo'}`;
+  const pageNotesKey = `book_pdf_pagenotes_${book.id || book.isbn || 'demo'}`;
   const modeKey = `book_pdf_twopage_${book.id || book.isbn || 'demo'}`;
 
   const currentPageRef = useRef(currentPage);
@@ -98,8 +100,14 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     try {
       const savedMode = localStorage.getItem(modeKey);
       if (savedMode !== null) setIsTwoPageMode(savedMode === 'true');
-      const n = localStorage.getItem(notesKey);
-      if (n) setNotes(n);
+
+      const savedPageNotes = localStorage.getItem(pageNotesKey);
+      if (savedPageNotes) {
+        setPageNotes(JSON.parse(savedPageNotes));
+      } else {
+        const legacyNotes = localStorage.getItem(notesKey);
+        if (legacyNotes) setPageNotes({ 1: legacyNotes });
+      }
     } catch (e) {}
 
     const handleKeyDown = (e) => {
@@ -133,7 +141,39 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     };
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [changePage, onClose, modeKey, notesKey]);
+  }, [changePage, onClose, modeKey, notesKey, pageNotesKey]);
+
+  const handleCurrentNoteChange = (text) => {
+    setPageNotes((prev) => {
+      const updated = { ...prev, [currentPage]: text };
+      if (!text.trim()) {
+        delete updated[currentPage];
+      }
+      try {
+        localStorage.setItem(pageNotesKey, JSON.stringify(updated));
+      } catch (e) {}
+      return updated;
+    });
+  };
+
+  const handleDeletePageNote = (targetPage, e) => {
+    if (e) e.stopPropagation();
+    if (window.confirm(`${targetPage}페이지 메모를 삭제하시겠습니까?`)) {
+      setPageNotes((prev) => {
+        const updated = { ...prev };
+        delete updated[targetPage];
+        try {
+          localStorage.setItem(pageNotesKey, JSON.stringify(updated));
+        } catch (err) {}
+        return updated;
+      });
+    }
+  };
+
+  const writtenPages = Object.keys(pageNotes)
+    .map(Number)
+    .filter((p) => pageNotes[p] && pageNotes[p].trim() !== '')
+    .sort((a, b) => a - b);
 
   // 컨테이너 크기(모달 열림 트랜지션, 브라우저 창 크기 변경, 메모장 열고 닫기 등)가
   // 바뀔 때마다 재렌더링을 트리거한다. 짧은 디바운스를 걸어 드래그 중 과도한 재렌더를 막는다.
@@ -651,30 +691,147 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             )}
           </div>
 
-          {/* 메모장 */}
+          {/* 페이지별 독립 메모장 & 전체 페이지 메모 목록 사이드바 */}
           {showNotes && (
             <div style={{
-              width: '380px', height: '100%', backgroundColor: '#1e293b', borderLeft: '1px solid #334155',
+              width: '400px', height: '100%', backgroundColor: '#1e293b', borderLeft: '1px solid #334155',
               display: 'flex', flexDirection: 'column', padding: '1rem', boxShadow: '-10px 0 25px rgba(0,0,0,0.3)', zIndex: 20
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid #334155' }}>
-                <h4 style={{ margin: 0, fontWeight: 700, fontSize: '0.875rem', color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <FileText size={16} style={{ color: '#38bdf8' }} /> 독서 메모장
-                </h4>
-                <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{currentPage}p 독서 중</span>
+              {/* 상단 탭 헤더 */}
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '0.85rem', paddingBottom: '0.65rem', borderBottom: '1px solid #334155', flexShrink: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => setNotesTab('current')}
+                  style={{
+                    flex: 1,
+                    padding: '0.45rem 0.6rem',
+                    borderRadius: '8px',
+                    border: '1px solid',
+                    borderColor: notesTab === 'current' ? '#0284c7' : '#334155',
+                    backgroundColor: notesTab === 'current' ? '#0284c7' : '#0f172a',
+                    color: notesTab === 'current' ? '#ffffff' : '#94a3b8',
+                    fontWeight: 700,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '5px'
+                  }}
+                >
+                  <Edit3 size={14} /> 현재 페이지 ({currentPage}p)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setNotesTab('list')}
+                  style={{
+                    flex: 1,
+                    padding: '0.45rem 0.6rem',
+                    borderRadius: '8px',
+                    border: '1px solid',
+                    borderColor: notesTab === 'list' ? '#0284c7' : '#334155',
+                    backgroundColor: notesTab === 'list' ? '#0284c7' : '#0f172a',
+                    color: notesTab === 'list' ? '#ffffff' : '#94a3b8',
+                    fontWeight: 700,
+                    fontSize: '0.78rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '5px'
+                  }}
+                >
+                  <List size={14} /> 전체 목록 ({writtenPages.length})
+                </button>
               </div>
-              <textarea value={notes} onChange={(e) => handleNotesChange(e.target.value)}
-                placeholder="책을 읽으며 기억하고 싶은 문장이나 생각을 기록해보세요..."
-                style={{
-                  flex: 1, width: '100%', backgroundColor: '#0f172a', color: '#f8fafc', border: '1px solid #334155',
-                  borderRadius: '8px', padding: '0.85rem', fontSize: '0.9rem', lineHeight: '1.6', resize: 'none', outline: 'none'
-                }} />
-              <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <CheckCircle2 size={13} style={{ color: '#34d399' }} /> 자동 저장됨
-                </span>
-                <span>{notes.length}자</span>
-              </div>
+
+              {/* 탭 1: 현재 페이지 전용 메모 */}
+              {notesTab === 'current' ? (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Bookmark size={14} /> {currentPage}페이지 전용 기록
+                    </span>
+                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>자동 저장</span>
+                  </div>
+
+                  <textarea
+                    value={pageNotes[currentPage] || ''}
+                    onChange={(e) => handleCurrentNoteChange(e.target.value)}
+                    placeholder={`${currentPage}페이지를 읽으며 남기고 싶은 생각을 메모하세요...`}
+                    style={{
+                      flex: 1, width: '100%', backgroundColor: '#0f172a', color: '#f8fafc', border: '1.5px solid #334155',
+                      borderRadius: '10px', padding: '0.85rem', fontSize: '0.9rem', lineHeight: '1.6', resize: 'none', outline: 'none',
+                      fontFamily: 'Inter, system-ui, sans-serif'
+                    }}
+                  />
+
+                  <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#34d399' }}>
+                      <CheckCircle2 size={13} /> {pageNotes[currentPage] ? '저장 완료' : '입력 중...'}
+                    </span>
+                    <span>{(pageNotes[currentPage] || '').length}자</span>
+                  </div>
+                </div>
+              ) : (
+                /* 탭 2: 전체 페이지 메모 목록 */
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', gap: '0.65rem', minHeight: 0, paddingRight: '2px' }}>
+                  <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600, paddingBottom: '0.25rem' }}>
+                    💡 페이지 카드를 클릭하면 해당 페이지로 즉시 이동합니다.
+                  </div>
+
+                  {writtenPages.length === 0 ? (
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: '#64748b', padding: '2rem 1rem' }}>
+                      <FileText size={36} style={{ marginBottom: '0.75rem', color: '#475569' }} />
+                      <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600, color: '#cbd5e1' }}>작성된 페이지 메모가 없습니다.</p>
+                      <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.75rem' }}>책을 읽으며 기억하고 싶은 페이지에 메모를 남겨보세요!</p>
+                    </div>
+                  ) : (
+                    writtenPages.map((pageNum) => {
+                      const isCurrent = pageNum === currentPage;
+                      const text = pageNotes[pageNum] || '';
+                      return (
+                        <div
+                          key={pageNum}
+                          onClick={() => changePage(pageNum)}
+                          style={{
+                            padding: '0.75rem 0.85rem',
+                            backgroundColor: isCurrent ? '#0369a1' : '#0f172a',
+                            border: `1.5px solid ${isCurrent ? '#38bdf8' : '#334155'}`,
+                            borderRadius: '10px',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.35rem'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: isCurrent ? '#ffffff' : '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <Bookmark size={13} /> {pageNum} 페이지
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => handleDeletePageNote(pageNum, e)}
+                              title="이 페이지 메모 삭제"
+                              style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '2px', opacity: 0.8 }}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                          <p style={{
+                            margin: 0, fontSize: '0.82rem', lineHeight: '1.45', color: isCurrent ? '#f1f5f9' : '#cbd5e1',
+                            whiteSpace: 'pre-wrap', wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'
+                          }}>
+                            {text}
+                          </p>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
