@@ -857,96 +857,126 @@ export default function BookshelfView({
       )}
 
       {/* 헤더 컨트롤 */}
-      <div className="bookshelf-header">
+      <div className="bookshelf-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
         <div>
-          <h2>{viewedFriend ? `${viewedFriend.email.split('@')[0]} 님의 3D 비주얼 서재` : '나만의 3D 비주얼 서재'}</h2>
-          <p className="sub-text">
+          <h2 style={{ margin: 0 }}>{viewedFriend ? `${viewedFriend.email.split('@')[0]} 님의 3D 비주얼 서재` : '나만의 3D 비주얼 서재'}</h2>
+          <p className="sub-text" style={{ margin: '0.25rem 0 0 0' }}>
             {viewedFriend 
               ? '친구의 책장에 꽂힌 양장본 도서들을 마우스 포인터로 움직여 관찰하고 클릭해 독평을 읽어보세요.'
               : '원목 책장에 꽂힌 책을 클릭하여 상태 변경, 별점 및 독서 리뷰를 남기세요.'}
           </p>
         </div>
-        <div className="flex gap-2 align-center">
-          <div className="flex flex-col gap-1 align-end">
-            <div className="toggle-group">
-              <button
-                className={`toggle-btn ${viewMode === '3d' ? 'active' : ''}`}
-                onClick={() => setViewMode('3d')}
-              >
-                <Layers size={16} /> 3D 클래식 서재
-              </button>
-              <button
-                className={`toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
-                onClick={() => setViewMode('grid')}
-              >
-                <Grid size={16} /> 그리드 뷰
-              </button>
-            </div>
 
-            {viewMode === '3d' && (
-              <div className="flex align-center gap-1 mt-1 justify-end" style={{ fontSize: '0.78rem', whiteSpace: 'nowrap', flexWrap: 'nowrap' }}>
-                <span className="sub-text font-bold" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>🪵 책장 테마:</span>
-                <select
-                  value={shelfTheme}
-                  onChange={(e) => handleShelfThemeChange(e.target.value)}
-                  style={{
-                    padding: '0.2rem 0.5rem',
-                    fontSize: '0.78rem',
-                    borderRadius: '8px',
-                    border: '1.5px solid #cbd5e1',
-                    backgroundColor: '#ffffff',
-                    color: '#1e293b',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  <optgroup label="✨ 캐릭터 테마">
-                    <option value="pochacco">🐾 포장마차 파스텔 블루</option>
-                    <option value="kitty">🎀 안녕고양이 러블리 핑크</option>
-                  </optgroup>
-                  <optgroup label="☀️ 밝고 산뜻한 파스텔 테마">
-                    <option value="maple">🥛 화이트 메이플</option>
-                    <option value="blossom">🌸 체리블라썸 핑크</option>
-                    <option value="vanilla">🍦 바닐라 샌드</option>
-                    <option value="sky">🧊 파스텔 스카이</option>
-                    <option value="mint">🌱 마일드 민트</option>
-                  </optgroup>
-                  <optgroup label="🪵 클래식 & 내추럴 원목">
-                    <option value="classic">🪵 클래식 원목</option>
-                    <option value="sepia">📜 빈티지 세피아</option>
-                    <option value="cherry">🏺 고대 체리목</option>
-                  </optgroup>
-                  <optgroup label="🌙 딥 & 무드 분위기">
-                    <option value="dark">🌙 미드나잇 다크</option>
-                    <option value="rose">🎨 모던 로즈골드</option>
-                    <option value="forest">🍃 세이지 그리너리</option>
-                    <option value="ocean">🌊 마린 브리즈</option>
-                    <option value="violet">💜 로얄 바이올렛</option>
-                  </optgroup>
-                </select>
-              </div>
-            )}
+        {/* 우측 정렬 툴바 제어 수평 행 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+          {/* 1. 3D / 그리드 뷰 토글 모듈 */}
+          <div className="toggle-group" style={{ height: '38px', display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box' }}>
+            <button
+              className={`toggle-btn ${viewMode === '3d' ? 'active' : ''}`}
+              onClick={() => setViewMode('3d')}
+              style={{ whiteSpace: 'nowrap', height: '100%', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0 0.75rem', fontSize: '0.825rem' }}
+            >
+              <Layers size={15} /> 3D 클래식 서재
+            </button>
+            <button
+              className={`toggle-btn ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              style={{ whiteSpace: 'nowrap', height: '100%', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0 0.75rem', fontSize: '0.825rem' }}
+            >
+              <Grid size={15} /> 그리드 뷰
+            </button>
           </div>
 
-          {!viewedFriend && (
-            <div className="flex gap-2 align-center">
-              <button
-                className="btn btn-outline flex align-center gap-1.5 font-bold"
-                onClick={() => setShowThoughtLedgerModal(true)}
+          {/* 2. 책장 테마 셀렉트 드롭다운 */}
+          {viewMode === '3d' && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap' }}>
+              <select
+                value={shelfTheme}
+                onChange={(e) => handleShelfThemeChange(e.target.value)}
                 style={{
-                  backgroundColor: 'rgba(2, 132, 199, 0.12)',
-                  color: '#0284c7',
-                  borderColor: 'rgba(2, 132, 199, 0.35)',
+                  height: '38px',
+                  padding: '0 0.75rem',
+                  fontSize: '0.825rem',
+                  borderRadius: '8px',
+                  border: '1.5px solid #cbd5e1',
+                  backgroundColor: '#ffffff',
+                  color: '#1e293b',
                   fontWeight: 700,
-                  fontSize: '0.85rem'
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  boxSizing: 'border-box',
+                  outline: 'none'
                 }}
               >
-                <MessageSquare size={16} /> 📝 독서 기록장 (문장 & 생각)
+                <optgroup label="✨ 캐릭터 테마">
+                  <option value="pochacco">🐾 포장마차 파스텔 블루</option>
+                  <option value="kitty">🎀 안녕고양이 러블리 핑크</option>
+                </optgroup>
+                <optgroup label="☀️ 밝고 산뜻한 파스텔 테마">
+                  <option value="maple">🥛 화이트 메이플</option>
+                  <option value="blossom">🌸 체리블라썸 핑크</option>
+                  <option value="vanilla">🍦 바닐라 샌드</option>
+                  <option value="sky">🧊 파스텔 스카이</option>
+                  <option value="mint">🌱 마일드 민트</option>
+                </optgroup>
+                <optgroup label="🪵 클래식 & 내추럴 원목">
+                  <option value="classic">🪵 클래식 원목</option>
+                  <option value="sepia">📜 빈티지 세피아</option>
+                  <option value="cherry">🏺 고대 체리목</option>
+                </optgroup>
+                <optgroup label="🌙 딥 & 무드 분위기">
+                  <option value="dark">🌙 미드나잇 다크</option>
+                  <option value="rose">🎨 모던 로즈골드</option>
+                  <option value="forest">🍃 세이지 그리너리</option>
+                  <option value="ocean">🌊 마린 브리즈</option>
+                  <option value="violet">💜 로얄 바이올렛</option>
+                </optgroup>
+              </select>
+            </div>
+          )}
+
+          {/* 3. 독서 기록장 & 수동 책 추가 액션 버튼 */}
+          {!viewedFriend && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', whiteSpace: 'nowrap' }}>
+              <button
+                className="btn btn-outline"
+                onClick={() => setShowThoughtLedgerModal(true)}
+                style={{
+                  height: '38px',
+                  padding: '0 0.9rem',
+                  backgroundColor: 'rgba(2, 132, 199, 0.1)',
+                  color: '#0284c7',
+                  borderColor: 'rgba(2, 132, 199, 0.3)',
+                  fontWeight: 700,
+                  fontSize: '0.825rem',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  borderRadius: '8px',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <MessageSquare size={15} /> 📝 독서 기록장 (문장 & 생각)
               </button>
 
-              <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-                <PlusCircle size={18} /> 수동 책 추가
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowAddModal(true)}
+                style={{
+                  height: '38px',
+                  padding: '0 0.9rem',
+                  fontWeight: 700,
+                  fontSize: '0.825rem',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  borderRadius: '8px',
+                  boxSizing: 'border-box'
+                }}
+              >
+                <PlusCircle size={15} /> 수동 책 추가
               </button>
             </div>
           )}
