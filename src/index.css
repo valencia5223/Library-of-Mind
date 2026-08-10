@@ -1206,7 +1206,7 @@ input:focus, select:focus, textarea:focus {
   left: 5px;
   right: 15px;
   bottom: 48px;
-  writing-mode: vertical-lr;
+  writing-mode: vertical-rl;
   text-orientation: mixed;
   font-size: 0.57rem; /* 10% 추가 축소하여 긴 제목 및 모바일/서재 화면 잘림 현상 방지 */
   font-weight: 800;
