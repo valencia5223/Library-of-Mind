@@ -2438,6 +2438,46 @@ input:focus, select:focus, textarea:focus {
     padding: 1rem !important;
     border-radius: 16px !important;
   }
+
+  /* 일정 관리 캘린더 모바일 최적화 (iPhone 15 Pro ~393px) */
+  .calendar-header-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+
+  .calendar-nav-controls {
+    justify-content: center !important;
+  }
+
+  .calendar-grid {
+    gap: 3px !important;
+  }
+
+  .calendar-day-cell {
+    min-height: 56px !important;
+    padding: 0.25rem 0.2rem !important;
+  }
+
+  .day-number {
+    font-size: 0.75rem !important;
+  }
+
+  .holiday-badge {
+    font-size: 0.6rem !important;
+    padding: 0 0.2rem !important;
+  }
+
+  .schedule-chip {
+    padding: 0.15rem 0.3rem !important;
+    font-size: 0.68rem !important;
+    border-left-width: 2.5px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .schedule-chip .schedule-time {
+    display: none !important;
+  }
 }
 
 
