@@ -2439,7 +2439,7 @@ input:focus, select:focus, textarea:focus {
     border-radius: 16px !important;
   }
 
-  /* 일정 관리 캘린더 모바일 최적화 (iPhone 15 Pro ~393px) */
+  /* 일정 관리 캘린더 모바일 최적화 (iPhone 15 Pro ~393px, Pro Max ~430px) */
   .calendar-header-bar {
     flex-direction: column !important;
     align-items: stretch !important;
@@ -2450,12 +2450,24 @@ input:focus, select:focus, textarea:focus {
     justify-content: center !important;
   }
 
+  .calendar-week-header,
   .calendar-grid {
+    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
     gap: 3px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .week-cell,
+  .calendar-day-cell {
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
   }
 
   .calendar-day-cell {
-    min-height: 56px !important;
+    min-height: 58px !important;
     padding: 0.25rem 0.2rem !important;
   }
 
@@ -2464,15 +2476,31 @@ input:focus, select:focus, textarea:focus {
   }
 
   .holiday-badge {
-    font-size: 0.6rem !important;
-    padding: 0 0.2rem !important;
+    font-size: 0.58rem !important;
+    padding: 0 0.15rem !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
 
   .schedule-chip {
-    padding: 0.15rem 0.3rem !important;
+    padding: 0.15rem 0.25rem !important;
     font-size: 0.68rem !important;
     border-left-width: 2.5px !important;
     margin-bottom: 2px !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .schedule-chip .schedule-title {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    display: inline-block !important;
+    max-width: 100% !important;
   }
 
   .schedule-chip .schedule-time {
