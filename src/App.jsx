@@ -492,7 +492,7 @@ export default function App() {
                   flexShrink: 0
                 }}
               >
-                <CheckSquare size={16} /> ✅ 루틴 & 할 일
+                <CheckSquare size={16} /> ✅ 오늘의 할일
               </button>
 
               <button
