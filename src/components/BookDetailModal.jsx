@@ -44,8 +44,33 @@ export default function BookDetailModal({
   const [pdfData, setPdfData] = useState(null);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [realPageCount, setRealPageCount] = useState(book.total_pages || book.itemPage || 0);
 
   const pdfStorageKey = `book_pdf_meta_${book.id || book.isbn || 'demo'}`;
+
+  // 모달 오픈 시 알라딘 ItemLookUp API를 통해 물리적 실제 페이지 수 자동 검증 & 동기화
+  useEffect(() => {
+    let isMounted = true;
+    const rawId = String(book.isbn || book.id || '').replace(/^[a-z]+-/i, '').replace(/^K/i, '').trim();
+    
+    if (rawId) {
+      const fetchRealPages = async () => {
+        try {
+          const idType = rawId.length < 10 ? 'ItemId' : rawId.length === 10 ? 'ISBN' : 'ISBN13';
+          const { data, error } = await supabase.rpc('aladin_lookup_proxy', { item_id: rawId, id_type: idType });
+          if (!error && data && data.item && data.item.length > 0) {
+            const p = parseInt(data.item[0].subInfo?.itemPage || data.item[0].itemPage);
+            if (p && p > 0 && isMounted) {
+              setRealPageCount(p);
+              book.total_pages = p; // book 객체의 total_pages 직접 수정을 통한 일관성 보장
+            }
+          }
+        } catch (e) {}
+      };
+      fetchRealPages();
+    }
+    return () => { isMounted = false; };
+  }, [book]);
 
   useEffect(() => {
     try {
@@ -247,9 +272,9 @@ export default function BookDetailModal({
                     📅 <b>출간일:</b> {book.pub_date}
                   </span>
                 )}
-                {(book.total_pages || book.itemPage) && (
+                {(realPageCount || book.total_pages || book.itemPage) && (
                   <span style={{ background: '#ecfdf5', color: '#047857', borderRadius: '6px', padding: '4px 10px', fontWeight: 600 }}>
-                    📄 <b>분량:</b> {book.total_pages || book.itemPage}쪽
+                    📄 <b>분량:</b> {realPageCount || book.total_pages || book.itemPage}쪽
                   </span>
                 )}
               </div>
