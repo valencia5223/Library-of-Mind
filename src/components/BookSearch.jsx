@@ -326,7 +326,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
     <div className="book-search-container">
       <div className="search-header-banner">
         <h2><Sparkles size={24} className="text-warning inline-block me-1" /> 알라딘 실시간 국내 베스트셀러 & 도서 검색</h2>
-        <p className="sub-text">Supabase DB Proxy 방식을 통해 국내 도서 데이터와 100% 실제 물리 책 표지를 안전하고 안정적으로 제공합니다.</p>
+        <p className="sub-text">국내 베스트셀러 및 다양한 분야의 도서를 검색하여 내 서재에 수집해 보세요.</p>
 
         <form onSubmit={(e) => { e.preventDefault(); setPage(1); handleSearch(e, false); }} className="search-bar-wrapper mt-3">
           <Search size={20} className="search-icon" />

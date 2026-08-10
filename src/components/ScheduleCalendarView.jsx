@@ -508,9 +508,8 @@ const getKoreanHoliday = (dateObj) => {
             <h2 className="text-xl font-bold flex align-center gap-2 m-0" style={{ color: '#0f172a' }}>
               {year}년 {month + 1}월 일정 관리
             </h2>
-            <p className="text-xs sub-text m-0 mt-1 flex align-center gap-1" style={{ color: '#0284c7', fontWeight: 600 }}>
-              <ShieldCheck size={14} className="text-sky-600" />
-              등록되는 모든 일정은 클라이언트 암호화(End-to-End Encryption) 처리되어 DB 조회 권한자도 내용을 볼 수 없도록 안전하게 보호됩니다.
+            <p className="text-xs sub-text m-0 mt-1" style={{ color: '#64748b', fontWeight: 500 }}>
+              월별 일정을 손쉽게 등록하고 관리할 수 있습니다.
             </p>
           </div>
         </div>
