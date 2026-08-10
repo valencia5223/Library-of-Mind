@@ -14,6 +14,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
   const [currentPage, setCurrentPage] = useState(pdfData.currentPage || 1);
   const [totalPages, setTotalPages] = useState(pdfData.totalPages || 1);
   const [isTwoPageMode, setIsTwoPageMode] = useState(false);
+  const [targetPageOffset, setTargetPageOffset] = useState(0); // 0: 왼쪽, 1: 오른쪽
   const [showNotes, setShowNotes] = useState(false);
   const [pageNotes, setPageNotes] = useState({}); // { [pageNum]: string }
   const [notesTab, setNotesTab] = useState('current'); // 'current' | 'list'
@@ -143,11 +144,15 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [changePage, onClose, modeKey, notesKey, pageNotesKey]);
 
+  const activeNotePage = (isTwoPageMode && targetPageOffset === 1 && currentPage < totalPages)
+    ? currentPage + 1
+    : currentPage;
+
   const handleCurrentNoteChange = (text) => {
     setPageNotes((prev) => {
-      const updated = { ...prev, [currentPage]: text };
+      const updated = { ...prev, [activeNotePage]: text };
       if (!text.trim()) {
-        delete updated[currentPage];
+        delete updated[activeNotePage];
       }
       try {
         localStorage.setItem(pageNotesKey, JSON.stringify(updated));
@@ -156,9 +161,34 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     });
   };
 
+  const handleDeleteLineNote = (targetPage, lineIndex, e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    setPageNotes((prev) => {
+      const raw = prev[targetPage] || '';
+      const lines = raw.split('\n');
+      const filtered = lines.filter((_, idx) => idx !== lineIndex);
+      const updated = { ...prev };
+      if (filtered.length === 0 || filtered.every(l => !l.trim())) {
+        delete updated[targetPage];
+      } else {
+        updated[targetPage] = filtered.join('\n');
+      }
+      try {
+        localStorage.setItem(pageNotesKey, JSON.stringify(updated));
+      } catch (err) {}
+      return updated;
+    });
+  };
+
   const handleDeletePageNote = (targetPage, e) => {
-    if (e) e.stopPropagation();
-    if (window.confirm(`${targetPage}페이지 메모를 삭제하시겠습니까?`)) {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (window.confirm(`${targetPage}페이지의 모든 메모를 삭제하시겠습니까?`)) {
       setPageNotes((prev) => {
         const updated = { ...prev };
         delete updated[targetPage];
@@ -749,17 +779,67 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               {/* 탭 1: 현재 페이지 전용 메모 */}
               {notesTab === 'current' ? (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                  {/* 양면 보기일 때 왼쪽/오른쪽 대상 페이지 선택 전환 토글 */}
+                  {isTwoPageMode && currentPage < totalPages && (
+                    <div style={{ display: 'flex', gap: '6px', marginBottom: '0.65rem', flexShrink: 0 }}>
+                      <button
+                        type="button"
+                        onClick={() => setTargetPageOffset(0)}
+                        style={{
+                          flex: 1,
+                          padding: '0.35rem 0.5rem',
+                          borderRadius: '6px',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          backgroundColor: targetPageOffset === 0 ? '#0284c7' : '#0f172a',
+                          color: targetPageOffset === 0 ? '#ffffff' : '#94a3b8',
+                          border: '1.5px solid',
+                          borderColor: targetPageOffset === 0 ? '#38bdf8' : '#334155',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        📘 {currentPage}p (왼쪽)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTargetPageOffset(1)}
+                        style={{
+                          flex: 1,
+                          padding: '0.35rem 0.5rem',
+                          borderRadius: '6px',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          backgroundColor: targetPageOffset === 1 ? '#0284c7' : '#0f172a',
+                          color: targetPageOffset === 1 ? '#ffffff' : '#94a3b8',
+                          border: '1.5px solid',
+                          borderColor: targetPageOffset === 1 ? '#38bdf8' : '#334155',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        📖 {currentPage + 1}p (오른쪽)
+                      </button>
+                    </div>
+                  )}
+
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                     <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Bookmark size={14} /> {currentPage}페이지 전용 기록
+                      <Bookmark size={14} /> {activeNotePage}페이지 전용 기록
                     </span>
                     <span style={{ fontSize: '0.72rem', color: '#64748b' }}>자동 저장</span>
                   </div>
 
                   <textarea
-                    value={pageNotes[currentPage] || ''}
+                    value={pageNotes[activeNotePage] || ''}
                     onChange={(e) => handleCurrentNoteChange(e.target.value)}
-                    placeholder={`${currentPage}페이지를 읽으며 남기고 싶은 생각을 메모하세요...`}
+                    placeholder={`${activeNotePage}페이지를 읽으며 남기고 싶은 생각을 메모하세요...`}
                     style={{
                       flex: 1, width: '100%', backgroundColor: '#0f172a', color: '#f8fafc', border: '1.5px solid #334155',
                       borderRadius: '10px', padding: '0.85rem', fontSize: '0.9rem', lineHeight: '1.6', resize: 'none', outline: 'none',
@@ -769,9 +849,9 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
                   <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#34d399' }}>
-                      <CheckCircle2 size={13} /> {pageNotes[currentPage] ? '저장 완료' : '입력 중...'}
+                      <CheckCircle2 size={13} /> {pageNotes[activeNotePage] ? '저장 완료' : '입력 중...'}
                     </span>
-                    <span>{(pageNotes[currentPage] || '').length}자</span>
+                    <span>{(pageNotes[activeNotePage] || '').length}자</span>
                   </div>
                 </div>
               ) : (
@@ -789,8 +869,10 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                     </div>
                   ) : (
                     writtenPages.map((pageNum) => {
-                      const isCurrent = pageNum === currentPage;
+                      const isCurrent = pageNum === currentPage || (isTwoPageMode && pageNum === currentPage + 1);
                       const text = pageNotes[pageNum] || '';
+                      const lines = text.split('\n');
+
                       return (
                         <div
                           key={pageNum}
@@ -804,28 +886,67 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                             transition: 'all 0.15s ease',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '0.35rem'
+                            gap: '0.45rem'
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '0.78rem', fontWeight: 800, color: isCurrent ? '#ffffff' : '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <Bookmark size={13} /> {pageNum} 페이지
+                              <Bookmark size={13} /> {pageNum} 페이지 메모
                             </span>
                             <button
                               type="button"
                               onClick={(e) => handleDeletePageNote(pageNum, e)}
-                              title="이 페이지 메모 삭제"
-                              style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '2px', opacity: 0.8 }}
+                              title="페이지 메모 전체 삭제"
+                              style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', padding: '2px 4px', opacity: 0.85, display: 'flex', alignItems: 'center', gap: '3px' }}
                             >
-                              <Trash2 size={13} />
+                              <Trash2 size={12} /> <span style={{ fontSize: '0.7rem' }}>전체 삭제</span>
                             </button>
                           </div>
-                          <p style={{
-                            margin: 0, fontSize: '0.82rem', lineHeight: '1.45', color: isCurrent ? '#f1f5f9' : '#cbd5e1',
-                            whiteSpace: 'pre-wrap', wordBreak: 'break-word', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'
-                          }}>
-                            {text}
-                          </p>
+
+                          {/* 줄별(라인별) 메모 개별 리스트 및 라인 삭제 버튼 */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {lines.map((line, lineIdx) => {
+                              if (!line && lines.length > 1) return null;
+                              return (
+                                <div
+                                  key={lineIdx}
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'flex-start',
+                                    gap: '6px',
+                                    backgroundColor: isCurrent ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
+                                    padding: '5px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '0.8rem',
+                                    color: isCurrent ? '#f1f5f9' : '#cbd5e1'
+                                  }}
+                                >
+                                  <span style={{ flex: 1, wordBreak: 'break-word', lineHeight: '1.4' }}>
+                                    {line || '(빈 줄)'}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleDeleteLineNote(pageNum, lineIdx, e)}
+                                    title="이 줄 메모 삭제"
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      color: '#ef4444',
+                                      cursor: 'pointer',
+                                      padding: '1px 3px',
+                                      flexShrink: 0,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      opacity: 0.85
+                                    }}
+                                  >
+                                    <X size={13} />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       );
                     })
