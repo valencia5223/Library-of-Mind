@@ -23,40 +23,91 @@ export default function FocusStudio({ books = [], onSaveSession }) {
   const noiseNodeRef = useRef(null);
   const gainNodeRef = useRef(null);
 
+  // 백그라운드/화면 꺼짐 시 시간 왜곡 방지 타임스탬프 참조
+  const startTimeRef = useRef(null);
+  const accumulatedSecRef = useRef(0);
+
+  // 타임스탬프 기반 실제 경과 시각 재계산 함수
+  const updateRealTime = () => {
+    if (!isActive || !startTimeRef.current) return;
+
+    const now = Date.now();
+    const elapsedSinceStart = Math.floor((now - startTimeRef.current) / 1000);
+    const totalElapsed = accumulatedSecRef.current + elapsedSinceStart;
+
+    if (timerMode === 'stopwatch') {
+      setSeconds(totalElapsed);
+    } else {
+      // 뽀모도로 모드 (기본 25분 = 1500초 / 휴식 5분 = 300초)
+      const targetSec = (isRestPhase ? 5 : pomodoroMins) * 60;
+      const remaining = targetSec - totalElapsed;
+
+      if (remaining <= 0) {
+        if (!isRestPhase) {
+          setIsRestPhase(true);
+          accumulatedSecRef.current = 0;
+          startTimeRef.current = Date.now();
+          setSeconds(5 * 60);
+          alert('🎉 25분 독서 몰입 세션이 완료되었습니다! 5분간 달콤한 휴식을 가지세요.');
+        } else {
+          setIsRestPhase(false);
+          setIsActive(false);
+          accumulatedSecRef.current = 0;
+          startTimeRef.current = null;
+          setSeconds(pomodoroMins * 60);
+          alert('☕ 휴식 시간이 끝났습니다. 다시 독서를 시작해 보세요!');
+        }
+      } else {
+        setSeconds(remaining);
+      }
+    }
+  };
+
+  // 타이머 활성화 및 백그라운드 visibilitychange / focus 이벤트 감지
   useEffect(() => {
     let interval = null;
     if (isActive) {
+      if (!startTimeRef.current) {
+        startTimeRef.current = Date.now();
+      }
+
       interval = setInterval(() => {
-        setSeconds((sec) => {
-          if (timerMode === 'pomodoro') {
-            if (sec <= 1) {
-              // 뽀모도로 종료
-              if (!isRestPhase) {
-                setIsRestPhase(true);
-                alert('🎉 25분 독서 몰입 세션이 완료되었습니다! 5분간 달콤한 휴식을 가지세요.');
-                return 5 * 60; // 5분 휴식 카운트
-              } else {
-                setIsRestPhase(false);
-                setIsActive(false);
-                alert('☕ 휴식 시간이 끝났습니다. 다시 독서를 시작해 보세요!');
-                return 25 * 60;
-              }
-            }
-            return sec - 1;
-          }
-          return sec + 1;
-        });
+        updateRealTime();
       }, 1000);
-    } else if (!isActive && seconds !== 0) {
-      clearInterval(interval);
+
+      // 화면이 꺼진 후 다시 켜지거나 백그라운드에서 복귀할 때 즉시 시간 재계산
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          updateRealTime();
+        }
+      };
+
+      const handleFocus = () => {
+        updateRealTime();
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('focus', handleFocus);
+
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        window.removeEventListener('focus', handleFocus);
+      };
+    } else {
+      if (startTimeRef.current) {
+        accumulatedSecRef.current += Math.floor((Date.now() - startTimeRef.current) / 1000);
+        startTimeRef.current = null;
+      }
     }
-    return () => clearInterval(interval);
-  }, [isActive, seconds, timerMode, isRestPhase]);
+  }, [isActive, timerMode, isRestPhase, pomodoroMins]);
 
   const switchTimerMode = (mode) => {
     setTimerMode(mode);
     setIsActive(false);
     setIsRestPhase(false);
+    startTimeRef.current = null;
+    accumulatedSecRef.current = 0;
     if (mode === 'pomodoro') {
       setSeconds(pomodoroMins * 60);
     } else {
@@ -165,6 +216,8 @@ export default function FocusStudio({ books = [], onSaveSession }) {
   const handleReset = () => {
     setIsActive(false);
     setIsRestPhase(false);
+    startTimeRef.current = null;
+    accumulatedSecRef.current = 0;
     if (timerMode === 'pomodoro') {
       setSeconds(pomodoroMins * 60);
     } else {
