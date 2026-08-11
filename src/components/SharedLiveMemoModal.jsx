@@ -597,7 +597,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     try {
       const res = await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(q)}`, {
         headers: {
-          Authorization: 'KakaoAK 28212e3427976e1a4d87b9264c92b234'
+          Authorization: 'KakaoAK dcd623782ec5e52a055131c06e7598e6'
         }
       });
       if (res.ok) {
