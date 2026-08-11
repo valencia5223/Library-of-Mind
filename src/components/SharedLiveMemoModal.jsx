@@ -612,18 +612,17 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
       console.warn('Kakao Local API search warning:', err);
     }
 
-    // 3. 다중 지역 검색 결과 자동 생성 (검색어가 "설렁탕", "국밥", "삼겹살" 등 단일 키워드일 때)
-    const regions = ['마포 본점', '종로점', '강남점', '명동점', '신촌점', '분당점', '여의도점'];
-    const generatedList = regions.map((region, idx) => ({
-      id: `gen_${idx}`,
-      name: `${q} (${region})`,
-      category: '음식점 · 한식',
-      address: `서울/경기 ${region} 카카오맵 검색 장소`,
-      phone: `02-71${idx}-34${idx}5`,
-      mapUrl: `https://map.kakao.com/?q=${encodeURIComponent(q + ' ' + region)}`
-    }));
-
-    setSearchResults(generatedList);
+    // 카카오 API 검색 결과가 없거나 도메인 승인 필요 시 실제 카카오맵 실시간 검색 연결 1건 제공
+    setSearchResults([
+      {
+        id: 'real_kakao_direct_search',
+        name: `'${q}' 카카오맵 실시간 위치/상호 상세 검색`,
+        category: '카카오맵 바로가기',
+        address: `'${q}' 카카오맵 지도에서 실시간 위치 및 지점 확인`,
+        phone: '',
+        mapUrl: `https://map.kakao.com/?q=${encodeURIComponent(q)}`
+      }
+    ]);
     setIsSearchingPlace(false);
   };
 
