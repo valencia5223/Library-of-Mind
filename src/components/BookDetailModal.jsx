@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ExternalLink, Plus, RefreshCw, Trash2, X, BookOpen, Layers, FileText, Upload, Eye } from 'lucide-react';
 import PdfBookViewerModal from './PdfBookViewerModal';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
+import { savePdfBlobToIDB, getFreshPdfUrl, deletePdfBlobFromIDB } from '../utils/pdfStorage';
 
 const parseAuthorAndTranslator = (authorStr = '') => {
   if (!authorStr) return { author: '저자 미상', translator: null };
@@ -73,12 +74,21 @@ export default function BookDetailModal({
   }, [book]);
 
   useEffect(() => {
-    try {
-      const savedPdf = localStorage.getItem(pdfStorageKey);
-      if (savedPdf) {
-        setPdfData(JSON.parse(savedPdf));
-      }
-    } catch (e) {}
+    let isMounted = true;
+    const restorePdf = async () => {
+      try {
+        const savedPdf = localStorage.getItem(pdfStorageKey);
+        if (savedPdf) {
+          const parsed = JSON.parse(savedPdf);
+          const freshUrl = await getFreshPdfUrl(parsed);
+          if (isMounted) {
+            setPdfData({ ...parsed, url: freshUrl || parsed.url });
+          }
+        }
+      } catch (e) {}
+    };
+    restorePdf();
+    return () => { isMounted = false; };
   }, [book, pdfStorageKey]);
 
   const handlePdfUpload = async (e) => {
@@ -92,8 +102,13 @@ export default function BookDetailModal({
 
     setIsUploading(true);
     try {
+      const pdfId = `pdf_book_${book.id || 'demo'}_${Date.now()}`;
+      // IndexedDB에 바이너리 파일 영구 저장 (브라우저 새로고침/재부팅 후에도 100% 지속 보장)
+      await savePdfBlobToIDB(pdfId, file);
+
       const localObjectUrl = URL.createObjectURL(file);
       const newPdfData = {
+        id: pdfId,
         fileName: file.name,
         fileSize: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
         url: localObjectUrl,
@@ -124,8 +139,11 @@ export default function BookDetailModal({
     }
   };
 
-  const handleRemovePdf = () => {
+  const handleRemovePdf = async () => {
     if (window.confirm('첨부된 PDF 파일을 제거하시겠습니까?')) {
+      if (pdfData && pdfData.id) {
+        await deletePdfBlobFromIDB(pdfData.id);
+      }
       setPdfData(null);
       localStorage.removeItem(pdfStorageKey);
     }

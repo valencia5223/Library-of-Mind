@@ -3,69 +3,9 @@ import { X, FileText, Upload, BookOpen, Trash2, Plus, Clock, HardDrive, Eye } fr
 import PdfBookViewerModal from './PdfBookViewerModal';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
+import { openPdfIDB, savePdfBlobToIDB, getPdfBlobFromIDB, deletePdfBlobFromIDB, getFreshPdfUrl } from '../utils/pdfStorage';
+
 const STORAGE_KEY = 'standalone_pdf_library_v1';
-const IDB_NAME = 'LibraryOfMind_PdfStorage';
-const IDB_STORE = 'pdf_blobs';
-
-function openPdfIDB() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(IDB_NAME, 1);
-    request.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(IDB_STORE)) {
-        db.createObjectStore(IDB_STORE);
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-async function savePdfBlobToIDB(id, blob) {
-  try {
-    const db = await openPdfIDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      const store = tx.objectStore(IDB_STORE);
-      const req = store.put(blob, id);
-      req.onsuccess = () => resolve(true);
-      req.onerror = () => reject(req.error);
-    });
-  } catch (e) {
-    console.warn('IndexedDB PDF 저장 실패:', e);
-    return false;
-  }
-}
-
-async function getPdfBlobFromIDB(id) {
-  try {
-    const db = await openPdfIDB();
-    return new Promise((resolve) => {
-      const tx = db.transaction(IDB_STORE, 'readonly');
-      const store = tx.objectStore(IDB_STORE);
-      const req = store.get(id);
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror = () => resolve(null);
-    });
-  } catch (e) {
-    return null;
-  }
-}
-
-async function deletePdfBlobFromIDB(id) {
-  try {
-    const db = await openPdfIDB();
-    return new Promise((resolve) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      const store = tx.objectStore(IDB_STORE);
-      const req = store.delete(id);
-      req.onsuccess = () => resolve(true);
-      req.onerror = () => resolve(false);
-    });
-  } catch (e) {
-    return false;
-  }
-}
 
 export default function PdfLibraryModal({ onClose }) {
   const [pdfList, setPdfList] = useState([]);

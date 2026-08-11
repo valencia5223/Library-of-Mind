@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, BookOpen, ChevronLeft, ChevronRight, FileText, CheckCircle2, Columns, Square, ZoomIn, ZoomOut, RotateCcw, Play, Pause, Maximize2, Minimize2, List, Trash2, Bookmark, Edit3 } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
+import { getFreshPdfUrl } from '../utils/pdfStorage';
 
 const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
 const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -228,6 +229,14 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     const loadPdf = async () => {
       setLoadingPdf(true);
       setPdfError(null);
+
+      // IndexedDB / Supabase에서 최신 유효 URL 복원 시도
+      let activeUrl = pdfData.url;
+      try {
+        const fresh = await getFreshPdfUrl(pdfData);
+        if (fresh) activeUrl = fresh;
+      } catch (e) {}
+
       if (!window.pdfjsLib) {
         try {
           await new Promise((resolve, reject) => {
@@ -247,7 +256,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
       try {
         const doc = await window.pdfjsLib.getDocument({
-          url: pdfData.url,
+          url: activeUrl,
           cMapUrl: PDFJS_CMAP_URL,
           cMapPacked: true,
           standardFontDataUrl: PDFJS_STANDARD_FONTS_URL
@@ -266,9 +275,9 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         if (isMounted) setLoadingPdf(false);
       }
     };
-    if (pdfData.url) loadPdf();
+    if (pdfData && (pdfData.url || pdfData.id)) loadPdf();
     return () => { isMounted = false; };
-  }, [pdfData.url, progressKey]);
+  }, [pdfData, progressKey]);
 
   useEffect(() => {
     if (!pdfDoc || !containerRef.current) return;

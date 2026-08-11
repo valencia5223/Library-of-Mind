@@ -512,6 +512,51 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }
   };
 
+  // 🎲 1:1 주사위 굴리기 기능 (1~6 랜덤 생성 및 메모장 삽입)
+  const handleRollDice = () => {
+    const diceNum = Math.floor(Math.random() * 6) + 1;
+    const diceEmojis = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+    const diceIcon = diceEmojis[diceNum - 1];
+    const myName = user.email ? user.email.split('@')[0] : '나';
+
+    const diceBlockHTML = `<div style="display:inline-block; padding: 6px 12px; margin: 6px 0; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #b45309; border: 1.5px solid #f59e0b; border-radius: 8px; font-weight: 700; font-size: 0.88rem; box-shadow: 0 2px 4px rgba(245,158,11,0.15);">🎲 <b>[${myName}]</b>님의 행운 주사위: <span style="font-size: 1.15rem; vertical-align: middle; margin: 0 4px;">${diceIcon}</span> <b>[ ${diceNum} ]</b></div><br>`;
+
+    if (myEditorRef.current) {
+      myEditorRef.current.innerHTML = (myEditorRef.current.innerHTML || '') + diceBlockHTML;
+      handleMyEditorInput();
+    }
+  };
+
+  // 🍱 오늘 뭐 먹지? 랜덤 메뉴 추천 목록 및 생성기
+  const KOREAN_MENU_LIST = [
+    { name: '🍕 바삭한 피자', desc: '오늘 저녁은 고소한 피자 어때요?' },
+    { name: '🍗 바삭바삭 치킨', desc: '오늘 밤은 치맥/치콜이 진리!' },
+    { name: '🍣 싱싱한 초밥/스시', desc: '깔끔하고 정갈한 일식 초밥!' },
+    { name: '🍜 얼큰한 라면/우동', desc: '뜨끈한 국물이 생각날 때!' },
+    { name: '🍔 수제 햄버거 세트', desc: '두툼한 패티와 감자튀김의 조합!' },
+    { name: '🍲 차돌 김치찌개', desc: '한국인의 영혼의 밥상, 칼칼한 찌개!' },
+    { name: '🥩 노릇노릇 삼겹살', desc: '지글지글 고기 구워 먹는 날!' },
+    { name: '🍛 고소한 카레/덮밥', desc: '진하고 깊은 카레 한 그릇!' },
+    { name: '🍝 촉촉한 파스타', desc: '분위기 있게 이탈리안 파스타!' },
+    { name: '🍢 매콤 떡볶이 & 튀김', desc: '출출할 땐 떡튀순 분식 파티!' },
+    { name: '😾 불맛 짬뽕 & 짜장면', desc: '단짠단짠 중화요리가 당길 때!' },
+    { name: '🌮 매콤달콤 멕시칸 타코', desc: '이색적이고 과즙 톡톡 멕시칸!' },
+    { name: '🍖 쫄깃한 족발 & 보쌈', desc: '야식으로 손색없는 족발 보쌈!' },
+    { name: '🥗 프레시 샐러드 보울', desc: '가볍고 건강하게 웰빙 한 끼!' }
+  ];
+
+  const handlePickRandomMenu = () => {
+    const picked = KOREAN_MENU_LIST[Math.floor(Math.random() * KOREAN_MENU_LIST.length)];
+    const myName = user.email ? user.email.split('@')[0] : '나';
+
+    const menuBlockHTML = `<div style="display:inline-block; padding: 6px 12px; margin: 6px 0; background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); color: #0369a1; border: 1.5px solid #38bdf8; border-radius: 8px; font-weight: 700; font-size: 0.88rem; box-shadow: 0 2px 4px rgba(56,189,248,0.15);">🍱 <b>[${myName}]</b>님의 추천 메뉴: <b style="color: #0284c7; font-size: 0.95rem;">${picked.name}</b> <span style="font-size: 0.78rem; opacity: 0.85; margin-left: 4px;">("${picked.desc}")</span></div><br>`;
+
+    if (myEditorRef.current) {
+      myEditorRef.current.innerHTML = (myEditorRef.current.innerHTML || '') + menuBlockHTML;
+      handleMyEditorInput();
+    }
+  };
+
   // 줄 수 및 글자 수 계산
   const myText = myEditorRef.current ? (myEditorRef.current.innerText || '') : '';
   const myLineCount = myText ? myText.split('\n').length : 0;
@@ -624,6 +669,46 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               >
                 <Zap size={14} className={nudgeCooldown > 0 ? '' : 'animate-bounce'} />
                 {nudgeCooldown > 0 ? `${nudgeCooldown}초 대기...` : '⚡ 흔들기 알람'}
+              </button>
+
+              {/* 🎲 1:1 주사위 굴리기 버튼 */}
+              <button
+                type="button"
+                className="btn btn-xs font-bold flex align-center gap-1"
+                onClick={handleRollDice}
+                title="1~6 행운의 주사위를 굴려 메모장에 기록합니다!"
+                style={{
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '4px 9px',
+                  fontSize: '0.78rem',
+                  boxShadow: '0 2px 6px rgba(245, 158, 11, 0.25)',
+                  cursor: 'pointer'
+                }}
+              >
+                🎲 주사위 굴리기
+              </button>
+
+              {/* 🍱 오늘 뭐 먹지? 랜덤 메뉴 추천 버튼 */}
+              <button
+                type="button"
+                className="btn btn-xs font-bold flex align-center gap-1"
+                onClick={handlePickRandomMenu}
+                title="오늘 뭐 먹을지 맛있는 메뉴를 랜덤 추천하여 메모장에 꽂아줍니다!"
+                style={{
+                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '4px 9px',
+                  fontSize: '0.78rem',
+                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)',
+                  cursor: 'pointer'
+                }}
+              >
+                🍱 오늘 뭐 먹지?
               </button>
 
               <div className="flex align-center gap-1.5" style={{ background: '#f1f5f9', padding: '4px 8px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
