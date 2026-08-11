@@ -55,6 +55,39 @@ export default function App() {
   // 전역 흔들기/깜박임 알람 상태
   const [isNudgeShaking, setIsNudgeShaking] = useState(false);
 
+  // 브라우저 최소화 시에도 청각으로 즉시 알아챌 수 있는 '띵동!' 맑은 알림음 (Web Audio Synth)
+  const triggerNudgeChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc1.type = 'sine';
+      osc2.type = 'sine';
+
+      // 880Hz -> 1760Hz 맑고 청아한 알림음
+      osc1.frequency.setValueAtTime(880, ctx.currentTime);
+      osc2.frequency.setValueAtTime(1760, ctx.currentTime + 0.12);
+
+      gain.gain.setValueAtTime(0.35, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc1.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 0.12);
+      osc2.start(ctx.currentTime + 0.12);
+      osc2.stop(ctx.currentTime + 0.6);
+    } catch (e) {
+      console.warn('Chime audio failed', e);
+    }
+  };
+
   // 작업표시줄 아이콘 & 탭 제목 깜박임 (document.title 교체)
   const triggerTaskbarBlink = (senderEmail) => {
     const originalTitle = 'Library of Mind';
@@ -65,7 +98,7 @@ export default function App() {
     const interval = setInterval(() => {
       document.title = count % 2 === 0 ? alertTitle : originalTitle;
       count++;
-      if (count >= 10) {
+      if (count >= 20) {
         clearInterval(interval);
         document.title = originalTitle;
       }
@@ -74,12 +107,17 @@ export default function App() {
 
   // 웹 데스크톱 알림 발송 (OS 작업표시줄 및 알림 센터에 팝업 노출)
   const triggerWebNotification = (senderEmail) => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      const senderName = senderEmail ? senderEmail.split('@')[0] : '상대방';
-      new Notification('💬 쪽지가 도착했습니다!', {
-        body: `${senderName}님이 채팅창을 흔듭니다! ⚡`,
-        icon: '/favicon.ico'
-      });
+    if ('Notification' in window) {
+      if (Notification.permission === 'granted') {
+        const senderName = senderEmail ? senderEmail.split('@')[0] : '상대방';
+        new Notification('💬 쪽지가 도착했습니다!', {
+          body: `${senderName}님이 채팅창을 흔듭니다! ⚡`,
+          icon: '/favicon.ico',
+          requireInteraction: true
+        });
+      } else if (Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
     }
   };
 
@@ -103,8 +141,11 @@ export default function App() {
           const senderEmail = payload.payload?.sender_email;
           triggerTaskbarBlink(senderEmail);
 
-          // 3. 데스크톱 알림 (Windows 작업표시줄 하이라이트)
+          // 3. 데스크톱 알림 (Windows 작업표시줄 팝업)
           triggerWebNotification(senderEmail);
+
+          // 4. 최소화 상태 대응 띵동! 사운드 알림음
+          triggerNudgeChime();
         })
         .subscribe();
 
