@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, GripHorizontal, ArrowRightLeft, User, MessageSquare, MapPin, Search } from 'lucide-react';
-import { defaultRestaurants } from '../restaurantData';
 
 export default function SharedLiveMemoModal({ user, friend, onClose }) {
   if (!user || !friend) return null;
@@ -513,18 +512,82 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }
   };
 
-  // 📍 카카오맵 맛집/장소 검색 & 가족 맛지도 1클릭 공유 기능
+  // 📍 카카오맵 맛집/장소 검색 & 실시간 자동완성 결과 목록 기능
   const [showPlaceModal, setShowPlaceModal] = useState(false);
   const [customPlaceName, setCustomPlaceName] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearchingPlace, setIsSearchingPlace] = useState(false);
 
-  const handleSharePlace = (name, address, mapUrl) => {
+  // 카카오 키워드 검색 REST API 및 오픈 검색 연동
+  const handleSearchKakaoPlaces = async (queryStr) => {
+    const q = (queryStr !== undefined ? queryStr : customPlaceName).trim();
+    if (!q) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearchingPlace(true);
+    try {
+      const res = await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(q)}`, {
+        headers: {
+          Authorization: 'KakaoAK 28212e3427976e1a4d87b9264c92b234'
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.documents && data.documents.length > 0) {
+          const formatted = data.documents.map(item => ({
+            id: item.id,
+            name: item.place_name,
+            address: item.road_address_name || item.address_name,
+            category: item.category_name ? item.category_name.split(' > ').pop() : '장소',
+            mapUrl: item.place_url || `https://map.kakao.com/?q=${encodeURIComponent(item.place_name)}`
+          }));
+          setSearchResults(formatted);
+          setIsSearchingPlace(false);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Kakao Local API search warning:', err);
+    }
+
+    // fallback 검색 결과
+    setSearchResults([
+      {
+        id: 'custom_fallback',
+        name: q,
+        address: '카카오맵 바로가기 검색',
+        category: '장소/음식점',
+        mapUrl: `https://map.kakao.com/?q=${encodeURIComponent(q)}`
+      }
+    ]);
+    setIsSearchingPlace(false);
+  };
+
+  // 자동완성 디바운싱 효과
+  useEffect(() => {
+    if (!showPlaceModal) return;
+    const timer = setTimeout(() => {
+      if (customPlaceName.trim().length >= 2) {
+        handleSearchKakaoPlaces(customPlaceName);
+      } else if (customPlaceName.trim().length === 0) {
+        setSearchResults([]);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [customPlaceName, showPlaceModal]);
+
+  const handleSharePlace = (item) => {
     const myName = user.email ? user.email.split('@')[0] : '나';
-    const placeName = name || customPlaceName.trim();
+    const placeName = item ? item.name : customPlaceName.trim();
     if (!placeName) return;
 
-    const kakaoUrl = mapUrl || `https://map.kakao.com/?q=${encodeURIComponent(placeName)}`;
+    const address = item ? item.address : '';
+    const category = item ? item.category : '';
+    const kakaoUrl = item ? item.mapUrl : `https://map.kakao.com/?q=${encodeURIComponent(placeName)}`;
 
-    const placeCardHTML = `<div style="display:inline-block; padding: 8px 14px; margin: 6px 0; background: linear-gradient(135deg, #fefce8 0%, #fef08a 100%); color: #854d0e; border: 1.5px solid #facc15; border-radius: 10px; font-size: 0.88rem; box-shadow: 0 2px 6px rgba(234,179,8,0.2);">📍 <b>[${myName}]</b>님의 추천 맛집/장소 공유:<br><b style="font-size: 0.98rem; color: #a16207;">🏪 ${placeName}</b>${address ? ` <span style="font-size: 0.78rem; color: #713f12;">(${address})</span>` : ''}<br><a href="${kakaoUrl}" target="_blank" rel="noreferrer" style="display:inline-block; margin-top: 4px; color: #ca8a04; font-weight: 700; text-decoration: underline;">👉 카카오맵에서 위치/길찾기 보기 🗺️</a></div><br>`;
+    const placeCardHTML = `<div style="display:inline-block; padding: 10px 14px; margin: 6px 0; background: linear-gradient(135deg, #fefce8 0%, #fef08a 100%); color: #854d0e; border: 1.5px solid #facc15; border-radius: 10px; font-size: 0.88rem; box-shadow: 0 2px 6px rgba(234,179,8,0.2);">📍 <b>[${myName}]</b>님의 추천 맛집/장소 공유:<br><b style="font-size: 1rem; color: #a16207;">🏪 ${placeName}</b>${category ? ` <span style="font-size: 0.76rem; color: #b45309; background:#ffffff; padding:1px 5px; border-radius:4px; font-weight:700;">${category}</span>` : ''}<br>${address ? `<span style="font-size: 0.8rem; color: #713f12; opacity: 0.9;">📍 ${address}</span><br>` : ''}<a href="${kakaoUrl}" target="_blank" rel="noreferrer" style="display:inline-block; margin-top: 5px; color: #ca8a04; font-weight: 700; text-decoration: underline;">👉 카카오맵에서 위치/길찾기 보기 🗺️</a></div><br>`;
 
     if (myEditorRef.current) {
       myEditorRef.current.innerHTML = (myEditorRef.current.innerHTML || '') + placeCardHTML;
@@ -532,6 +595,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }
     setShowPlaceModal(false);
     setCustomPlaceName('');
+    setSearchResults([]);
   };
 
   // 이모티콘 팝업 오픈 상태
@@ -553,27 +617,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }
   };
 
-  // 🔮 오늘 운세/타로 카드 뽑기 목록 및 생성기
-  const FORTUNE_CARD_LIST = [
-    { title: '🌟 대박 럭키 카드', desc: '빛나는 아이디어와 뜻밖의 행운이 샘솟는 기분 좋은 하루!' },
-    { title: '☕ 아늑한 여유 카드', desc: '따뜻한 차 한 잔과 함께 마음에 평온함이 가득한 날!' },
-    { title: '💖 설렘 만발 카드', desc: '좋은 사람과의 반가운 소식이나 선물이 찾아오는 하루!' },
-    { title: '🚀 열정 폭발 카드', desc: '목표를 향해 추진력이 상승하고 알찬 결실을 맺는 날!' },
-    { title: '🔮 지혜 영감 카드', desc: '머릿속이 명쾌해지고 혜안과 아이디어가 반짝이는 하루!' },
-    { title: '🍀 힐링 행운 카드', desc: '지친 마음에 활력이 충전되고 소소한 기쁨이 넘치는 날!' }
-  ];
 
-  const handleDrawFortuneCard = () => {
-    const picked = FORTUNE_CARD_LIST[Math.floor(Math.random() * FORTUNE_CARD_LIST.length)];
-    const myName = user.email ? user.email.split('@')[0] : '나';
-
-    const fortuneBlockHTML = `<div style="display:inline-block; padding: 6px 12px; margin: 6px 0; background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); color: #6b21a8; border: 1.5px solid #c084fc; border-radius: 8px; font-weight: 700; font-size: 0.88rem; box-shadow: 0 2px 4px rgba(192,132,252,0.2);">🔮 <b>[${myName}]</b>님의 오늘 타로 카드: <b style="color: #7e22ce; font-size: 0.95rem;">${picked.title}</b> <span style="font-size: 0.78rem; opacity: 0.85; margin-left: 4px;">("${picked.desc}")</span></div><br>`;
-
-    if (myEditorRef.current) {
-      myEditorRef.current.innerHTML = (myEditorRef.current.innerHTML || '') + fortuneBlockHTML;
-      handleMyEditorInput();
-    }
-  };
 
   // 줄 수 및 글자 수 계산
   const myText = myEditorRef.current ? (myEditorRef.current.innerText || '') : '';
@@ -689,25 +733,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                 {nudgeCooldown > 0 ? `${nudgeCooldown}초 대기...` : '⚡ 흔들기 알람'}
               </button>
 
-              {/* 🔮 오늘 운세/타로 카드 버튼 */}
-              <button
-                type="button"
-                className="btn btn-xs font-bold flex align-center gap-1"
-                onClick={handleDrawFortuneCard}
-                title="오늘의 행운/타로 카드를 뽑아 메모장에 기록합니다!"
-                style={{
-                  background: 'linear-gradient(135deg, #9333ea 0%, #7e22ce 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '4px 9px',
-                  fontSize: '0.78rem',
-                  boxShadow: '0 2px 6px rgba(147, 51, 234, 0.25)',
-                  cursor: 'pointer'
-                }}
-              >
-                🔮 오늘 운세
-              </button>
 
               {/* 😀 이모티콘 팝업 드롭다운 버튼 */}
               <div style={{ position: 'relative' }}>
@@ -848,82 +873,129 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                       </button>
                     </div>
 
-                    {/* 직접 상호명/장소 검색 입력 */}
+                    {/* 상호명/장소 검색 입력 */}
                     <div style={{ marginBottom: '10px' }}>
                       <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#713f12', display: 'block', marginBottom: '4px' }}>
-                        🔍 상호명 또는 주소 검색 입력:
+                        🔍 상호명 또는 주소 검색 입력 (실시간 연동):
                       </label>
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <input
                           type="text"
-                          placeholder="예: 마포설렁탕, 강남 카카오프렌즈"
+                          placeholder="예: 마포설렁탕, 성수 카페, 을밀대"
                           value={customPlaceName}
                           onChange={(e) => setCustomPlaceName(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSharePlace();
+                            if (e.key === 'Enter') {
+                              if (searchResults.length > 0) {
+                                handleSharePlace(searchResults[0]);
+                              } else {
+                                handleSharePlace();
+                              }
+                            }
                           }}
                           style={{
                             flex: 1,
-                            padding: '5px 8px',
-                            fontSize: '0.8rem',
-                            border: '1px solid #fde047',
+                            padding: '6px 9px',
+                            fontSize: '0.82rem',
+                            border: '1.5px solid #fde047',
                             borderRadius: '6px',
                             outline: 'none'
                           }}
                         />
                         <button
                           type="button"
-                          onClick={() => handleSharePlace()}
+                          onClick={() => {
+                            if (searchResults.length > 0) {
+                              handleSharePlace(searchResults[0]);
+                            } else {
+                              handleSharePlace();
+                            }
+                          }}
                           style={{
                             background: '#eab308',
                             color: '#ffffff',
                             border: 'none',
                             borderRadius: '6px',
-                            padding: '0 10px',
+                            padding: '0 12px',
                             fontWeight: 700,
-                            fontSize: '0.78rem',
+                            fontSize: '0.8rem',
                             cursor: 'pointer'
                           }}
                         >
-                          공유
+                          검색/공유
                         </button>
                       </div>
                     </div>
 
-                    {/* 가족 맛지도 등록 맛집 1클릭 추천 공유 */}
+                    {/* 실시간 검색 결과 및 자동완성 목록 중 선택 공유 */}
                     <div>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#854d0e', marginBottom: '6px' }}>
-                        ⭐ 우리 가족 맛지도 등록 추천 맛집 (1클릭 공유):
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#854d0e', marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>📋 카카오맵 검색 결과 목록 ({searchResults.length}건):</span>
+                        {isSearchingPlace && <span style={{ fontSize: '0.7rem', color: '#ca8a04' }}>검색 중...</span>}
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        {defaultRestaurants.map((res) => (
-                          <div
-                            key={res.id}
-                            onClick={() => handleSharePlace(res.name, res.address, res.mapUrl)}
-                            style={{
-                              padding: '6px 8px',
-                              background: '#fefce8',
-                              border: '1px solid #fef08a',
-                              borderRadius: '6px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              transition: 'background 0.15s ease'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = '#fef08a'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = '#fefce8'}
-                          >
-                            <div>
-                              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#713f12' }}>{res.name}</div>
-                              <div style={{ fontSize: '0.7rem', color: '#a16207' }}>{res.address}</div>
+
+                      {searchResults.length === 0 ? (
+                        <div style={{ padding: '16px 8px', textAlign: 'center', color: '#a16207', fontSize: '0.78rem', background: '#fefce8', borderRadius: '8px', border: '1px dashed #fde047' }}>
+                          {customPlaceName.trim() ? '검색어를 더 자세히 입력하시거나 엔터를 누르시면 즉시 카카오맵 링크로 공유됩니다!' : '상호명이나 위치를 입력하시면 카카오맵 장소 목록이 여기에 나타납니다!'}
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '230px', overflowY: 'auto' }}>
+                          {searchResults.map((item) => (
+                            <div
+                              key={item.id}
+                              onClick={() => handleSharePlace(item)}
+                              style={{
+                                padding: '8px 10px',
+                                background: '#ffffff',
+                                border: '1.5px solid #fef08a',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                transition: 'all 0.15s ease',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#fefce8';
+                                e.currentTarget.style.borderColor = '#eab308';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#ffffff';
+                                e.currentTarget.style.borderColor = '#fef08a';
+                              }}
+                            >
+                              <div style={{ flex: 1, paddingRight: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#713f12' }}>{item.name}</span>
+                                  {item.category && (
+                                    <span style={{ fontSize: '0.68rem', color: '#ca8a04', background: '#fef3c7', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                                      {item.category}
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ fontSize: '0.72rem', color: '#a16207', marginTop: '2px' }}>{item.address}</div>
+                              </div>
+                              <button
+                                type="button"
+                                style={{
+                                  fontSize: '0.74rem',
+                                  fontWeight: 700,
+                                  color: '#ffffff',
+                                  backgroundColor: '#ca8a04',
+                                  border: 'none',
+                                  padding: '4px 8px',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  whiteSpace: 'nowrap'
+                                }}
+                              >
+                                + 공유
+                              </button>
                             </div>
-                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#ca8a04', backgroundColor: '#ffffff', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fde047' }}>
-                              + 공유
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
