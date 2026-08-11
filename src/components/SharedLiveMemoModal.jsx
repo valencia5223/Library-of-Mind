@@ -666,13 +666,11 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     setSearchResults([]);
   };
 
-  // 인기 캐릭터 스티커 목록 (키티, 포챠코, 짱구, 쿠로미, 폼폼푸린)
+  // 인기 캐릭터 스티커 목록 (실제 키티, 포챠코, 짱구)
   const CHARACTER_STICKERS = [
     { name: '키티', src: '/assets/hello_kitty_sticker.png' },
-    { name: '포챠코', src: '/assets/pochacco_sticker.png' },
-    { name: '짱구', src: '/assets/shinchan_sticker.png' },
-    { name: '쿠로미', src: '/assets/kuromi_sticker.png' },
-    { name: '폼폼푸린', src: '/assets/pompompurin_sticker.png' }
+    { name: '포챠코', src: '/assets/pochacco_official.png' },
+    { name: '짱구', src: '/assets/shinchan_sticker.png' }
   ];
 
   // 이모티콘 팝업 오픈 상태
@@ -870,12 +868,12 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                       </button>
                     </div>
 
-                    {/* 🎀 인기 캐릭터 스티커 (키티, 포챠코, 짱구, 쿠로미, 폼폼푸린) */}
-                    <div style={{ marginBottom: '10px', background: '#fff5f5', padding: '8px', borderRadius: '8px', border: '1px dashed #fbcfe8' }}>
-                      <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#db2777', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        🎀 인기 캐릭터 스티커 (키티 · 포챠코 · 짱구 · 쿠로미 · 폼폼푸린)
+                    {/* 🎀 인기 캐릭터 스티커 (키티, 포챠코, 짱구) */}
+                    <div style={{ marginBottom: '10px', background: '#fff5f5', padding: '8px 10px', borderRadius: '8px', border: '1px dashed #fbcfe8' }}>
+                      <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#db2777', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        🎀 인기 캐릭터 스티커 (키티 · 포챠코 · 짱구)
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                         {CHARACTER_STICKERS.map((stk, sIdx) => (
                           <button
                             key={sIdx}
@@ -889,19 +887,20 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                               border: '1px solid #fbcfe8',
                               background: '#ffffff',
                               borderRadius: '8px',
-                              padding: '4px',
+                              padding: '6px 4px',
                               cursor: 'pointer',
                               display: 'flex',
                               flexDirection: 'column',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              transition: 'transform 0.1s ease'
+                              transition: 'transform 0.1s ease',
+                              boxShadow: '0 1px 3px rgba(219,39,119,0.1)'
                             }}
-                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; }}
+                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
                           >
-                            <img src={stk.src} alt={stk.name} style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
-                            <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#be185d', marginTop: '2px' }}>{stk.name}</span>
+                            <img src={stk.src} alt={stk.name} style={{ width: '38px', height: '38px', objectFit: 'contain' }} />
+                            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#be185d', marginTop: '3px' }}>{stk.name}</span>
                           </button>
                         ))}
                       </div>
