@@ -58,8 +58,8 @@ export default function App() {
   // 작업표시줄 아이콘 & 탭 제목 깜박임 (document.title 교체)
   const triggerTaskbarBlink = (senderEmail) => {
     const originalTitle = 'Library of Mind';
-    const senderName = senderEmail ? senderEmail.split('@')[0] : '친구';
-    const alertTitle = `🔔 [콕 찌르기!] ${senderName}님의 알림!`;
+    const senderName = senderEmail ? senderEmail.split('@')[0] : '상대방';
+    const alertTitle = `📢 [쪽지 도착] ${senderName}님이 채팅창을 흔듭니다!`;
 
     let count = 0;
     const interval = setInterval(() => {
@@ -72,12 +72,12 @@ export default function App() {
     }, 500);
   };
 
-  // 웹 데스크톱 알림 발송 (OS 작업표시줄 및 알림 센터에 노출)
+  // 웹 데스크톱 알림 발송 (OS 작업표시줄 및 알림 센터에 팝업 노출)
   const triggerWebNotification = (senderEmail) => {
     if ('Notification' in window && Notification.permission === 'granted') {
-      const senderName = senderEmail ? senderEmail.split('@')[0] : '친구';
-      new Notification('⚡ 콕 찌르기 알림!', {
-        body: `${senderName}님이 콕 찌르기 알림을 보냈습니다!`,
+      const senderName = senderEmail ? senderEmail.split('@')[0] : '상대방';
+      new Notification('💬 쪽지가 도착했습니다!', {
+        body: `${senderName}님이 채팅창을 흔듭니다! ⚡`,
         icon: '/favicon.ico'
       });
     }
