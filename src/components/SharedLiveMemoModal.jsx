@@ -520,8 +520,26 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   const partnerText = sanitizeAndNormalizeHTML(partnerContent).replace(/<[^>]*>/g, '').trim();
   const partnerCharCount = partnerText.length;
 
+  // 모달 오버레이 스마트 클릭 감지 (텍스트 드래그 선택 시 창이 닫히는 현상 100% 방지)
+  const overlayMouseDownRef = useRef(null);
+
+  const handleOverlayMouseDown = (e) => {
+    overlayMouseDownRef.current = e.target;
+  };
+
+  const handleOverlayMouseUp = (e) => {
+    if (overlayMouseDownRef.current === e.currentTarget && e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="modal-overlay" style={{ zIndex: 1250 }} onClick={onClose}>
+    <div
+      className="modal-overlay"
+      style={{ zIndex: 1250 }}
+      onMouseDown={handleOverlayMouseDown}
+      onMouseUp={handleOverlayMouseUp}
+    >
       <div
         className={`modal-card animate-scale-in ${isLocalShaking ? 'app-nudge-shake' : ''}`}
         onClick={(e) => e.stopPropagation()}
