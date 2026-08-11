@@ -654,7 +654,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }
     const kakaoUrl = rawUrl;
 
-    const placeCardHTML = `<div style="display:inline-block; padding: 10px 14px; margin: 6px 0; background: linear-gradient(135deg, #fefce8 0%, #fef08a 100%); color: #854d0e; border: 1.5px solid #facc15; border-radius: 10px; font-size: 0.88rem; box-shadow: 0 2px 6px rgba(234,179,8,0.2);">📍 <b>[${myName}]</b>님의 추천 맛집/장소 공유:<br><a href="${kakaoUrl}" target="_blank" rel="noreferrer" onclick="window.open('${kakaoUrl}', '_blank'); return false;" style="text-decoration:none;"><b style="font-size: 1.05rem; color: #713f12; text-decoration: underline;">🏪 ${placeName} 🔗</b></a>${category ? ` <span style="font-size: 0.76rem; color: #b45309; background:#ffffff; padding:2px 6px; border-radius:5px; font-weight:800; border: 1px solid #fde047; margin-left: 4px;">🍱 ${category}</span>` : ''}<br>${address ? `<span style="font-size: 0.8rem; color: #713f12; opacity: 0.9;">🏠 <b>주소:</b> ${address}</span><br>` : ''}${phone ? `<span style="font-size: 0.78rem; color: #a16207;">📞 <b>전화:</b> ${phone}</span><br>` : ''}<a href="${kakaoUrl}" target="_blank" rel="noreferrer" onclick="window.open('${kakaoUrl}', '_blank'); return false;" style="display:inline-block; margin-top: 6px; padding: 5px 12px; background: #eab308; color: #ffffff !important; font-weight: 800; text-decoration: none; border-radius: 6px; font-size: 0.82rem; box-shadow: 0 2px 5px rgba(234,179,8,0.3); cursor: pointer;">👉 카카오맵 지도 앱/웹으로 바로가기 🗺️</a></div><br>`;
+    // 슬림하고 컴팩트한 카카오맵 장소 공유 카드 HTML
+    const placeCardHTML = `<div style="display:inline-block; max-width: 95%; padding: 6px 10px; margin: 4px 0; background: linear-gradient(135deg, #fefce8 0%, #fef08a 100%); color: #854d0e; border: 1.2px solid #facc15; border-radius: 8px; font-size: 0.8rem; box-shadow: 0 1px 4px rgba(234,179,8,0.18);">📍 <b>[${myName}]</b> 맛집/장소:<br><a href="${kakaoUrl}" target="_blank" rel="noreferrer" onclick="window.open('${kakaoUrl}', '_blank'); return false;" style="text-decoration:none;"><b style="font-size: 0.92rem; color: #713f12; text-decoration: underline;">🏪 ${placeName} 🔗</b></a>${category ? ` <span style="font-size: 0.72rem; color: #b45309; background:#ffffff; padding:1px 5px; border-radius:4px; font-weight:800; border: 1px solid #fde047; margin-left: 2px;">🍱 ${category}</span>` : ''}<br>${address ? `<span style="font-size: 0.75rem; color: #713f12; opacity: 0.9;">🏠 ${address}</span><br>` : ''}${phone ? `<span style="font-size: 0.72rem; color: #a16207;">📞 ${phone}</span><br>` : ''}<a href="${kakaoUrl}" target="_blank" rel="noreferrer" onclick="window.open('${kakaoUrl}', '_blank'); return false;" style="display:inline-block; margin-top: 4px; padding: 3px 8px; background: #eab308; color: #ffffff !important; font-weight: 800; text-decoration: none; border-radius: 5px; font-size: 0.74rem; box-shadow: 0 1px 3px rgba(234,179,8,0.25); cursor: pointer;">👉 카카오맵 지도 이동 🗺️</a></div><br>`;
 
     if (myEditorRef.current) {
       myEditorRef.current.innerHTML = (myEditorRef.current.innerHTML || '') + placeCardHTML;
@@ -665,13 +666,22 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     setSearchResults([]);
   };
 
+  // 인기 캐릭터 스티커 목록 (키티, 포챠코, 짱구, 쿠로미, 폼폼푸린)
+  const CHARACTER_STICKERS = [
+    { name: '키티', src: '/assets/hello_kitty_sticker.png' },
+    { name: '포챠코', src: '/assets/pochacco_sticker.png' },
+    { name: '짱구', src: '/assets/shinchan_sticker.png' },
+    { name: '쿠로미', src: '/assets/kuromi_sticker.png' },
+    { name: '폼폼푸린', src: '/assets/pompompurin_sticker.png' }
+  ];
+
   // 이모티콘 팝업 오픈 상태
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   // 이모티콘 팔레트 카테고리별 목록
   const EMOJI_CATEGORIES = [
     { name: '😊 감정/표정', emojis: ['😂', '🤣', '😊', '😍', '🥳', '🤩', '🥺', '😱', '😤', '🤔', '😇', '😴', '💩', '👻', '🤖', '💖', '🔥', '✨'] },
-    { name: '👍 손짓/반응', emojis: ['👍', '👎', '👏', '🙌', '🤝', '✌️', '🤞', '🤟', '💪', '🤙', '👊', '🖐️', '📍', '💯', '💬', '⚡', '🎉', '🎈'] },
+    { name: '👍 손짓/반응', emojis: ['👍', '👎', '👏', '🙌', '🤝', '✌️', '🤞', '🤟', '💪', '<ctrl42>', '👊', '🖐️', '📍', '💯', '💬', '⚡', '🎉', '🎈'] },
     { name: '🍕 음식/디저트', emojis: ['🍕', '🍗', '🍣', '🍜', '🍔', '🍲', '🥩', '🍛', '☕', '🧋', '🍰', '🍩', '🍺', '🍷', '🍏', '🍊', '🍓', '🍦'] },
     { name: '🔮 기분/행운', emojis: ['🌟', '💥', '🎵', '🔮', '📌', '💌', '📍', '🏆', '🎯', '🍀', '🌈', '☀️', '🌙', '⭐', '🎁', '🔑', '💎', '🚀'] }
   ];
@@ -680,6 +690,15 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     if (myEditorRef.current) {
       myEditorRef.current.focus();
       document.execCommand('insertText', false, emojiStr);
+      handleMyEditorInput();
+    }
+  };
+
+  const handleInsertSticker = (imgSrc, altName) => {
+    if (myEditorRef.current) {
+      myEditorRef.current.focus();
+      const imgHTML = `<img src="${imgSrc}" alt="${altName}" style="width: 44px; height: 44px; vertical-align: middle; margin: 2px 4px; display: inline-block; object-fit: contain;" />`;
+      document.execCommand('insertHTML', false, imgHTML);
       handleMyEditorInput();
     }
   };
@@ -849,6 +868,43 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                       >
                         <X size={14} />
                       </button>
+                    </div>
+
+                    {/* 🎀 인기 캐릭터 스티커 (키티, 포챠코, 짱구, 쿠로미, 폼폼푸린) */}
+                    <div style={{ marginBottom: '10px', background: '#fff5f5', padding: '8px', borderRadius: '8px', border: '1px dashed #fbcfe8' }}>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#db2777', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        🎀 인기 캐릭터 스티커 (키티 · 포챠코 · 짱구 · 쿠로미 · 폼폼푸린)
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '6px' }}>
+                        {CHARACTER_STICKERS.map((stk, sIdx) => (
+                          <button
+                            key={sIdx}
+                            type="button"
+                            onClick={() => {
+                              handleInsertSticker(stk.src, stk.name);
+                              setShowEmojiPicker(false);
+                            }}
+                            title={`${stk.name} 스티커 입력`}
+                            style={{
+                              border: '1px solid #fbcfe8',
+                              background: '#ffffff',
+                              borderRadius: '8px',
+                              padding: '4px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'transform 0.1s ease'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                          >
+                            <img src={stk.src} alt={stk.name} style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+                            <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#be185d', marginTop: '2px' }}>{stk.name}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     {EMOJI_CATEGORIES.map((cat, idx) => (
