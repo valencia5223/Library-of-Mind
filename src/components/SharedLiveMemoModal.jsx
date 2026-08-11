@@ -545,14 +545,43 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     { name: '🥗 프레시 샐러드 보울', desc: '가볍고 건강하게 웰빙 한 끼!' }
   ];
 
-  const handlePickRandomMenu = () => {
-    const picked = KOREAN_MENU_LIST[Math.floor(Math.random() * KOREAN_MENU_LIST.length)];
+  // 이모티콘 팝업 오픈 상태
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  // 이모티콘 팔레트 카테고리별 목록
+  const EMOJI_CATEGORIES = [
+    { name: '😊 감정/표정', emojis: ['😂', '🤣', '😊', '😍', '🥳', '🤩', '🥺', '😱', '😤', '🤔', '😇', '😴', '💩', '👻', '🤖', '💖', '🔥', '✨'] },
+    { name: '👍 손짓/반응', emojis: ['👍', '👎', '👏', '🙌', '🤝', '✌️', '🤞', '🤟', '💪', '🤙', '👊', '🖐️', '📍', '💯', '💬', '⚡', '🎉', '🎈'] },
+    { name: '🍕 음식/디저트', emojis: ['🍕', '🍗', '🍣', '🍜', '🍔', '🍲', '🥩', '🍛', '☕', '🧋', '🍰', '🍩', '🍺', '🍷', '🍏', '🍊', '🍓', '🍦'] },
+    { name: '🔮 기분/행운', emojis: ['🌟', '💥', '🎵', '🔮', '📌', '💌', '📍', '🏆', '🎯', '🍀', '🌈', '☀️', '🌙', '⭐', '🎁', '🔑', '💎', '🚀'] }
+  ];
+
+  const handleInsertEmoji = (emojiStr) => {
+    if (myEditorRef.current) {
+      myEditorRef.current.focus();
+      document.execCommand('insertText', false, emojiStr);
+      handleMyEditorInput();
+    }
+  };
+
+  // 🔮 오늘 운세/타로 카드 뽑기 목록 및 생성기
+  const FORTUNE_CARD_LIST = [
+    { title: '🌟 대박 럭키 카드', desc: '빛나는 아이디어와 뜻밖의 행운이 샘솟는 기분 좋은 하루!' },
+    { title: '☕ 아늑한 여유 카드', desc: '따뜻한 차 한 잔과 함께 마음에 평온함이 가득한 날!' },
+    { title: '💖 설렘 만발 카드', desc: '좋은 사람과의 반가운 소식이나 선물이 찾아오는 하루!' },
+    { title: '🚀 열정 폭발 카드', desc: '목표를 향해 추진력이 상승하고 알찬 결실을 맺는 날!' },
+    { title: '🔮 지혜 영감 카드', desc: '머릿속이 명쾌해지고 혜안과 아이디어가 반짝이는 하루!' },
+    { title: '🍀 힐링 행운 카드', desc: '지친 마음에 활력이 충전되고 소소한 기쁨이 넘치는 날!' }
+  ];
+
+  const handleDrawFortuneCard = () => {
+    const picked = FORTUNE_CARD_LIST[Math.floor(Math.random() * FORTUNE_CARD_LIST.length)];
     const myName = user.email ? user.email.split('@')[0] : '나';
 
-    const menuBlockHTML = `<div style="display:inline-block; padding: 6px 12px; margin: 6px 0; background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); color: #0369a1; border: 1.5px solid #38bdf8; border-radius: 8px; font-weight: 700; font-size: 0.88rem; box-shadow: 0 2px 4px rgba(56,189,248,0.15);">🍱 <b>[${myName}]</b>님의 추천 메뉴: <b style="color: #0284c7; font-size: 0.95rem;">${picked.name}</b> <span style="font-size: 0.78rem; opacity: 0.85; margin-left: 4px;">("${picked.desc}")</span></div><br>`;
+    const fortuneBlockHTML = `<div style="display:inline-block; padding: 6px 12px; margin: 6px 0; background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); color: #6b21a8; border: 1.5px solid #c084fc; border-radius: 8px; font-weight: 700; font-size: 0.88rem; box-shadow: 0 2px 4px rgba(192,132,252,0.2);">🔮 <b>[${myName}]</b>님의 오늘 타로 카드: <b style="color: #7e22ce; font-size: 0.95rem;">${picked.title}</b> <span style="font-size: 0.78rem; opacity: 0.85; margin-left: 4px;">("${picked.desc}")</span></div><br>`;
 
     if (myEditorRef.current) {
-      myEditorRef.current.innerHTML = (myEditorRef.current.innerHTML || '') + menuBlockHTML;
+      myEditorRef.current.innerHTML = (myEditorRef.current.innerHTML || '') + fortuneBlockHTML;
       handleMyEditorInput();
     }
   };
@@ -710,6 +739,113 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               >
                 🍱 오늘 뭐 먹지?
               </button>
+
+              {/* 🔮 오늘 운세/타로 카드 버튼 */}
+              <button
+                type="button"
+                className="btn btn-xs font-bold flex align-center gap-1"
+                onClick={handleDrawFortuneCard}
+                title="오늘의 행운/타로 카드를 뽑아 메모장에 기록합니다!"
+                style={{
+                  background: 'linear-gradient(135deg, #9333ea 0%, #7e22ce 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '4px 9px',
+                  fontSize: '0.78rem',
+                  boxShadow: '0 2px 6px rgba(147, 51, 234, 0.25)',
+                  cursor: 'pointer'
+                }}
+              >
+                🔮 오늘 운세
+              </button>
+
+              {/* 😀 이모티콘 팝업 드롭다운 버튼 */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  className="btn btn-xs font-bold flex align-center gap-1"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  title="다양한 이모티콘/스티커를 선택하여 메모장에 입력합니다!"
+                  style={{
+                    background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '4px 9px',
+                    fontSize: '0.78rem',
+                    boxShadow: '0 2px 6px rgba(236, 72, 153, 0.25)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  😀 이모티콘
+                </button>
+
+                {/* 이모티콘 팝오버 팔레트 */}
+                {showEmojiPicker && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '110%',
+                      right: 0,
+                      zIndex: 999,
+                      width: '270px',
+                      maxHeight: '300px',
+                      overflowY: 'auto',
+                      backgroundColor: '#ffffff',
+                      borderRadius: '12px',
+                      padding: '10px 12px',
+                      boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3), 0 8px 10px -6px rgba(0,0,0,0.2)',
+                      border: '1px solid #f1f5f9'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#334155' }}>이모티콘 팔레트</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowEmojiPicker(false)}
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+
+                    {EMOJI_CATEGORIES.map((cat, idx) => (
+                      <div key={idx} style={{ marginBottom: '8px' }}>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>{cat.name}</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '4px' }}>
+                          {cat.emojis.map((emoji, eIdx) => (
+                            <button
+                              key={eIdx}
+                              type="button"
+                              onClick={() => {
+                                handleInsertEmoji(emoji);
+                                setShowEmojiPicker(false);
+                              }}
+                              style={{
+                                border: 'none',
+                                background: '#f8fafc',
+                                borderRadius: '6px',
+                                fontSize: '1.15rem',
+                                padding: '4px 0',
+                                cursor: 'pointer',
+                                transition: 'transform 0.1s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.25)'}
+                              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className="flex align-center gap-1.5" style={{ background: '#f1f5f9', padding: '4px 8px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                 <span className="text-xs font-bold text-slate-600" style={{ fontSize: '0.78rem' }}>글씨 크기:</span>
