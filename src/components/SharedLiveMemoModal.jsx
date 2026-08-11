@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
-import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, GripHorizontal, ArrowRightLeft, User, MessageSquare } from 'lucide-react';
+import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, GripHorizontal, ArrowRightLeft, User, MessageSquare, MapPin, Search } from 'lucide-react';
+import { defaultRestaurants } from '../restaurantData';
 
 export default function SharedLiveMemoModal({ user, friend, onClose }) {
   if (!user || !friend) return null;
@@ -512,38 +513,26 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }
   };
 
-  // 🎲 1:1 주사위 굴리기 기능 (1~6 랜덤 생성 및 메모장 삽입)
-  const handleRollDice = () => {
-    const diceNum = Math.floor(Math.random() * 6) + 1;
-    const diceEmojis = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
-    const diceIcon = diceEmojis[diceNum - 1];
-    const myName = user.email ? user.email.split('@')[0] : '나';
+  // 📍 카카오맵 맛집/장소 검색 & 가족 맛지도 1클릭 공유 기능
+  const [showPlaceModal, setShowPlaceModal] = useState(false);
+  const [customPlaceName, setCustomPlaceName] = useState('');
 
-    const diceBlockHTML = `<div style="display:inline-block; padding: 6px 12px; margin: 6px 0; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #b45309; border: 1.5px solid #f59e0b; border-radius: 8px; font-weight: 700; font-size: 0.88rem; box-shadow: 0 2px 4px rgba(245,158,11,0.15);">🎲 <b>[${myName}]</b>님의 행운 주사위: <span style="font-size: 1.15rem; vertical-align: middle; margin: 0 4px;">${diceIcon}</span> <b>[ ${diceNum} ]</b></div><br>`;
+  const handleSharePlace = (name, address, mapUrl) => {
+    const myName = user.email ? user.email.split('@')[0] : '나';
+    const placeName = name || customPlaceName.trim();
+    if (!placeName) return;
+
+    const kakaoUrl = mapUrl || `https://map.kakao.com/?q=${encodeURIComponent(placeName)}`;
+
+    const placeCardHTML = `<div style="display:inline-block; padding: 8px 14px; margin: 6px 0; background: linear-gradient(135deg, #fefce8 0%, #fef08a 100%); color: #854d0e; border: 1.5px solid #facc15; border-radius: 10px; font-size: 0.88rem; box-shadow: 0 2px 6px rgba(234,179,8,0.2);">📍 <b>[${myName}]</b>님의 추천 맛집/장소 공유:<br><b style="font-size: 0.98rem; color: #a16207;">🏪 ${placeName}</b>${address ? ` <span style="font-size: 0.78rem; color: #713f12;">(${address})</span>` : ''}<br><a href="${kakaoUrl}" target="_blank" rel="noreferrer" style="display:inline-block; margin-top: 4px; color: #ca8a04; font-weight: 700; text-decoration: underline;">👉 카카오맵에서 위치/길찾기 보기 🗺️</a></div><br>`;
 
     if (myEditorRef.current) {
-      myEditorRef.current.innerHTML = (myEditorRef.current.innerHTML || '') + diceBlockHTML;
+      myEditorRef.current.innerHTML = (myEditorRef.current.innerHTML || '') + placeCardHTML;
       handleMyEditorInput();
     }
+    setShowPlaceModal(false);
+    setCustomPlaceName('');
   };
-
-  // 🍱 오늘 뭐 먹지? 랜덤 메뉴 추천 목록 및 생성기
-  const KOREAN_MENU_LIST = [
-    { name: '🍕 바삭한 피자', desc: '오늘 저녁은 고소한 피자 어때요?' },
-    { name: '🍗 바삭바삭 치킨', desc: '오늘 밤은 치맥/치콜이 진리!' },
-    { name: '🍣 싱싱한 초밥/스시', desc: '깔끔하고 정갈한 일식 초밥!' },
-    { name: '🍜 얼큰한 라면/우동', desc: '뜨끈한 국물이 생각날 때!' },
-    { name: '🍔 수제 햄버거 세트', desc: '두툼한 패티와 감자튀김의 조합!' },
-    { name: '🍲 차돌 김치찌개', desc: '한국인의 영혼의 밥상, 칼칼한 찌개!' },
-    { name: '🥩 노릇노릇 삼겹살', desc: '지글지글 고기 구워 먹는 날!' },
-    { name: '🍛 고소한 카레/덮밥', desc: '진하고 깊은 카레 한 그릇!' },
-    { name: '🍝 촉촉한 파스타', desc: '분위기 있게 이탈리안 파스타!' },
-    { name: '🍢 매콤 떡볶이 & 튀김', desc: '출출할 땐 떡튀순 분식 파티!' },
-    { name: '😾 불맛 짬뽕 & 짜장면', desc: '단짠단짠 중화요리가 당길 때!' },
-    { name: '🌮 매콤달콤 멕시칸 타코', desc: '이색적이고 과즙 톡톡 멕시칸!' },
-    { name: '🍖 쫄깃한 족발 & 보쌈', desc: '야식으로 손색없는 족발 보쌈!' },
-    { name: '🥗 프레시 샐러드 보울', desc: '가볍고 건강하게 웰빙 한 끼!' }
-  ];
 
   // 이모티콘 팝업 오픈 상태
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -700,46 +689,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                 {nudgeCooldown > 0 ? `${nudgeCooldown}초 대기...` : '⚡ 흔들기 알람'}
               </button>
 
-              {/* 🎲 1:1 주사위 굴리기 버튼 */}
-              <button
-                type="button"
-                className="btn btn-xs font-bold flex align-center gap-1"
-                onClick={handleRollDice}
-                title="1~6 행운의 주사위를 굴려 메모장에 기록합니다!"
-                style={{
-                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '4px 9px',
-                  fontSize: '0.78rem',
-                  boxShadow: '0 2px 6px rgba(245, 158, 11, 0.25)',
-                  cursor: 'pointer'
-                }}
-              >
-                🎲 주사위 굴리기
-              </button>
-
-              {/* 🍱 오늘 뭐 먹지? 랜덤 메뉴 추천 버튼 */}
-              <button
-                type="button"
-                className="btn btn-xs font-bold flex align-center gap-1"
-                onClick={handlePickRandomMenu}
-                title="오늘 뭐 먹을지 맛있는 메뉴를 랜덤 추천하여 메모장에 꽂아줍니다!"
-                style={{
-                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '4px 9px',
-                  fontSize: '0.78rem',
-                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)',
-                  cursor: 'pointer'
-                }}
-              >
-                🍱 오늘 뭐 먹지?
-              </button>
-
               {/* 🔮 오늘 운세/타로 카드 버튼 */}
               <button
                 type="button"
@@ -843,6 +792,139 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 📍 카카오맵 맛집/장소 공유 버튼 */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  className="btn btn-xs font-bold flex align-center gap-1"
+                  onClick={() => setShowPlaceModal(!showPlaceModal)}
+                  title="카카오맵 연동 맛집/장소를 검색하고 메모장에 지도 링크와 함께 공유합니다!"
+                  style={{
+                    background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '4px 9px',
+                    fontSize: '0.78rem',
+                    boxShadow: '0 2px 6px rgba(234, 179, 8, 0.3)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <MapPin size={13} /> 📍 맛집/장소
+                </button>
+
+                {/* 카카오맵 맛집/장소 공유 모달 팝오버 */}
+                {showPlaceModal && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '110%',
+                      right: 0,
+                      zIndex: 999,
+                      width: '320px',
+                      maxHeight: '380px',
+                      overflowY: 'auto',
+                      backgroundColor: '#ffffff',
+                      borderRadius: '12px',
+                      padding: '12px 14px',
+                      boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3), 0 8px 10px -6px rgba(0,0,0,0.2)',
+                      border: '1.5px solid #fef08a'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', borderBottom: '1px solid #fef08a', paddingBottom: '6px' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#854d0e', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <MapPin size={15} className="text-amber-600" /> 카카오맵 맛집/장소 공유
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowPlaceModal(false)}
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+
+                    {/* 직접 상호명/장소 검색 입력 */}
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#713f12', display: 'block', marginBottom: '4px' }}>
+                        🔍 상호명 또는 주소 검색 입력:
+                      </label>
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <input
+                          type="text"
+                          placeholder="예: 마포설렁탕, 강남 카카오프렌즈"
+                          value={customPlaceName}
+                          onChange={(e) => setCustomPlaceName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSharePlace();
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '5px 8px',
+                            fontSize: '0.8rem',
+                            border: '1px solid #fde047',
+                            borderRadius: '6px',
+                            outline: 'none'
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSharePlace()}
+                          style={{
+                            background: '#eab308',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '0 10px',
+                            fontWeight: 700,
+                            fontSize: '0.78rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          공유
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 가족 맛지도 등록 맛집 1클릭 추천 공유 */}
+                    <div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#854d0e', marginBottom: '6px' }}>
+                        ⭐ 우리 가족 맛지도 등록 추천 맛집 (1클릭 공유):
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                        {defaultRestaurants.map((res) => (
+                          <div
+                            key={res.id}
+                            onClick={() => handleSharePlace(res.name, res.address, res.mapUrl)}
+                            style={{
+                              padding: '6px 8px',
+                              background: '#fefce8',
+                              border: '1px solid #fef08a',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              transition: 'background 0.15s ease'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = '#fef08a'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = '#fefce8'}
+                          >
+                            <div>
+                              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#713f12' }}>{res.name}</div>
+                              <div style={{ fontSize: '0.7rem', color: '#a16207' }}>{res.address}</div>
+                            </div>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#ca8a04', backgroundColor: '#ffffff', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fde047' }}>
+                              + 공유
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
