@@ -518,7 +518,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearchingPlace, setIsSearchingPlace] = useState(false);
 
-  // 카카오 키워드 검색 REST API 및 오픈 검색 연동
+  // 카카오 키워드 검색 REST API 및 오픈 검색 연동 (상세 주소 & 음식종류 파싱)
   const handleSearchKakaoPlaces = async (queryStr) => {
     const q = (queryStr !== undefined ? queryStr : customPlaceName).trim();
     if (!q) {
@@ -536,13 +536,35 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
       if (res.ok) {
         const data = await res.json();
         if (data.documents && data.documents.length > 0) {
-          const formatted = data.documents.map(item => ({
-            id: item.id,
-            name: item.place_name,
-            address: item.road_address_name || item.address_name,
-            category: item.category_name ? item.category_name.split(' > ').pop() : '장소',
-            mapUrl: item.place_url || `https://map.kakao.com/?q=${encodeURIComponent(item.place_name)}`
-          }));
+          const formatted = data.documents.map(item => {
+            // 카테고리 트리 정제 (예: "음식점 > 한식 > 삼겹살" -> "한식 · 삼겹살")
+            let catStr = '장소';
+            if (item.category_name) {
+              const parts = item.category_name.split(' > ').filter(p => p !== '음식점');
+              catStr = parts.length > 0 ? parts.slice(-2).join(' · ') : item.category_name;
+            }
+
+            // 도로명 주소와 지번 주소 결합
+            const roadAddr = item.road_address_name || '';
+            const lotAddr = item.address_name || '';
+            let fullAddress = roadAddr;
+            if (roadAddr && lotAddr && roadAddr !== lotAddr) {
+              fullAddress = `${roadAddr} (지번: ${lotAddr})`;
+            } else if (!roadAddr && lotAddr) {
+              fullAddress = lotAddr;
+            }
+
+            return {
+              id: item.id,
+              name: item.place_name,
+              category: catStr,
+              address: fullAddress || '주소 정보 없음',
+              roadAddress: roadAddr,
+              lotAddress: lotAddr,
+              phone: item.phone || '',
+              mapUrl: item.place_url || `https://map.kakao.com/?q=${encodeURIComponent(item.place_name)}`
+            };
+          });
           setSearchResults(formatted);
           setIsSearchingPlace(false);
           return;
@@ -557,8 +579,11 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
       {
         id: 'custom_fallback',
         name: q,
-        address: '카카오맵 바로가기 검색',
         category: '장소/음식점',
+        address: '카카오맵 검색어 직접 연결',
+        roadAddress: '',
+        lotAddress: '',
+        phone: '',
         mapUrl: `https://map.kakao.com/?q=${encodeURIComponent(q)}`
       }
     ]);
@@ -585,9 +610,15 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
 
     const address = item ? item.address : '';
     const category = item ? item.category : '';
-    const kakaoUrl = item ? item.mapUrl : `https://map.kakao.com/?q=${encodeURIComponent(placeName)}`;
+    const phone = item ? item.phone : '';
+    
+    let rawUrl = item ? item.mapUrl : `https://map.kakao.com/?q=${encodeURIComponent(placeName + (address ? ' ' + address : ''))}`;
+    if (rawUrl && rawUrl.startsWith('http:')) {
+      rawUrl = rawUrl.replace('http:', 'https:');
+    }
+    const kakaoUrl = rawUrl;
 
-    const placeCardHTML = `<div style="display:inline-block; padding: 10px 14px; margin: 6px 0; background: linear-gradient(135deg, #fefce8 0%, #fef08a 100%); color: #854d0e; border: 1.5px solid #facc15; border-radius: 10px; font-size: 0.88rem; box-shadow: 0 2px 6px rgba(234,179,8,0.2);">📍 <b>[${myName}]</b>님의 추천 맛집/장소 공유:<br><b style="font-size: 1rem; color: #a16207;">🏪 ${placeName}</b>${category ? ` <span style="font-size: 0.76rem; color: #b45309; background:#ffffff; padding:1px 5px; border-radius:4px; font-weight:700;">${category}</span>` : ''}<br>${address ? `<span style="font-size: 0.8rem; color: #713f12; opacity: 0.9;">📍 ${address}</span><br>` : ''}<a href="${kakaoUrl}" target="_blank" rel="noreferrer" style="display:inline-block; margin-top: 5px; color: #ca8a04; font-weight: 700; text-decoration: underline;">👉 카카오맵에서 위치/길찾기 보기 🗺️</a></div><br>`;
+    const placeCardHTML = `<div style="display:inline-block; padding: 10px 14px; margin: 6px 0; background: linear-gradient(135deg, #fefce8 0%, #fef08a 100%); color: #854d0e; border: 1.5px solid #facc15; border-radius: 10px; font-size: 0.88rem; box-shadow: 0 2px 6px rgba(234,179,8,0.2);">📍 <b>[${myName}]</b>님의 추천 맛집/장소 공유:<br><a href="${kakaoUrl}" target="_blank" rel="noreferrer" style="text-decoration:none;"><b style="font-size: 1.05rem; color: #713f12; text-decoration: underline;">🏪 ${placeName} 🔗</b></a>${category ? ` <span style="font-size: 0.76rem; color: #b45309; background:#ffffff; padding:2px 6px; border-radius:5px; font-weight:800; border: 1px solid #fde047; margin-left: 4px;">🍱 ${category}</span>` : ''}<br>${address ? `<span style="font-size: 0.8rem; color: #713f12; opacity: 0.9;">🏠 <b>주소:</b> ${address}</span><br>` : ''}${phone ? `<span style="font-size: 0.78rem; color: #a16207;">📞 <b>전화:</b> ${phone}</span><br>` : ''}<a href="${kakaoUrl}" target="_blank" rel="noreferrer" style="display:inline-block; margin-top: 6px; padding: 4px 10px; background: #eab308; color: #ffffff !important; font-weight: 800; text-decoration: none; border-radius: 6px; font-size: 0.8rem; box-shadow: 0 2px 4px rgba(234,179,8,0.3);">👉 카카오맵 지도 앱/웹으로 바로가기 🗺️</a></div><br>`;
 
     if (myEditorRef.current) {
       myEditorRef.current.innerHTML = (myEditorRef.current.innerHTML || '') + placeCardHTML;
@@ -966,28 +997,36 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                               }}
                             >
                               <div style={{ flex: 1, paddingRight: '8px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#713f12' }}>{item.name}</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                  <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>{item.name}</span>
                                   {item.category && (
-                                    <span style={{ fontSize: '0.68rem', color: '#ca8a04', background: '#fef3c7', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
-                                      {item.category}
+                                    <span style={{ fontSize: '0.7rem', color: '#b45309', background: '#fef3c7', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, border: '1px solid #fde047' }}>
+                                      🍱 {item.category}
                                     </span>
                                   )}
                                 </div>
-                                <div style={{ fontSize: '0.72rem', color: '#a16207', marginTop: '2px' }}>{item.address}</div>
+                                <div style={{ fontSize: '0.75rem', color: '#334155', marginTop: '3px', lineHeight: 1.3 }}>
+                                  📍 <b>주소:</b> {item.address}
+                                </div>
+                                {item.phone && (
+                                  <div style={{ fontSize: '0.72rem', color: '#0284c7', marginTop: '2px', fontWeight: 600 }}>
+                                    📞 <b>전화:</b> {item.phone}
+                                  </div>
+                                )}
                               </div>
                               <button
                                 type="button"
                                 style={{
-                                  fontSize: '0.74rem',
+                                  fontSize: '0.75rem',
                                   fontWeight: 700,
                                   color: '#ffffff',
                                   backgroundColor: '#ca8a04',
                                   border: 'none',
-                                  padding: '4px 8px',
+                                  padding: '5px 9px',
                                   borderRadius: '6px',
                                   cursor: 'pointer',
-                                  whiteSpace: 'nowrap'
+                                  whiteSpace: 'nowrap',
+                                  boxShadow: '0 1px 3px rgba(202,138,4,0.3)'
                                 }}
                               >
                                 + 공유
