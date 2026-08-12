@@ -17,6 +17,19 @@ const INITIAL_HABITS = [
   { id: 'h_4', title: '하루 20분 독서 & 생각 정리 📖', category: 'hobby', type: 'routine', targetDay: 'today', completed: false, lastResetDate: new Date().toDateString() }
 ];
 
+const getYYYYMMDD = (d = new Date()) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getTomorrowYYYYMMDD = () => {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return getYYYYMMDD(d);
+};
+
 export default function DailyHabitBoardModal({ isOpen, onClose }) {
   const [items, setItems] = useState(() => {
     try {
@@ -24,15 +37,21 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
       if (saved) {
         let parsed = JSON.parse(saved);
         const todayStr = new Date().toDateString();
+        const todayYYYYMMDD = getYYYYMMDD();
 
-        // 자정 지난 경우 자동 날짜 변환 및 루틴 리셋 처리
+        // 자정 지난 경우 루틴 리셋 및 하위 호환 처리
         parsed = parsed.map(item => {
           let updated = { ...item };
-          // 내일 계획으로 등록되었던 할 일이 날짜가 지나 오늘이 된 경우
-          if (updated.targetDay === 'tomorrow' && updated.lastResetDate !== todayStr) {
-            updated.targetDay = 'today';
-            updated.lastResetDate = todayStr;
+
+          // 기존 legacy 데이터 보완: scheduledDate가 없으면 등록 당시 날짜 기반으로 자동 부여
+          if (!updated.scheduledDate) {
+            if (updated.targetDay === 'tomorrow') {
+              updated.scheduledDate = getTomorrowYYYYMMDD();
+            } else {
+              updated.scheduledDate = todayYYYYMMDD;
+            }
           }
+
           // 자정 지난 경우 루틴 항목 자동 리셋
           if (updated.type === 'routine' && updated.lastResetDate !== todayStr) {
             updated.completed = false;
@@ -43,7 +62,7 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
         return parsed;
       }
     } catch (e) {}
-    return INITIAL_HABITS;
+    return INITIAL_HABITS.map(h => ({ ...h, scheduledDate: getYYYYMMDD() }));
   });
 
   const [title, setTitle] = useState('');
@@ -78,12 +97,15 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
     e.preventDefault();
     if (!title.trim()) return;
 
+    const scheduledDate = targetDay === 'tomorrow' ? getTomorrowYYYYMMDD() : getYYYYMMDD();
+
     const newItem = {
       id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
       title: title.trim(),
       category,
       type,
       targetDay,
+      scheduledDate,
       completed: false,
       createdAt: new Date().toISOString(),
       lastResetDate: new Date().toDateString()
@@ -106,9 +128,27 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
     setItems(prev => prev.filter(item => item.id !== id));
   };
 
-  // 오늘 할 일 목록 및 달성률
-  const todayItems = items.filter(i => i.targetDay !== 'tomorrow');
-  const tomorrowItems = items.filter(i => i.targetDay === 'tomorrow');
+  // 날짜 비교 기반 스마트 탭 필터링
+  const todayYYYYMMDD = getYYYYMMDD();
+  const tomorrowYYYYMMDD = getTomorrowYYYYMMDD();
+
+  // 오늘 할 일: 매일 루틴이거나, 오늘 예정된 일회성 할일 (미완료된 지나간 할일 포함)
+  const todayItems = items.filter(i => {
+    if (i.type === 'routine') return true;
+    if (i.scheduledDate === todayYYYYMMDD) return true;
+    if (i.scheduledDate < todayYYYYMMDD && !i.completed) return true; // 지난 미완료 할일
+    if (!i.scheduledDate && i.targetDay !== 'tomorrow') return true;
+    return false;
+  });
+
+  // 내일 미리 계획: 내일 날짜(tomorrowYYYYMMDD)로 예정된 할일
+  const tomorrowItems = items.filter(i => {
+    if (i.type === 'routine') return false;
+    if (i.scheduledDate === tomorrowYYYYMMDD) return true;
+    if (!i.scheduledDate && i.targetDay === 'tomorrow') return true;
+    return false;
+  });
+
   const routineItems = items.filter(i => i.type === 'routine');
 
   const completedTodayCount = todayItems.filter(i => i.completed).length;
