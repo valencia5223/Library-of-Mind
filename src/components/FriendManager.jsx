@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
-import { Users, UserPlus, Heart, ExternalLink, Trash2, ShieldAlert, Sparkles, Mail, Zap } from 'lucide-react';
+import { Users, UserPlus, Heart, ExternalLink, Trash2, ShieldAlert, Sparkles, Mail, Zap, MessageSquare } from 'lucide-react';
 import SharedLiveMemoModal from './SharedLiveMemoModal';
 
 export default function FriendManager({ user, onViewFriendBookshelf, currentViewedFriend, onBackToMyBookshelf }) {
