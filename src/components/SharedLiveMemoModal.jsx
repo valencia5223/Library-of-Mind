@@ -518,6 +518,30 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearchingPlace, setIsSearchingPlace] = useState(false);
 
+  // 📍 현재 내 위치 정보 (Geolocation API + 의왕시 폴백)
+  const UIWANG_FALLBACK = { lat: 37.3447, lng: 126.9683, name: '경기도 의왕시 (기본)' };
+  const [placeUserLocation, setPlaceUserLocation] = useState(null);
+
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setPlaceUserLocation({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            name: '내 현재 위치 (GPS)'
+          });
+        },
+        () => {
+          setPlaceUserLocation(UIWANG_FALLBACK);
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+      );
+    } else {
+      setPlaceUserLocation(UIWANG_FALLBACK);
+    }
+  }, []);
+
   // 카카오 키워드 검색 (Kakao Places SDK & REST API 하이브리드 연동)
   const handleSearchKakaoPlaces = async (queryStr) => {
     const q = (queryStr !== undefined ? queryStr : customPlaceName).trim();
@@ -561,6 +585,11 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         try {
           if (window.kakao.maps.services && window.kakao.maps.services.Places) {
             const ps = new window.kakao.maps.services.Places();
+            // 📍 현재 위치 기반 거리순 정렬 검색 옵션 적용
+            const searchOptions = placeUserLocation ? {
+              location: new window.kakao.maps.LatLng(placeUserLocation.lat, placeUserLocation.lng),
+              sort: window.kakao.maps.services.SortBy.DISTANCE
+            } : {};
             ps.keywordSearch(q, (data, status) => {
               if (status === window.kakao.maps.services.Status.OK && data && data.length > 0) {
                 setSearchResults(parsePlacesData(data));
@@ -568,7 +597,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               } else {
                 fetchKakaoRESTSearch(q, parsePlacesData);
               }
-            });
+            }, searchOptions);
             return true;
           }
         } catch (e) {
@@ -595,7 +624,12 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
 
   const fetchKakaoRESTSearch = async (q, parsePlacesData) => {
     try {
-      const res = await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(q)}`, {
+      // 📍 현재 위치 기반 거리순 정렬 파라미터 적용
+      let apiUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(q)}`;
+      if (placeUserLocation) {
+        apiUrl += `&x=${placeUserLocation.lng}&y=${placeUserLocation.lat}&sort=distance`;
+      }
+      const res = await fetch(apiUrl, {
         headers: {
           Authorization: 'KakaoAK dcd623782ec5e52a055131c06e7598e6'
         }
