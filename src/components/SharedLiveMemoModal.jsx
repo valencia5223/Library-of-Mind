@@ -790,8 +790,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           <div className="flex align-center justify-between" style={{ paddingRight: '6.5rem' }}>
             <h3 className="flex align-center gap-2" style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
               <GripHorizontal size={20} className="text-slate-400 me-1" />
-              <Zap size={22} className="text-primary" style={{ color: '#0078a6' }} />
-              <span>실시간 1:1 분리 메모장</span>
+              <MessageSquare size={22} className="text-primary" style={{ color: '#0078a6' }} />
+              <span>실시간 1:1 라이브 채팅</span>
             </h3>
 
             {/* 흔들기 알람 버튼 및 폰트 크기 커스텀 숫자 입력 컨트롤러 */}

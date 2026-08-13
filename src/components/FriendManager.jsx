@@ -299,7 +299,7 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
                       style={{ fontSize: '0.8rem', color: '#0284c7', borderColor: '#bae6fd', backgroundColor: '#f0f9ff' }}
                       onClick={() => setActiveFriendForMemo(friend)}
                     >
-                      <Zap className="me-1 text-sky-600" size={14} /> 실시간 메모
+                      <MessageSquare className="me-1 text-sky-600" size={14} /> 실시간 채팅
                     </button>
 
                     <button
