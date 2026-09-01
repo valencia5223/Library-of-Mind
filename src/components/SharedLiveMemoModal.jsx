@@ -876,46 +876,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               <span>실시간 1:1 라이브 채팅</span>
             </h3>
 
-            {/* 창 크기 규격 원클릭 프리셋 컨트롤러 (소/중/대/와이드) */}
-            <div className="flex align-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200" style={{ flexShrink: 0 }}>
-              <span className="text-slate-400 font-bold px-1" style={{ fontSize: '0.72rem' }}>📐 크기:</span>
-              <button
-                type="button"
-                onClick={() => handleApplyPresetSize(340, 280)}
-                className={`btn btn-xs ${panelSize.width === 340 ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ padding: '2px 6px', fontSize: '0.72rem', borderRadius: '4px', fontWeight: 700 }}
-                title="소형 규격 (340x280px)"
-              >
-                소
-              </button>
-              <button
-                type="button"
-                onClick={() => handleApplyPresetSize(420, 340)}
-                className={`btn btn-xs ${panelSize.width === 420 ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ padding: '2px 6px', fontSize: '0.72rem', borderRadius: '4px', fontWeight: 700 }}
-                title="중형 기본 규격 (420x340px)"
-              >
-                중
-              </button>
-              <button
-                type="button"
-                onClick={() => handleApplyPresetSize(520, 420)}
-                className={`btn btn-xs ${panelSize.width === 520 ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ padding: '2px 6px', fontSize: '0.72rem', borderRadius: '4px', fontWeight: 700 }}
-                title="대형 규격 (520x420px)"
-              >
-                대
-              </button>
-              <button
-                type="button"
-                onClick={() => handleApplyPresetSize(640, 500)}
-                className={`btn btn-xs ${panelSize.width === 640 ? 'btn-primary' : 'btn-ghost'}`}
-                style={{ padding: '2px 6px', fontSize: '0.72rem', borderRadius: '4px', fontWeight: 700 }}
-                title="와이드 시네마 규격 (640x500px)"
-              >
-                🖥️ 와이드
-              </button>
-            </div>
+
 
             {/* 흔들기 알람 버튼 및 폰트 크기 커스텀 숫자 입력 컨트롤러 */}
             <div className="flex align-center gap-2">
