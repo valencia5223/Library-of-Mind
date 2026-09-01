@@ -878,8 +878,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
 
 
 
-            {/* 흔들기 알람 버튼 및 폰트 크기 커스텀 숫자 입력 컨트롤러 */}
-            <div className="flex align-center gap-2">
+            {/* 컨트롤러 수평 정렬 영역 (절대 줄바꿈 금지, 단일 1행 수평 고정) */}
+            <div className="flex align-center gap-2" style={{ flexWrap: 'nowrap', alignItems: 'center', whiteSpace: 'nowrap' }}>
               <button
                 type="button"
                 className={`btn btn-xs font-bold flex align-center gap-1 ${nudgeCooldown > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -891,19 +891,22 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                   color: nudgeCooldown > 0 ? '#94a3b8' : '#ffffff',
                   border: 'none',
                   borderRadius: '8px',
-                  padding: '4px 10px',
+                  padding: '0 10px',
+                  height: '28px',
                   fontSize: '0.78rem',
                   boxShadow: nudgeCooldown > 0 ? 'none' : '0 2px 8px rgba(239, 68, 68, 0.3)',
-                  cursor: nudgeCooldown > 0 ? 'not-allowed' : 'pointer'
+                  cursor: nudgeCooldown > 0 ? 'not-allowed' : 'pointer',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center'
                 }}
               >
                 <Zap size={14} className={nudgeCooldown > 0 ? '' : 'animate-bounce'} />
                 {nudgeCooldown > 0 ? `${nudgeCooldown}초 대기...` : '⚡ 흔들기 알람'}
               </button>
 
-
-              {/* 😀 이모티콘 팝업 드롭다운 버튼 & 하단 글씨 크기 조절기 */}
-              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
+              {/* 😀 이모티콘 팝업 드롭다운 버튼 */}
+              <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
                 <button
                   type="button"
                   className="btn btn-xs font-bold flex align-center gap-1"
@@ -914,44 +917,18 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '8px',
-                    padding: '4px 9px',
+                    padding: '0 10px',
+                    height: '28px',
                     fontSize: '0.78rem',
                     boxShadow: '0 2px 6px rgba(236, 72, 153, 0.25)',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center'
                   }}
                 >
                   😀 이모티콘
                 </button>
-
-                {/* 이모티콘 버튼 바로 아래 글씨 크기 조절기 */}
-                <div className="flex align-center gap-1" style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                  <span className="text-xs font-bold text-slate-600" style={{ fontSize: '0.7rem' }}>글씨:</span>
-                  <button
-                    type="button"
-                    onClick={() => handleFontSizePxChange(fontSizePx - 1)}
-                    style={{ width: '18px', height: '18px', borderRadius: '3px', border: '1px solid #cbd5e1', background: '#ffffff', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    -
-                  </button>
-                  <div className="flex align-center gap-0.5">
-                    <input
-                      type="number"
-                      min="1"
-                      max="100"
-                      value={fontSizePx}
-                      onChange={(e) => handleFontSizePxChange(e.target.value)}
-                      style={{ width: '34px', height: '20px', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, color: '#0284c7', border: '1px solid #38bdf8', borderRadius: '4px', outline: 'none', background: '#ffffff', padding: '0 1px' }}
-                    />
-                    <span className="text-xs font-bold text-slate-500" style={{ fontSize: '0.68rem' }}>px</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleFontSizePxChange(fontSizePx + 1)}
-                    style={{ width: '18px', height: '18px', borderRadius: '3px', border: '1px solid #cbd5e1', background: '#ffffff', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    +
-                  </button>
-                </div>
 
                 {/* 이모티콘 팝오버 팔레트 */}
                 {showEmojiPicker && (
@@ -1055,6 +1032,36 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* 글씨 크기 조절 수평 캡슐 */}
+              <div className="flex align-center gap-1" style={{ background: '#f1f5f9', padding: '0 8px', borderRadius: '8px', border: '1px solid #cbd5e1', height: '28px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}>
+                <span className="text-xs font-bold text-slate-600" style={{ fontSize: '0.72rem' }}>글씨:</span>
+                <button
+                  type="button"
+                  onClick={() => handleFontSizePxChange(fontSizePx - 1)}
+                  style={{ width: '18px', height: '18px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  -
+                </button>
+                <div className="flex align-center gap-0.5">
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={fontSizePx}
+                    onChange={(e) => handleFontSizePxChange(e.target.value)}
+                    style={{ width: '36px', height: '20px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 700, color: '#0284c7', border: '1px solid #38bdf8', borderRadius: '4px', outline: 'none', background: '#ffffff', padding: '0 1px' }}
+                  />
+                  <span className="text-xs font-bold text-slate-500" style={{ fontSize: '0.7rem' }}>px</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleFontSizePxChange(fontSizePx + 1)}
+                  style={{ width: '18px', height: '18px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  +
+                </button>
               </div>
 
               {/* 📍 카카오맵 맛집/장소 공유 버튼 */}
