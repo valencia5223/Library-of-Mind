@@ -159,7 +159,7 @@ export default function App() {
     // 1. 서비스 워커 등록 및 Web Push 구독 자동 등록 (창 닫힘 상태 오프라인 알림 수신용)
     registerServiceWorker().then(() => {
       if (user) {
-        subscribeUserToPush(user.id);
+        subscribeUserToPush(user.id, user.email);
       }
     });
 
@@ -192,50 +192,6 @@ export default function App() {
           triggerNudgeChime();
         })
         .subscribe();
-
-      // 오프라인 부재 중 수신된 미확인 흔들기 알림 조회 및 즉시 복귀 알림 터뜨리기 (이중 안전장치)
-      supabase.from('nudge_history')
-        .select('*')
-        .eq('target_user_id', user.id)
-        .eq('read', false)
-        .then(({ data: unreadNudges }) => {
-          if (unreadNudges && unreadNudges.length > 0) {
-            const count = unreadNudges.length;
-            const lastNudge = unreadNudges[unreadNudges.length - 1];
-            const lastSender = lastNudge.sender_email || '친구';
-            const senderName = lastSender.split('@')[0];
-
-            // 1. 화면 흔들기 & 알림음
-            setIsNudgeShaking(true);
-            setTimeout(() => setIsNudgeShaking(false), 1400);
-            triggerNudgeChime();
-            triggerTaskbarBlink(lastSender);
-
-            // 2. 부재중 수신 알림 데스크톱 노출 (클릭 시 바로가기 모달 연동)
-            if ('Notification' in window && Notification.permission === 'granted') {
-              const notification = new Notification('🔔 [부재중 흔들기 알림]', {
-                body: `인터넷이 닫혀 있던 사이에 ${senderName}님이 채팅창을 ${count}회 흔들었습니다! ⚡\n👉 (클릭 시 1:1 라이브 채팅창으로 이동)`,
-                icon: '/favicon.ico',
-                requireInteraction: true
-              });
-
-              notification.onclick = () => {
-                window.focus();
-                setActiveMemoFriend({
-                  friend_id: lastNudge.sender_id || '',
-                  email: lastSender,
-                  name: senderName
-                });
-                notification.close();
-              };
-            }
-
-            // 3. 읽음 상태로 업데이트
-            const unreadIds = unreadNudges.map(n => n.id);
-            supabase.from('nudge_history').update({ read: true }).in('id', unreadIds).then(() => {});
-          }
-        })
-        .catch(e => console.warn('nudge_history fetch warning:', e));
 
       return () => {
         supabase.removeChannel(channel);

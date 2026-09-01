@@ -38,7 +38,7 @@ export async function registerServiceWorker() {
 }
 
 // 2. 푸시 알림 권한 요청 및 PushManager 구독 생성 & DB 저장
-export async function subscribeUserToPush(userId) {
+export async function subscribeUserToPush(userId, userEmail) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     console.warn('이 브라우저는 PushManager API를 지원하지 않습니다.');
     return null;
@@ -82,7 +82,7 @@ export async function subscribeUserToPush(userId) {
       }
     }
 
-    // 4) Supabase DB push_subscriptions 테이블에 저장 (User ID 매핑)
+    // 4) Supabase DB push_subscriptions 테이블에 저장 (User ID + Email 이중 매칭)
     if (subscription && userId && isSupabaseConfigured()) {
       const subJson = subscription.toJSON();
       const p256dh = subJson.keys?.p256dh || '';
@@ -90,6 +90,7 @@ export async function subscribeUserToPush(userId) {
 
       await supabase.from('push_subscriptions').upsert({
         user_id: userId,
+        user_email: userEmail || '',
         endpoint: subscription.endpoint,
         p256dh: p256dh,
         auth: auth,
@@ -112,17 +113,19 @@ export async function subscribeUserToPush(userId) {
 
 // 3. 상대방에게 오프라인 웹 푸시 전송 (Supabase Edge Function + Realtime Broadcast 하이브리드)
 export async function sendWebPushNotification(targetUserId, payload) {
-  if (!targetUserId) return;
+  if (!targetUserId && !payload?.target_user_email) return;
 
-  const title = payload.title || '💬 쪽지가 도착했습니다!';
-  const body = payload.body || '상대방이 채팅창을 흔듭니다! ⚡';
+  const title = payload.title || '💬 [클릭 시 채팅창 열림] 쪽지가 도착했습니다!';
+  const body = payload.body || '상대방이 채팅창을 흔듭니다! ⚡\n👉 알림창 아무 곳이나 클릭하면 채팅창으로 바로 이동합니다.';
   const senderEmail = payload.sender_email || '';
   const senderId = payload.sender_id || '';
+  const targetEmail = payload.target_user_email || '';
 
   if (isSupabaseConfigured()) {
     // 1) Supabase Realtime Broadcast 전송 (현재 브라우저를 열어둔 상태 대응)
     try {
-      const globalChan = supabase.channel(`global_user_nudge:${targetUserId}`);
+      const channelId = targetUserId || `email_${targetEmail}`;
+      const globalChan = supabase.channel(`global_user_nudge:${channelId}`);
       await globalChan.send({
         type: 'broadcast',
         event: 'nudge_received',
@@ -142,6 +145,7 @@ export async function sendWebPushNotification(targetUserId, payload) {
       const { data, error } = await supabase.functions.invoke('send-push', {
         body: {
           target_user_id: targetUserId,
+          target_user_email: targetEmail,
           sender_id: senderId,
           sender_email: senderEmail,
           title: title,
@@ -151,14 +155,7 @@ export async function sendWebPushNotification(targetUserId, payload) {
       });
 
       if (error) {
-        console.warn('Edge Function send-push 미배포 또는 경고:', error.message);
-        // Edge Function 미배포 시 DB 오프라인 큐 직접 백업
-        await supabase.from('nudge_history').insert({
-          sender_id: senderId || null,
-          sender_email: senderEmail || '상대방',
-          target_user_id: targetUserId,
-          read: false
-        });
+        console.warn('Edge Function send-push 호출 경고:', error.message);
       } else {
         console.log('✅ Edge Function 푸시 전송 결과:', data);
       }

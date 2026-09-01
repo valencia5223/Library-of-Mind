@@ -14,17 +14,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   // CORS Preflight 옵션 요청 처리
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { target_user_id, title, body, icon, url, sender_email, sender_id } = await req.json();
+    const { target_user_id, target_user_email, title, body, icon, url, sender_email, sender_id } = await req.json();
 
-    if (!target_user_id) {
-      return new Response(JSON.stringify({ error: 'target_user_id is required' }), {
+    if (!target_user_id && !target_user_email) {
+      return new Response(JSON.stringify({ error: 'target_user_id or target_user_email is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -35,21 +35,27 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_ANON_KEY') || '';
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 대상 사용자의 웹 푸시 구독 엔드포인트 목록 DB 조회
-    const { data: subscriptions, error: dbError } = await supabase
-      .from('push_subscriptions')
-      .select('*')
-      .eq('user_id', target_user_id);
+    // 1. 대상 사용자의 웹 푸시 구독 엔드포인트 목록 DB 조회 (user_id 또는 user_email 매칭)
+    let query = supabase.from('push_subscriptions').select('*');
+    if (target_user_id && target_user_email) {
+      query = query.or(`user_id.eq.${target_user_id},user_email.eq.${target_user_email}`);
+    } else if (target_user_id) {
+      query = query.eq('user_id', target_user_id);
+    } else {
+      query = query.eq('user_email', target_user_email);
+    }
+
+    const { data: subscriptions, error: dbError } = await query;
 
     if (dbError) {
-      console.error('DB fetch error:', dbError);
+      console.error('Push Subscription DB fetch error:', dbError);
     }
 
     let sentCount = 0;
     let failedCount = 0;
     const notificationPayload = JSON.stringify({
-      title: title || '💬 쪽지가 도착했습니다!',
-      body: body || '상대방이 채팅창을 흔듭니다! ⚡',
+      title: title || '💬 [클릭 시 채팅창 열림] 쪽지가 도착했습니다!',
+      body: body || '상대방이 채팅창을 흔듭니다! ⚡\n👉 알림창 아무 곳이나 클릭하면 채팅창으로 바로 이동합니다.',
       icon: icon || '/favicon.ico',
       data: {
         url: url || '/',
@@ -71,6 +77,7 @@ Deno.serve(async (req) => {
 
           await webpush.sendNotification(pushSubscription, notificationPayload);
           sentCount++;
+          console.log(`✅ Push sent to ${sub.user_email || sub.user_id}`);
         } catch (err: any) {
           failedCount++;
           console.warn(`푸시 전송 실패 (endpoint: ${sub.endpoint}):`, err.statusCode || err.message);
@@ -81,18 +88,9 @@ Deno.serve(async (req) => {
           }
         }
       }
+    } else {
+      console.warn(`⚠️ 대상 사용자(ID: ${target_user_id}, Email: ${target_user_email})의 push_subscriptions 정보가 없습니다.`);
     }
-
-    // 부재중/오프라인 이중 백업을 위해 nudge_history 기록
-    await supabase.from('nudge_history').insert({
-      sender_id: sender_id || null,
-      sender_email: sender_email || '상대방',
-      target_user_id: target_user_id,
-      read: false,
-      created_at: new Date().toISOString()
-    }).then(({ error }) => {
-      if (error) console.warn('nudge_history 저장 참고 (테이블 준비중):', error.message);
-    });
 
     return new Response(JSON.stringify({
       success: true,
