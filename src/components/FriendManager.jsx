@@ -210,14 +210,14 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
                  return;
                }
                if (Notification.permission === 'granted') {
-                 if (user) await subscribeUserToPush(user.id);
-                 alert('✅ [데스크톱 알림 활성화 상태]\n인터넷 창이 닫혀 있어도 흔들기 및 라이브 채팅 알림을 팝업으로 수신받으실 수 있습니다.');
+                 if (user) await subscribeUserToPush(user.id, user.email, true);
+                 alert('✅ [데스크톱 알림 활성화 완수]\nVAPID 푸시 키가 최신 상태로 갱신되었습니다! 인터넷 창이 닫혀 있어도 흔들기 및 라이브 채팅 알림을 팝업으로 수신받으실 수 있습니다.');
                } else if (Notification.permission === 'denied') {
                  alert('⚠️ [브라우저 알림이 차단되어 있습니다]\n\n해결 방법:\n1. 브라우저 주소창 맨 좌측의 🔒(자물쇠/설정) 아이콘 클릭\n2. [알림] 권한을 [허용]으로 변경\n3. 페이지 새로고침(F5) 실행');
                } else {
                  const res = await Notification.requestPermission();
                  if (res === 'granted' && user) {
-                   await subscribeUserToPush(user.id);
+                   await subscribeUserToPush(user.id, user.email, true);
                    alert('🎉 데스크톱 알림 권한이 정상적으로 허용되었습니다!');
                  }
                }

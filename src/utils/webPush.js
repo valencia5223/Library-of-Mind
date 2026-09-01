@@ -37,8 +37,8 @@ export async function registerServiceWorker() {
   }
 }
 
-// 2. 푸시 알림 권한 요청 및 PushManager 구독 생성 & DB 저장
-export async function subscribeUserToPush(userId, userEmail) {
+// 2. 푸시 알림 권한 요청 및 PushManager 최신 VAPID 구독 생성 & DB 저장
+export async function subscribeUserToPush(userId, userEmail, forceRefresh = false) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     console.warn('이 브라우저는 PushManager API를 지원하지 않습니다.');
     return null;
@@ -48,7 +48,7 @@ export async function subscribeUserToPush(userId, userEmail) {
     // 1) 알림 권한 요청
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
-      console.warn('사용자가 데스크톱 알림 권한을 거부했습니다.');
+      console.warn('사용자가 데스크톱 알림 권한을 거부했거나 설정하지 않았습니다.');
       return null;
     }
 
@@ -60,8 +60,17 @@ export async function subscribeUserToPush(userId, userEmail) {
 
     if (!registration) return null;
 
-    // 3) 기존 구독 정보 확인 및 새로 구독
+    // 3) 기존 구형 또는 타 VAPID 구독이 존재하면 해제 후 항상 최신 VAPID 키로 재구독
     let subscription = await registration.pushManager.getSubscription();
+
+    if (subscription && forceRefresh) {
+      try {
+        await subscription.unsubscribe();
+        subscription = null;
+      } catch (e) {
+        console.warn('기존 구독 해제 예외:', e);
+      }
+    }
 
     if (!subscription) {
       try {
@@ -70,38 +79,39 @@ export async function subscribeUserToPush(userId, userEmail) {
           userVisibleOnly: true,
           applicationServerKey: convertedVapidKey
         });
+        console.log('✨ 구글 FCM / 브라우저 푸시 서버 신규 구독 성공');
       } catch (subErr) {
-        console.warn('VAPID 키 기반 구독 폴백:', subErr);
+        console.warn('VAPID 키 구독 예외, 표준 구독 시도:', subErr);
         try {
           subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true
           });
         } catch (e) {
-          console.warn('Standard Push subscription fallback:', e);
+          console.error('Standard Push subscription error:', e);
         }
       }
     }
 
     // 4) Supabase DB push_subscriptions 테이블에 저장 (User ID + Email 이중 매칭)
-    if (subscription && userId && isSupabaseConfigured()) {
+    if (subscription && (userId || userEmail) && isSupabaseConfigured()) {
       const subJson = subscription.toJSON();
       const p256dh = subJson.keys?.p256dh || '';
       const auth = subJson.keys?.auth || '';
 
-      await supabase.from('push_subscriptions').upsert({
-        user_id: userId,
+      const { error } = await supabase.from('push_subscriptions').upsert({
+        user_id: userId || null,
         user_email: userEmail || '',
         endpoint: subscription.endpoint,
         p256dh: p256dh,
         auth: auth,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'endpoint' }).then(({ error }) => {
-        if (error) {
-          console.warn('Push Subscription DB 저장 경고:', error.message);
-        } else {
-          console.log('✅ Push Subscription DB 등록 성공');
-        }
-      });
+      }, { onConflict: 'endpoint' });
+
+      if (error) {
+        console.warn('Push Subscription DB 저장 경고:', error.message);
+      } else {
+        console.log('✅ Push Subscription DB 등록/갱신 완수:', userEmail || userId);
+      }
     }
 
     return subscription;
@@ -113,13 +123,13 @@ export async function subscribeUserToPush(userId, userEmail) {
 
 // 3. 상대방에게 오프라인 웹 푸시 전송 (Supabase Edge Function + Realtime Broadcast 하이브리드)
 export async function sendWebPushNotification(targetUserId, payload) {
-  if (!targetUserId && !payload?.target_user_email) return;
+  const targetEmail = payload?.target_user_email || payload?.email || '';
+  if (!targetUserId && !targetEmail) return;
 
   const title = payload.title || '💬 [클릭 시 채팅창 열림] 쪽지가 도착했습니다!';
   const body = payload.body || '상대방이 채팅창을 흔듭니다! ⚡\n👉 알림창 아무 곳이나 클릭하면 채팅창으로 바로 이동합니다.';
   const senderEmail = payload.sender_email || '';
   const senderId = payload.sender_id || '';
-  const targetEmail = payload.target_user_email || '';
 
   if (isSupabaseConfigured()) {
     // 1) Supabase Realtime Broadcast 전송 (현재 브라우저를 열어둔 상태 대응)
@@ -144,8 +154,8 @@ export async function sendWebPushNotification(targetUserId, payload) {
     try {
       const { data, error } = await supabase.functions.invoke('send-push', {
         body: {
-          target_user_id: targetUserId,
-          target_user_email: targetEmail,
+          target_user_id: targetUserId || '',
+          target_user_email: targetEmail || '',
           sender_id: senderId,
           sender_email: senderEmail,
           title: title,
@@ -156,8 +166,11 @@ export async function sendWebPushNotification(targetUserId, payload) {
 
       if (error) {
         console.warn('Edge Function send-push 호출 경고:', error.message);
-      } else {
+      } else if (data) {
         console.log('✅ Edge Function 푸시 전송 결과:', data);
+        if (data.total_subscriptions === 0) {
+          console.warn(`⚠️ 상대방(${targetEmail || targetUserId})의 푸시 구독 정보가 Supabase DB에 등록되어 있지 않습니다.`);
+        }
       }
     } catch (e) {
       console.warn('Edge Function invocation error:', e);

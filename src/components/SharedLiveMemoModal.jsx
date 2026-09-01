@@ -60,6 +60,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
       const targetUserId = friend.friend_id || friend.id;
       const senderName = user.email ? user.email.split('@')[0] : '상대방';
       await sendWebPushNotification(targetUserId, {
+        target_user_email: friend.email,
         sender_id: user.id,
         sender_email: user.email,
         title: '💬 [클릭 시 채팅창 열림] 쪽지가 도착했습니다!',
