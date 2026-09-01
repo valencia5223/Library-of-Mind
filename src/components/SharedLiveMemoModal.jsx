@@ -540,13 +540,71 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     setTimeout(() => setCopySuccess(false), 2000);
   };
 
-  // 내 메모 지우기
+  // 내 메모 지우기 (초기화)
   const handleClearMyContent = () => {
-    if (window.confirm('내 메모 내용을 모두 지우시겠습니까?')) {
+    if (isMyEditorEmpty) return;
+    if (window.confirm('내 메모장 내용을 모두 초기화(지우기)하시겠습니까?')) {
       if (myEditorRef.current) {
         myEditorRef.current.innerHTML = '';
       }
       handleMyEditorInput();
+    }
+  };
+
+  // 상대방 메모 초기화 (상대방 영역 지우기 & DB 실시간 연동)
+  const handleClearPartnerContent = async () => {
+    if (isPartnerEmpty) return;
+    if (window.confirm(`${friend.email} 님의 메모장 내용을 초기화(지우기)하시겠습니까?`)) {
+      const updatedDict = {
+        ...allMemosDictRef.current,
+        [friend.friend_id]: ''
+      };
+      allMemosDictRef.current = updatedDict;
+      setPartnerContent('');
+      setIsPartnerEmpty(true);
+
+      try {
+        await supabase
+          .from('shared_memos')
+          .update({
+            content: JSON.stringify(updatedDict),
+            last_updated_by: user.id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('room_id', roomId);
+      } catch (e) {
+        console.error('상대방 메모 초기화 실패:', e);
+      }
+    }
+  };
+
+  // 전체 메모 초기화 (내 메모 + 상대방 메모 둘 다 삭제)
+  const handleClearAllContent = async () => {
+    if (isMyEditorEmpty && isPartnerEmpty) return;
+    if (window.confirm('🚨 내 메모와 상대방 메모를 모두 초기화(전체 지우기)하시겠습니까?')) {
+      if (myEditorRef.current) {
+        myEditorRef.current.innerHTML = '';
+      }
+      setMyContent('');
+      setIsMyEditorEmpty(true);
+      setPartnerContent('');
+      setIsPartnerEmpty(true);
+
+      const emptyDict = { [user.id]: '', [friend.friend_id]: '' };
+      allMemosDictRef.current = emptyDict;
+
+      try {
+        await supabase
+          .from('shared_memos')
+          .update({
+            content: JSON.stringify(emptyDict),
+            last_updated_by: user.id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('room_id', roomId);
+      } catch (e) {
+        console.error('전체 메모 초기화 실패:', e);
+      }
     }
   };
 
@@ -1308,6 +1366,15 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                   <span className="font-bold flex align-center gap-1 text-slate-800" style={{ fontSize: '0.88rem' }}>
                     <User size={16} className="text-sky-600" /> 내 메모
                   </span>
+                  <button
+                    className="btn btn-xs btn-outline font-bold flex align-center gap-1 text-slate-500"
+                    onClick={handleClearMyContent}
+                    disabled={isMyEditorEmpty}
+                    title="내 메모 내용만 지우기(초기화)"
+                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem', borderRadius: '6px' }}
+                  >
+                    <Trash2 size={12} /> 내 메모 초기화
+                  </button>
                 </div>
 
                 <div style={{ position: 'relative', width: '100%', height: `${panelSize.height}px` }}>
@@ -1364,15 +1431,26 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                   <span className="font-bold flex align-center gap-1 text-slate-800" style={{ fontSize: '0.88rem' }}>
                     <MessageSquare size={16} className="text-emerald-600" /> {friend.email} 님의 메모
                   </span>
-                  <button
-                    className="btn btn-xs btn-outline font-bold flex align-center gap-1"
-                    onClick={handleImportPartnerContent}
-                    disabled={isPartnerEmpty}
-                    title="상대방 메모 내용을 내 메모에 추가 복사"
-                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem', borderRadius: '6px' }}
-                  >
-                    <ArrowRightLeft size={12} /> 내 메모로 가져오기
-                  </button>
+                  <div className="flex align-center gap-1">
+                    <button
+                      className="btn btn-xs btn-outline font-bold flex align-center gap-1 text-sky-700 border-sky-300"
+                      onClick={handleImportPartnerContent}
+                      disabled={isPartnerEmpty}
+                      title="상대방 메모 내용을 내 메모장으로 추가 복사"
+                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem', borderRadius: '6px' }}
+                    >
+                      <ArrowRightLeft size={12} /> 가져오기
+                    </button>
+                    <button
+                      className="btn btn-xs btn-outline font-bold flex align-center gap-1 text-rose-600 border-rose-200"
+                      onClick={handleClearPartnerContent}
+                      disabled={isPartnerEmpty}
+                      title="상대방 메모장 내용을 초기화(지우기)합니다"
+                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem', borderRadius: '6px', color: '#e11d48', borderColor: '#fecdd3' }}
+                    >
+                      <Trash2 size={12} /> 상대 메모 초기화
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ position: 'relative', width: '100%', height: `${panelSize.height}px` }}>
@@ -1446,12 +1524,13 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             </button>
 
             <button
-              className="btn btn-outline btn-sm text-danger font-bold flex align-center gap-1"
-              onClick={handleClearMyContent}
-              disabled={isMyEditorEmpty}
+              className="btn btn-outline btn-sm font-bold flex align-center gap-1 text-red-600 border-red-300"
+              onClick={handleClearAllContent}
+              disabled={isMyEditorEmpty && isPartnerEmpty}
               style={{ padding: '0.45rem 0.85rem', borderRadius: '8px', borderColor: '#fca5a5', color: '#dc2626' }}
+              title="내 메모와 상대방 메모를 포함한 전체 메모장 내용을 한 번에 초기화합니다"
             >
-              <Trash2 size={15} /> 지우기
+              <Trash2 size={15} /> 💥 전체 메모 초기화
             </button>
 
             <button
