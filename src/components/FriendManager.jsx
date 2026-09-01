@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { Users, UserPlus, Heart, ExternalLink, Trash2, ShieldAlert, Sparkles, Mail, Zap, MessageSquare } from 'lucide-react';
 import SharedLiveMemoModal from './SharedLiveMemoModal';
+import { subscribeUserToPush, isNotificationSupported, getNotificationPermission } from '../utils/webPush';
 
 export default function FriendManager({ user, onViewFriendBookshelf, currentViewedFriend, onBackToMyBookshelf }) {
   const [friendEmail, setFriendEmail] = useState('');
@@ -205,14 +206,15 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
         {/* 데스크톱 알림 권한 확인 및 활성화 버튼 */}
         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-200 transition"
              onClick={async () => {
-               if (!('Notification' in window)) {
-                 alert('이 브라우저는 데스크톱 알림을 지원하지 않습니다.');
+               if (!isNotificationSupported()) {
+                 alert('이 브라우저/기기는 데스크톱 푸시 알림을 지원하지 않습니다.');
                  return;
                }
-               if (Notification.permission === 'granted') {
+               const perm = getNotificationPermission();
+               if (perm === 'granted') {
                  if (user) await subscribeUserToPush(user.id, user.email, true);
                  alert('✅ [데스크톱 알림 활성화 완수]\nVAPID 푸시 키가 최신 상태로 갱신되었습니다! 인터넷 창이 닫혀 있어도 흔들기 및 라이브 채팅 알림을 팝업으로 수신받으실 수 있습니다.');
-               } else if (Notification.permission === 'denied') {
+               } else if (perm === 'denied') {
                  alert('⚠️ [브라우저 알림이 차단되어 있습니다]\n\n해결 방법:\n1. 브라우저 주소창 맨 좌측의 🔒(자물쇠/설정) 아이콘 클릭\n2. [알림] 권한을 [허용]으로 변경\n3. 페이지 새로고침(F5) 실행');
                } else {
                  const res = await Notification.requestPermission();
@@ -224,8 +226,8 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
              }}>
           <Zap size={14} className="text-amber-500 animate-pulse" />
           <span>데스크톱 오프라인 알림 상태: </span>
-          <strong className={Notification.permission === 'granted' ? 'text-green-600' : Notification.permission === 'denied' ? 'text-red-500' : 'text-blue-600'}>
-            {Notification.permission === 'granted' ? '🟢 허용됨 (수신 가능)' : Notification.permission === 'denied' ? '🔴 차단됨 (클릭하여 설정)' : '🟡 권한 설정하기 (클릭)'}
+          <strong className={getNotificationPermission() === 'granted' ? 'text-green-600' : getNotificationPermission() === 'denied' ? 'text-red-500' : 'text-blue-600'}>
+            {!isNotificationSupported() ? '⚪ 미지원 (모바일 Webview)' : getNotificationPermission() === 'granted' ? '🟢 허용됨 (수신 가능)' : getNotificationPermission() === 'denied' ? '🔴 차단됨 (클릭하여 설정)' : '🟡 권한 설정하기 (클릭)'}
           </strong>
         </div>
       </div>

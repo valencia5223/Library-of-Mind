@@ -15,7 +15,7 @@ import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock,
 import NewsTicker from './components/NewsTicker';
 import WeatherWidget from './components/WeatherWidget';
 import SharedLiveMemoModal from './components/SharedLiveMemoModal';
-import { registerServiceWorker, subscribeUserToPush } from './utils/webPush';
+import { registerServiceWorker, subscribeUserToPush, isNotificationSupported, getNotificationPermission } from './utils/webPush';
 
 
 export default function App() {
@@ -132,15 +132,23 @@ export default function App() {
 
   // 웹 데스크톱 알림 발송 (OS 작업표시줄 및 알림 센터에 팝업 노출, 클릭 시 바로가기 연동)
   const triggerWebNotification = (senderEmail, senderId) => {
-    if ('Notification' in window && Notification.permission === 'granted') {
+    if (isNotificationSupported() && Notification.permission === 'granted') {
       const senderName = senderEmail ? senderEmail.split('@')[0] : '상대방';
       const notification = new Notification('💬 [클릭 시 채팅창 열림] 쪽지가 도착했습니다!', {
         body: `${senderName}님이 채팅창을 흔듭니다! ⚡\n👉 이 알림창 아무 곳이나 클릭하면 1:1 라이브 채팅창이 즉시 열립니다.`,
         icon: '/favicon.ico',
-        requireInteraction: true
+        requireInteraction: false
       });
 
+      // 🔒 프라이버시 보호: 30초 후 알림 창 자동 소멸
+      const timer = setTimeout(() => {
+        try {
+          notification.close();
+        } catch (e) {}
+      }, 30000);
+
       notification.onclick = () => {
+        clearTimeout(timer);
         window.focus();
         if (senderEmail || senderId) {
           setActiveMemoFriend({
@@ -164,8 +172,8 @@ export default function App() {
     });
 
     if (user && isSupabaseConfigured()) {
-      // 알림 권한 요청 (최초 1회)
-      if ('Notification' in window && Notification.permission === 'default') {
+      // 알림 권한 요청 (모바일 모듈 미지원 환경 방어)
+      if (isNotificationSupported() && Notification.permission === 'default') {
         Notification.requestPermission();
       }
 

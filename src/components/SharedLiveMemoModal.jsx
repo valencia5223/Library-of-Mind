@@ -135,7 +135,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }
   };
 
-  // 메모 보드 개별 입력 박스 크기 조절 (드래그 resize & localStorage 기억)
+  // 메모 보드 개별 입력 박스 크기 조절 (드래그 resize, 모바일 터치 & localStorage 기억)
   const [panelSize, setPanelSize] = useState(() => {
     try {
       const saved = localStorage.getItem('shared_memo_panel_size_dual');
@@ -149,45 +149,89 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     return { width: 380, height: 320 };
   });
 
+  // 원클릭 크기 규격 변경 헬퍼
+  const handleApplyPresetSize = (w, h) => {
+    const newSize = { width: w, height: h };
+    setPanelSize(newSize);
+    localStorage.setItem('shared_memo_panel_size_dual', JSON.stringify(newSize));
+  };
+
   const isResizingRef = useRef(false);
   const resizeStartRef = useRef({ x: 0, y: 0, width: 380, height: 320 });
+  const rafIdRef = useRef(null);
 
-  const handleMouseDownResize = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const startResize = (clientX, clientY) => {
     isResizingRef.current = true;
     resizeStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
+      x: clientX,
+      y: clientY,
       width: panelSize.width,
       height: panelSize.height
     };
-
-    document.addEventListener('mousemove', handleMouseMoveResize);
-    document.addEventListener('mouseup', handleMouseUpResize);
   };
 
-  const handleMouseMoveResize = (e) => {
+  const updateResize = (clientX, clientY) => {
     if (!isResizingRef.current) return;
-    const dx = e.clientX - resizeStartRef.current.x;
-    const dy = e.clientY - resizeStartRef.current.y;
-    const newWidth = Math.max(300, Math.min((window.innerWidth - 100) / 2, resizeStartRef.current.width + dx));
-    const newHeight = Math.max(180, Math.min(window.innerHeight - 240, resizeStartRef.current.height + dy));
+    if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
 
-    setPanelSize({ width: newWidth, height: newHeight });
+    rafIdRef.current = requestAnimationFrame(() => {
+      const dx = clientX - resizeStartRef.current.x;
+      const dy = clientY - resizeStartRef.current.y;
+      const newWidth = Math.max(260, Math.min((window.innerWidth - 60) / 2, resizeStartRef.current.width + dx));
+      const newHeight = Math.max(160, Math.min(window.innerHeight - 200, resizeStartRef.current.height + dy));
+      setPanelSize({ width: newWidth, height: newHeight });
+    });
   };
 
-  const handleMouseUpResize = () => {
+  const stopResize = () => {
     if (isResizingRef.current) {
       isResizingRef.current = false;
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
       document.removeEventListener('mousemove', handleMouseMoveResize);
       document.removeEventListener('mouseup', handleMouseUpResize);
+      document.removeEventListener('touchmove', handleTouchMoveResize);
+      document.removeEventListener('touchend', handleTouchEndResize);
 
       setPanelSize((latestSize) => {
         localStorage.setItem('shared_memo_panel_size_dual', JSON.stringify(latestSize));
         return latestSize;
       });
     }
+  };
+
+  const handleMouseDownResize = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    startResize(e.clientX, e.clientY);
+    document.addEventListener('mousemove', handleMouseMoveResize);
+    document.addEventListener('mouseup', handleMouseUpResize);
+  };
+
+  const handleMouseMoveResize = (e) => {
+    updateResize(e.clientX, e.clientY);
+  };
+
+  const handleMouseUpResize = () => {
+    stopResize();
+  };
+
+  const handleTouchStartResize = (e) => {
+    if (e.touches && e.touches[0]) {
+      startResize(e.touches[0].clientX, e.touches[0].clientY);
+      document.addEventListener('touchmove', handleTouchMoveResize, { passive: false });
+      document.addEventListener('touchend', handleTouchEndResize);
+    }
+  };
+
+  const handleTouchMoveResize = (e) => {
+    if (e.touches && e.touches[0]) {
+      e.preventDefault();
+      updateResize(e.touches[0].clientX, e.touches[0].clientY);
+    }
+  };
+
+  const handleTouchEndResize = () => {
+    stopResize();
   };
 
   // ESC 키 누르면 모달 닫기
@@ -832,6 +876,47 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               <span>실시간 1:1 라이브 채팅</span>
             </h3>
 
+            {/* 창 크기 규격 원클릭 프리셋 컨트롤러 (소/중/대/와이드) */}
+            <div className="flex align-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200" style={{ flexShrink: 0 }}>
+              <span className="text-slate-400 font-bold px-1" style={{ fontSize: '0.72rem' }}>📐 크기:</span>
+              <button
+                type="button"
+                onClick={() => handleApplyPresetSize(340, 280)}
+                className={`btn btn-xs ${panelSize.width === 340 ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ padding: '2px 6px', fontSize: '0.72rem', borderRadius: '4px', fontWeight: 700 }}
+                title="소형 규격 (340x280px)"
+              >
+                소
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyPresetSize(420, 340)}
+                className={`btn btn-xs ${panelSize.width === 420 ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ padding: '2px 6px', fontSize: '0.72rem', borderRadius: '4px', fontWeight: 700 }}
+                title="중형 기본 규격 (420x340px)"
+              >
+                중
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyPresetSize(520, 420)}
+                className={`btn btn-xs ${panelSize.width === 520 ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ padding: '2px 6px', fontSize: '0.72rem', borderRadius: '4px', fontWeight: 700 }}
+                title="대형 규격 (520x420px)"
+              >
+                대
+              </button>
+              <button
+                type="button"
+                onClick={() => handleApplyPresetSize(640, 500)}
+                className={`btn btn-xs ${panelSize.width === 640 ? 'btn-primary' : 'btn-ghost'}`}
+                style={{ padding: '2px 6px', fontSize: '0.72rem', borderRadius: '4px', fontWeight: 700 }}
+                title="와이드 시네마 규격 (640x500px)"
+              >
+                🖥️ 와이드
+              </button>
+            </div>
+
             {/* 흔들기 알람 버튼 및 폰트 크기 커스텀 숫자 입력 컨트롤러 */}
             <div className="flex align-center gap-2">
               <button
@@ -1360,31 +1445,33 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                     />
                   )}
 
-                  {/* 우측 하단 듀얼 전체 크기 조절 손잡이 */}
+                  {/* 우측 하단 듀얼 전체 크기 조절 손잡이 (마우스/모바일 터치 60fps 가속 지원) */}
                   <div
                     onMouseDown={handleMouseDownResize}
-                    title="드래그하여 메모 박스 크기 변경 (localStorage 기억됨)"
+                    onTouchStart={handleTouchStartResize}
+                    title="드래그하여 메모 박스 크기 변경 (마우스/모바일 터치 60fps 가속, localStorage 기억)"
                     style={{
                       position: 'absolute',
                       bottom: '8px',
                       right: '8px',
-                      width: '22px',
-                      height: '22px',
+                      width: '26px',
+                      height: '26px',
                       cursor: 'nwse-resize',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       color: '#0284c7',
                       background: '#f0f9ff',
-                      borderRadius: '5px',
-                      border: '1px solid #bae6fd',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                      borderRadius: '6px',
+                      border: '1.5px solid #38bdf8',
+                      boxShadow: '0 2px 5px rgba(2, 132, 199, 0.2)',
                       zIndex: 5,
-                      userSelect: 'none'
+                      userSelect: 'none',
+                      touchAction: 'none'
                     }}
                   >
-                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                      <path d="M10 2L2 10M10 6L6 10M10 10H10.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d="M10 2L2 10M10 6L6 10M10 10H10.01" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
                     </svg>
                   </div>
                 </div>

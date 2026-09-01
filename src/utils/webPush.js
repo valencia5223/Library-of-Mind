@@ -6,6 +6,20 @@ import { supabase, isSupabaseConfigured } from '../supabaseClient';
 export const VAPID_PUBLIC_KEY = import.meta.env?.VITE_VAPID_PUBLIC_KEY || 
   'BNaIMXgaSQc25hN8q1ifdBuHvX2oV5k8P89MH5w29dDvvTGWlag-Bs7JwbhVIlIERbJQgwRA6Wx5oGnJjnT6qTA';
 
+// 모바일 Safari / 인앱 웹뷰(카카오톡 등) ReferenceError 방지용 안전 알림 지원 확인 헬퍼
+export function isNotificationSupported() {
+  return typeof window !== 'undefined' && 'Notification' in window && typeof Notification !== 'undefined';
+}
+
+export function getNotificationPermission() {
+  if (!isNotificationSupported()) return 'unsupported';
+  try {
+    return Notification.permission || 'default';
+  } catch (e) {
+    return 'unsupported';
+  }
+}
+
 // Base64 URL 문자열을 Uint8Array로 변환하는 헬퍼 함수
 export function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -37,10 +51,10 @@ export async function registerServiceWorker() {
   }
 }
 
-// 2. 푸시 알림 권한 요청 및 PushManager 최신 VAPID 구독 생성 & DB 저장 (타임아웃 방어 적용)
+// 2. 푸시 알림 권한 요청 및 PushManager 최신 VAPID 구독 생성 & DB 저장 (타임아웃 및 모바일 안전 방어 적용)
 export async function subscribeUserToPush(userId, userEmail, forceRefresh = false) {
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    console.warn('이 브라우저는 PushManager API를 지원하지 않습니다.');
+  if (!isNotificationSupported() || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    console.warn('이 브라우저는 PushManager/Notification API를 지원하지 않습니다.');
     return null;
   }
 
