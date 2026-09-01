@@ -1034,38 +1034,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                 )}
               </div>
 
-              {/* 글씨 크기 조절 수평 캡슐 */}
-              <div className="flex align-center gap-1" style={{ background: '#f1f5f9', padding: '0 8px', borderRadius: '8px', border: '1px solid #cbd5e1', height: '28px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}>
-                <span className="text-xs font-bold text-slate-600" style={{ fontSize: '0.72rem' }}>글씨:</span>
-                <button
-                  type="button"
-                  onClick={() => handleFontSizePxChange(fontSizePx - 1)}
-                  style={{ width: '18px', height: '18px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  -
-                </button>
-                <div className="flex align-center gap-0.5">
-                  <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={fontSizePx}
-                    onChange={(e) => handleFontSizePxChange(e.target.value)}
-                    style={{ width: '36px', height: '20px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 700, color: '#0284c7', border: '1px solid #38bdf8', borderRadius: '4px', outline: 'none', background: '#ffffff', padding: '0 1px' }}
-                  />
-                  <span className="text-xs font-bold text-slate-500" style={{ fontSize: '0.7rem' }}>px</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleFontSizePxChange(fontSizePx + 1)}
-                  style={{ width: '18px', height: '18px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  +
-                </button>
-              </div>
-
               {/* 📍 카카오맵 맛집/장소 공유 버튼 */}
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
                 <button
                   type="button"
                   className="btn btn-xs font-bold flex align-center gap-1"
@@ -1076,10 +1046,14 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '8px',
-                    padding: '4px 9px',
+                    padding: '0 10px',
+                    height: '28px',
                     fontSize: '0.78rem',
                     boxShadow: '0 2px 6px rgba(234, 179, 8, 0.3)',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center'
                   }}
                 >
                   <MapPin size={13} /> 📍 맛집/장소
