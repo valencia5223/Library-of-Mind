@@ -1,0 +1,6 @@
+# supabase/config.toml - Supabase 프로젝트 설정 파일
+
+project_id = "library-of-mind"
+
+[functions.send-push]
+verify_jwt = false
