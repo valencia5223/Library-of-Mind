@@ -134,8 +134,8 @@ export default function App() {
   const triggerWebNotification = (senderEmail, senderId) => {
     if ('Notification' in window && Notification.permission === 'granted') {
       const senderName = senderEmail ? senderEmail.split('@')[0] : '상대방';
-      const notification = new Notification('💬 쪽지가 도착했습니다!', {
-        body: `${senderName}님이 채팅창을 흔듭니다! ⚡\n👉 (클릭 시 1:1 라이브 채팅창으로 이동합니다)`,
+      const notification = new Notification('💬 [클릭 시 채팅창 열림] 쪽지가 도착했습니다!', {
+        body: `${senderName}님이 채팅창을 흔듭니다! ⚡\n👉 이 알림창 아무 곳이나 클릭하면 1:1 라이브 채팅창이 즉시 열립니다.`,
         icon: '/favicon.ico',
         requireInteraction: true
       });

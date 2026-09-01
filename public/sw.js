@@ -12,8 +12,8 @@ self.addEventListener('activate', (event) => {
 // 2. 푸시(Push) 이벤트 수신 - 브라우저 창이 닫혀 있어도 OS 백그라운드에서 동작!
 self.addEventListener('push', (event) => {
   let notificationData = {
-    title: '💬 쪽지가 도착했습니다!',
-    body: '상대방이 채팅창을 흔듭니다! ⚡',
+    title: '💬 [클릭 시 채팅창 열림] 쪽지가 도착했습니다!',
+    body: '상대방이 채팅창을 흔듭니다! ⚡\n👉 알림창 아무 곳이나 클릭하면 채팅창으로 바로 이동합니다.',
     icon: '/favicon.ico',
     badge: '/favicon.ico',
     tag: 'nudge-shake-notification',
@@ -44,10 +44,7 @@ self.addEventListener('push', (event) => {
     renotify: notificationData.renotify,
     requireInteraction: true, // 사용자가 직접 닫거나 클릭할 때까지 팝업 유지
     vibrate: [200, 100, 200, 100, 200],
-    data: notificationData.data,
-    actions: [
-      { action: 'open_chat', title: '💬 채팅창 바로가기' }
-    ]
+    data: notificationData.data
   };
 
   event.waitUntil(
@@ -58,8 +55,8 @@ self.addEventListener('push', (event) => {
 // 3. 클라이언트 메타 메시지 이벤트 수신
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'TRIGGER_NUDGE_NOTIFICATION') {
-    const title = event.data.title || '💬 쪽지가 도착했습니다!';
-    const body = event.data.body || '상대방이 채팅창을 흔듭니다! ⚡';
+    const title = event.data.title || '💬 [클릭 시 채팅창 열림] 쪽지가 도착했습니다!';
+    const body = event.data.body || '상대방이 채팅창을 흔듭니다! ⚡\n👉 알림창 아무 곳이나 클릭하면 채팅창으로 바로 이동합니다.';
     self.registration.showNotification(title, {
       body: body,
       icon: '/favicon.ico',
@@ -72,10 +69,7 @@ self.addEventListener('message', (event) => {
         url: '/',
         sender_id: event.data.senderId,
         sender_email: event.data.senderEmail
-      },
-      actions: [
-        { action: 'open_chat', title: '💬 채팅창 바로가기' }
-      ]
+      }
     });
   }
 });
