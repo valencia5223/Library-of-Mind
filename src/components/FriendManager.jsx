@@ -204,62 +204,42 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
         <h2><Users className="text-pink inline-block me-2" size={28} /> 소셜 서재 & 친구 관리</h2>
         <p className="sub-text mb-3">다른 독서가들의 이메일을 등록하고, 서재에 꽂힌 3D 명작 책장을 탐색해보세요.</p>
         
-        {/* 데스크톱 알림 권한 확인 및 활성화 버튼 (마우스 커서 Hover 시 클릭 이벤트 인지 강화) */}
-        <div style={{ position: 'relative', display: 'inline-block' }}>
-          <div
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold cursor-pointer transition-all duration-200"
-            style={{
-              background: isNotifHovered ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)' : '#f8fafc',
-              border: isNotifHovered ? '1.5px solid #f59e0b' : '1px solid #cbd5e1',
-              boxShadow: isNotifHovered ? '0 4px 18px rgba(245, 158, 11, 0.35)' : '0 1px 3px rgba(0,0,0,0.06)',
-              transform: isNotifHovered ? 'scale(1.05) translateY(-1px)' : 'scale(1)',
-              color: '#0f172a'
-            }}
-            onMouseEnter={() => setIsNotifHovered(true)}
-            onMouseLeave={() => setIsNotifHovered(false)}
-            onClick={async () => {
-              if (!isNotificationSupported()) {
-                alert('이 브라우저/기기는 데스크톱 푸시 알림을 지원하지 않습니다.');
-                return;
+        {/* 심플 깔끔 알림 갱신 캡슐 버튼 */}
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition shadow-sm hover:opacity-80"
+          style={{
+            backgroundColor: 'rgba(234, 179, 8, 0.12)',
+            color: '#b45309',
+            border: '1px solid rgba(234, 179, 8, 0.4)',
+            cursor: 'pointer'
+          }}
+          onClick={async () => {
+            if (!isNotificationSupported()) {
+              alert('이 브라우저/기기는 데스크톱 푸시 알림을 지원하지 않습니다.');
+              return;
+            }
+            const perm = getNotificationPermission();
+            if (perm === 'granted') {
+              if (user) await subscribeUserToPush(user.id, user.email, true);
+              alert('✅ [데스크톱 알림 활성화 완수]\nVAPID 푸시 키가 최신 상태로 갱신되었습니다! 인터넷 창이 닫혀 있어도 흔들기 및 라이브 채팅 알림을 팝업으로 수신받으실 수 있습니다.');
+            } else if (perm === 'denied') {
+              alert('⚠️ [브라우저 알림이 차단되어 있습니다]\n\n해결 방법:\n1. 브라우저 주소창 맨 좌측의 🔒(자물쇠/설정) 아이콘 클릭\n2. [알림] 권한을 [허용]으로 변경\n3. 페이지 새로고침(F5) 실행');
+            } else {
+              const res = await Notification.requestPermission();
+              if (res === 'granted' && user) {
+                await subscribeUserToPush(user.id, user.email, true);
+                alert('🎉 데스크톱 알림 권한이 정상적으로 허용되었습니다!');
               }
-              const perm = getNotificationPermission();
-              if (perm === 'granted') {
-                if (user) await subscribeUserToPush(user.id, user.email, true);
-                alert('✅ [데스크톱 알림 활성화 완수]\nVAPID 푸시 키가 최신 상태로 갱신되었습니다! 인터넷 창이 닫혀 있어도 흔들기 및 라이브 채팅 알림을 팝업으로 수신받으실 수 있습니다.');
-              } else if (perm === 'denied') {
-                alert('⚠️ [브라우저 알림이 차단되어 있습니다]\n\n해결 방법:\n1. 브라우저 주소창 맨 좌측의 🔒(자물쇠/설정) 아이콘 클릭\n2. [알림] 권한을 [허용]으로 변경\n3. 페이지 새로고침(F5) 실행');
-              } else {
-                const res = await Notification.requestPermission();
-                if (res === 'granted' && user) {
-                  await subscribeUserToPush(user.id, user.email, true);
-                  alert('🎉 데스크톱 알림 권한이 정상적으로 허용되었습니다!');
-                }
-              }
-            }}
-          >
-            <Zap size={16} className={`text-amber-500 ${isNotifHovered ? 'animate-bounce text-amber-600' : 'animate-pulse'}`} />
-            <span>데스크톱 오프라인 알림 상태: </span>
-            <strong className={getNotificationPermission() === 'granted' ? 'text-green-600 font-extrabold' : getNotificationPermission() === 'denied' ? 'text-red-500 font-extrabold' : 'text-blue-600 font-extrabold'}>
-              {!isNotificationSupported() ? '⚪ 미지원 (모바일 Webview)' : getNotificationPermission() === 'granted' ? '🟢 허용됨 (수신 가능 - 클릭하여 갱신)' : getNotificationPermission() === 'denied' ? '🔴 차단됨 (클릭하여 설정)' : '🟡 권한 설정하기 (클릭)'}
-            </strong>
-          </div>
-
-          {/* 마우스 커서 호버 시 노출되는 인터랙티브 안내 툴팁 말풍선 */}
-          {isNotifHovered && (
-            <div
-              className="absolute left-1/2 transform -translate-x-1/2 mt-2 px-3.5 py-1.5 rounded-lg text-xs font-bold text-white shadow-xl pointer-events-none z-20 whitespace-nowrap"
-              style={{
-                top: '100%',
-                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                border: '1px solid #f59e0b',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
-              }}
-            >
-              <div style={{ position: 'absolute', top: '-5px', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderBottom: '5px solid #f59e0b' }} />
-              👉 클릭하면 오프라인 웹 푸시 알림 수신 상태 및 VAPID 키를 즉시 갱신/테스트합니다!
-            </div>
-          )}
-        </div>
+            }
+          }}
+          title="인터넷 창이 닫혀 있어도 수신받는 데스크톱 푸시 알림 상태 켜기/갱신"
+        >
+          <Zap size={14} className="text-amber-500" />
+          <span>
+            {!isNotificationSupported() ? '🔔 알림 미지원' : getNotificationPermission() === 'granted' ? '🔔 알림 ON (갱신)' : getNotificationPermission() === 'denied' ? '🔔 알림 차단됨' : '🔔 알림 켜기'}
+          </span>
+        </button>
       </div>
 
       {currentViewedFriend && (
