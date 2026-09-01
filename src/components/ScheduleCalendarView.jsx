@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users, ExternalLink, Download } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users, ExternalLink, Download, CheckSquare } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 // 클라이언트 단 엔드투엔드(E2E) 암호화 / 복호화 헬퍼 (DB 관리자도 읽을 수 없도록 보안 보장)
@@ -55,7 +55,7 @@ const decryptText = (cipherText, userSecret = 'default') => {
       const keyBytes = textEncoder.encode(fullKey);
 
       const decryptedBytes = new Uint8Array(encryptedBytes.length);
-      for (let i = 0; i < encryptedBytes.length; i++) {
+      for (let i = 0; i < decryptedBytes.length; i++) {
         decryptedBytes[i] = encryptedBytes[i] ^ keyBytes[i % keyBytes.length];
       }
 
@@ -90,7 +90,7 @@ const decryptText = (cipherText, userSecret = 'default') => {
         const fullKey = isSharedTag ? SHARED_SALT : `${userSecret}_${SECRET_SALT}`;
         const keyBytes = textEncoder.encode(fullKey);
         const decryptedBytes = new Uint8Array(encryptedBytes.length);
-        for (let i = 0; i < encryptedBytes.length; i++) {
+        for (let i = 0; i < decryptedBytes.length; i++) {
           decryptedBytes[i] = encryptedBytes[i] ^ keyBytes[i % keyBytes.length];
         }
         return textDecoder.decode(decryptedBytes);
@@ -103,7 +103,7 @@ const decryptText = (cipherText, userSecret = 'default') => {
   return cipherText;
 };
 
-export default function ScheduleCalendarView({ userId = null }) {
+export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard = null }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [schedules, setSchedules] = useState([]);
   const [friendsList, setFriendsList] = useState([]);
@@ -582,6 +582,26 @@ const getKoreanHoliday = (dateObj) => {
         </div>
 
         <div className="calendar-nav-controls flex align-center gap-2">
+          {onOpenHabitBoard && (
+            <button
+              type="button"
+              className="btn btn-sm font-bold flex align-center gap-1.5"
+              onClick={onOpenHabitBoard}
+              style={{
+                backgroundColor: 'rgba(16, 185, 129, 0.14)',
+                color: '#059669',
+                borderColor: 'rgba(16, 185, 129, 0.4)',
+                borderRadius: '10px',
+                padding: '0.4rem 0.85rem',
+                marginRight: '6px',
+                fontSize: '0.85rem'
+              }}
+              title="오늘의 할일 / 해빗 트래커 보드 열기"
+            >
+              <CheckSquare size={16} /> ✅ 오늘의 할일
+            </button>
+          )}
+
           <button className="btn btn-secondary btn-sm" onClick={handlePrevMonth} title="이전달 이동">
             <ChevronLeft size={18} />
           </button>
