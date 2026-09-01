@@ -1,11 +1,10 @@
-// src/utils/webPush.js - 서비스 워커 등록 및 Web Push 구독/발송 유틸리티
+// src/utils/webPush.js - 서비스 워커 등록 및 Web Push 구독/Edge Function 발송 유틸리티
 
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
-// 표준 Web Push VAPID 공개 키 (URL-safe Base64)
-// 프로젝트 환경에 맞춰 import.meta.env.VITE_VAPID_PUBLIC_KEY 로 변경 가능하며 기본 데모 VAPID Key가 포함되어 있습니다.
+// 표준 Web Push VAPID 공개 키 (Edge Function VAPID Key와 100% 매칭)
 export const VAPID_PUBLIC_KEY = import.meta.env?.VITE_VAPID_PUBLIC_KEY || 
-  'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-Skv6KqJgX0yP8Xl5G8z8r6Xl5G8z8r6Xl5G8z8r6Xl5G8z8r6Xl5G8z8r6';
+  'BNaIMXgaSQc25hN8q1ifdBuHvX2oV5k8P89MH5w29dDvvTGWlag-Bs7JwbhVIlIERbJQgwRA6Wx5oGnJjnT6qTA';
 
 // Base64 URL 문자열을 Uint8Array로 변환하는 헬퍼 함수
 export function urlBase64ToUint8Array(base64String) {
@@ -53,7 +52,7 @@ export async function subscribeUserToPush(userId) {
       return null;
     }
 
-    // 2) 서비스 워커 준공 확인
+    // 2) 서비스 워커 준비 확인
     let registration = await navigator.serviceWorker.ready;
     if (!registration) {
       registration = await registerServiceWorker();
@@ -72,8 +71,7 @@ export async function subscribeUserToPush(userId) {
           applicationServerKey: convertedVapidKey
         });
       } catch (subErr) {
-        // VAPID 키 형식 관련 폴백 (applicationServerKey 없이 구독 시도 또는 태그 기반 푸시)
-        console.warn('VAPID 키 기반 구독 시도 경고 (기본 구독 시도):', subErr);
+        console.warn('VAPID 키 기반 구독 폴백:', subErr);
         try {
           subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true
@@ -98,7 +96,7 @@ export async function subscribeUserToPush(userId) {
         updated_at: new Date().toISOString()
       }, { onConflict: 'endpoint' }).then(({ error }) => {
         if (error) {
-          console.warn('Push Subscription DB 저장 경고 (push_subscriptions 테이블이 아직 준비중일 수 있음):', error.message);
+          console.warn('Push Subscription DB 저장 경고:', error.message);
         } else {
           console.log('✅ Push Subscription DB 등록 성공');
         }
@@ -112,23 +110,24 @@ export async function subscribeUserToPush(userId) {
   }
 }
 
-// 3. 상대방에게 웹 푸시 전송 (Realtime Broadcast + Service Worker Background Notification 하이브리드)
+// 3. 상대방에게 오프라인 웹 푸시 전송 (Supabase Edge Function + Realtime Broadcast 하이브리드)
 export async function sendWebPushNotification(targetUserId, payload) {
   if (!targetUserId) return;
 
   const title = payload.title || '💬 쪽지가 도착했습니다!';
   const body = payload.body || '상대방이 채팅창을 흔듭니다! ⚡';
   const senderEmail = payload.sender_email || '';
+  const senderId = payload.sender_id || '';
 
-  // 1. Supabase Realtime Broadcast 전송 (현재 브라우저 열어둔 클라이언트용)
   if (isSupabaseConfigured()) {
+    // 1) Supabase Realtime Broadcast 전송 (현재 브라우저를 열어둔 상태 대응)
     try {
       const globalChan = supabase.channel(`global_user_nudge:${targetUserId}`);
       await globalChan.send({
         type: 'broadcast',
         event: 'nudge_received',
         payload: {
-          sender_id: payload.sender_id,
+          sender_id: senderId,
           sender_email: senderEmail,
           title: title,
           body: body
@@ -138,19 +137,33 @@ export async function sendWebPushNotification(targetUserId, payload) {
       console.warn('Realtime nudge broadcast error:', e);
     }
 
-    // 2. 푸시 구독 DB 정보 확인 후 백그라운드 서비스 워커 발송 처리
+    // 2) Supabase Edge Function 'send-push' 호출 (창이 완전히 닫힌 오프라인 상태 대응!)
     try {
-      const { data: subList } = await supabase
-        .from('push_subscriptions')
-        .select('*')
-        .eq('user_id', targetUserId);
+      const { data, error } = await supabase.functions.invoke('send-push', {
+        body: {
+          target_user_id: targetUserId,
+          sender_id: senderId,
+          sender_email: senderEmail,
+          title: title,
+          body: body,
+          url: '/'
+        }
+      });
 
-      if (subList && subList.length > 0) {
-        console.log(`📡 상대방(ID: ${targetUserId})의 등록된 푸시 구독 ${subList.length}건을 발견하여 오프라인 푸시를 보냅니다.`);
+      if (error) {
+        console.warn('Edge Function send-push 미배포 또는 경고:', error.message);
+        // Edge Function 미배포 시 DB 오프라인 큐 직접 백업
+        await supabase.from('nudge_history').insert({
+          sender_id: senderId || null,
+          sender_email: senderEmail || '상대방',
+          target_user_id: targetUserId,
+          read: false
+        });
+      } else {
+        console.log('✅ Edge Function 푸시 전송 결과:', data);
       }
     } catch (e) {
-      console.warn('Push subscription fetch error:', e);
+      console.warn('Edge Function invocation error:', e);
     }
   }
-
 }

@@ -31,7 +31,6 @@ self.addEventListener('push', (event) => {
       if (payload.icon) notificationData.icon = payload.icon;
       if (payload.data) notificationData.data = payload.data;
     } catch (e) {
-      // JSON 파싱 실패 시 일반 텍스트 사용
       const text = event.data.text();
       if (text) notificationData.body = text;
     }
@@ -44,8 +43,11 @@ self.addEventListener('push', (event) => {
     tag: notificationData.tag,
     renotify: notificationData.renotify,
     requireInteraction: true, // 사용자가 직접 닫거나 클릭할 때까지 팝업 유지
-    vibrate: [200, 100, 200, 100, 200], // 모바일/지원 기기 진동 패턴
-    data: notificationData.data
+    vibrate: [200, 100, 200, 100, 200],
+    data: notificationData.data,
+    actions: [
+      { action: 'open_chat', title: '💬 채팅창 바로가기' }
+    ]
   };
 
   event.waitUntil(
@@ -66,22 +68,44 @@ self.addEventListener('message', (event) => {
       renotify: true,
       requireInteraction: true,
       vibrate: [200, 100, 200, 100, 200],
-      data: { url: '/' }
+      data: {
+        url: '/',
+        sender_id: event.data.senderId,
+        sender_email: event.data.senderEmail
+      },
+      actions: [
+        { action: 'open_chat', title: '💬 채팅창 바로가기' }
+      ]
     });
   }
 });
 
-// 4. 알림 클릭 시 닫혀있던 웹페이지 열기 또는 기존 탭으로 포커스 이동
+// 4. 알림 및 바로가기 버튼 클릭 시 닫혀있던 브라우저를 열고 바로 1:1 라이브 채팅 모달 오픈
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const targetUrl = (event.notification.data && event.notification.data.url) ? event.notification.data.url : '/';
+  const data = event.notification.data || {};
+  let targetUrl = data.url || '/';
+
+  // 딥링크 파라미터 구성 (클릭 시 1:1 메모 모달 바로 띄우기)
+  const senderId = data.sender_id || '';
+  const senderEmail = data.sender_email || '';
+  if (senderId || senderEmail) {
+    const params = new URLSearchParams();
+    params.set('open_chat', 'true');
+    if (senderId) params.set('sender_id', senderId);
+    if (senderEmail) params.set('sender_email', senderEmail);
+    targetUrl = `/?${params.toString()}`;
+  }
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // 이미 열려 있는 앱 탭이 있다면 포커스
+      // 이미 열려 있는 앱 탭이 있다면 포커스 후 페이지 딥링크 이동
       for (const client of clientList) {
         if ('focus' in client) {
+          if ('navigate' in client) {
+            client.navigate(targetUrl);
+          }
           return client.focus();
         }
       }
@@ -92,4 +116,3 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
-

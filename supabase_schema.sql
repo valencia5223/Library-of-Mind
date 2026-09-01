@@ -132,3 +132,23 @@ drop policy if exists "푸시 구독 전체 조회 및 저장 허용" on push_su
 create policy "푸시 구독 전체 조회 및 저장 허용" on push_subscriptions
   for all using (true) with check (true);
 
+-- ==========================================
+-- ⚡ 5. 부재중 오프라인 흔들기 기록 테이블 (nudge_history)
+-- ==========================================
+
+create table if not exists nudge_history (
+  id uuid default gen_random_uuid() primary key,
+  sender_id uuid,
+  sender_email text not null,
+  target_user_id uuid not null,
+  read boolean default false,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table nudge_history enable row level security;
+
+drop policy if exists "부재중 흔들기 기록 전체 조회 및 저장 허용" on nudge_history;
+create policy "부재중 흔들기 기록 전체 조회 및 저장 허용" on nudge_history
+  for all using (true) with check (true);
+
+

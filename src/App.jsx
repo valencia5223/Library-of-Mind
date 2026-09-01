@@ -14,6 +14,7 @@ import DailyHabitBoardModal from './components/DailyHabitBoardModal';
 import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon, FileText, CheckSquare } from 'lucide-react';
 import NewsTicker from './components/NewsTicker';
 import WeatherWidget from './components/WeatherWidget';
+import SharedLiveMemoModal from './components/SharedLiveMemoModal';
 import { registerServiceWorker, subscribeUserToPush } from './utils/webPush';
 
 
@@ -26,8 +27,31 @@ export default function App() {
   const [showHabitBoardModal, setShowHabitBoardModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // 알림 클릭 시 바로 열리는 1:1 채팅 룸 친구 상태
+  const [activeMemoFriend, setActiveMemoFriend] = useState(null);
+
   // 관리자 권한 확인 (valencia5223@gmail.com 또는 admin 키워드)
   const isAdmin = user && (user.email === 'valencia5223@gmail.com' || user.email?.includes('admin') || !isSupabaseConfigured());
+
+  // URL 딥링크 (?open_chat=true) 파라미터 감지 시 1:1 채팅 모달 자동 오픈
+  useEffect(() => {
+    if (user) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const openChat = urlParams.get('open_chat');
+      const senderId = urlParams.get('sender_id');
+      const senderEmail = urlParams.get('sender_email');
+
+      if (openChat === 'true' && (senderId || senderEmail)) {
+        setActiveMemoFriend({
+          friend_id: senderId || '',
+          email: senderEmail || '상대방',
+          name: senderEmail ? senderEmail.split('@')[0] : '상대방'
+        });
+        // URL 딥링크 파라미터 깔끔하게 클리어 (새로고침 시 재열림 방지)
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
+  }, [user]);
 
   // 데이터 상태 (사용자별 개별 데이터)
   const [books, setBooks] = useState([]);
@@ -106,19 +130,27 @@ export default function App() {
     }, 500);
   };
 
-  // 웹 데스크톱 알림 발송 (OS 작업표시줄 및 알림 센터에 팝업 노출)
-  const triggerWebNotification = (senderEmail) => {
-    if ('Notification' in window) {
-      if (Notification.permission === 'granted') {
-        const senderName = senderEmail ? senderEmail.split('@')[0] : '상대방';
-        new Notification('💬 쪽지가 도착했습니다!', {
-          body: `${senderName}님이 채팅창을 흔듭니다! ⚡`,
-          icon: '/favicon.ico',
-          requireInteraction: true
-        });
-      } else if (Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
+  // 웹 데스크톱 알림 발송 (OS 작업표시줄 및 알림 센터에 팝업 노출, 클릭 시 바로가기 연동)
+  const triggerWebNotification = (senderEmail, senderId) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      const senderName = senderEmail ? senderEmail.split('@')[0] : '상대방';
+      const notification = new Notification('💬 쪽지가 도착했습니다!', {
+        body: `${senderName}님이 채팅창을 흔듭니다! ⚡\n👉 (클릭 시 1:1 라이브 채팅창으로 이동합니다)`,
+        icon: '/favicon.ico',
+        requireInteraction: true
+      });
+
+      notification.onclick = () => {
+        window.focus();
+        if (senderEmail || senderId) {
+          setActiveMemoFriend({
+            friend_id: senderId || '',
+            email: senderEmail || '상대방',
+            name: senderName
+          });
+        }
+        notification.close();
+      };
     }
   };
 
@@ -150,15 +182,60 @@ export default function App() {
 
           // 2. 작업표시줄 & 브라우저 탭 제목 깜박임
           const senderEmail = payload.payload?.sender_email;
+          const senderId = payload.payload?.sender_id;
           triggerTaskbarBlink(senderEmail);
 
           // 3. 데스크톱 알림 (Windows 작업표시줄 팝업)
-          triggerWebNotification(senderEmail);
+          triggerWebNotification(senderEmail, senderId);
 
           // 4. 최소화 상태 대응 띵동! 사운드 알림음
           triggerNudgeChime();
         })
         .subscribe();
+
+      // 오프라인 부재 중 수신된 미확인 흔들기 알림 조회 및 즉시 복귀 알림 터뜨리기 (이중 안전장치)
+      supabase.from('nudge_history')
+        .select('*')
+        .eq('target_user_id', user.id)
+        .eq('read', false)
+        .then(({ data: unreadNudges }) => {
+          if (unreadNudges && unreadNudges.length > 0) {
+            const count = unreadNudges.length;
+            const lastNudge = unreadNudges[unreadNudges.length - 1];
+            const lastSender = lastNudge.sender_email || '친구';
+            const senderName = lastSender.split('@')[0];
+
+            // 1. 화면 흔들기 & 알림음
+            setIsNudgeShaking(true);
+            setTimeout(() => setIsNudgeShaking(false), 1400);
+            triggerNudgeChime();
+            triggerTaskbarBlink(lastSender);
+
+            // 2. 부재중 수신 알림 데스크톱 노출 (클릭 시 바로가기 모달 연동)
+            if ('Notification' in window && Notification.permission === 'granted') {
+              const notification = new Notification('🔔 [부재중 흔들기 알림]', {
+                body: `인터넷이 닫혀 있던 사이에 ${senderName}님이 채팅창을 ${count}회 흔들었습니다! ⚡\n👉 (클릭 시 1:1 라이브 채팅창으로 이동)`,
+                icon: '/favicon.ico',
+                requireInteraction: true
+              });
+
+              notification.onclick = () => {
+                window.focus();
+                setActiveMemoFriend({
+                  friend_id: lastNudge.sender_id || '',
+                  email: lastSender,
+                  name: senderName
+                });
+                notification.close();
+              };
+            }
+
+            // 3. 읽음 상태로 업데이트
+            const unreadIds = unreadNudges.map(n => n.id);
+            supabase.from('nudge_history').update({ read: true }).in('id', unreadIds).then(() => {});
+          }
+        })
+        .catch(e => console.warn('nudge_history fetch warning:', e));
 
       return () => {
         supabase.removeChannel(channel);
@@ -684,6 +761,15 @@ export default function App() {
         isOpen={showHabitBoardModal}
         onClose={() => setShowHabitBoardModal(false)}
       />
+
+      {/* 알림 바로가기 클릭 시 전역 자동 오픈되는 1:1 메모 모달 */}
+      {activeMemoFriend && (
+        <SharedLiveMemoModal
+          user={user}
+          friend={activeMemoFriend}
+          onClose={() => setActiveMemoFriend(null)}
+        />
+      )}
     </div>
   );
 }
