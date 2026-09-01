@@ -154,23 +154,35 @@ export async function sendWebPushNotification(targetUserId, payload) {
   const senderId = payload.sender_id || '';
 
   if (isSupabaseConfigured()) {
-    // 1) Supabase Realtime Broadcast 전송 (현재 브라우저를 열어둔 상태 대응)
-    try {
-      const channelId = targetUserId || `email_${targetEmail}`;
-      const globalChan = supabase.channel(`global_user_nudge:${channelId}`);
-      await globalChan.send({
-        type: 'broadcast',
-        event: 'nudge_received',
-        payload: {
-          sender_id: senderId,
-          sender_email: senderEmail,
-          title: title,
-          body: body
-        }
-      });
-    } catch (e) {
-      console.warn('Realtime nudge broadcast error:', e);
-    }
+    // 1) Supabase Realtime Broadcast 전송 (현재 브라우저를 열어둔 웹 온라인 상태 대응)
+    const channelsToBroadcast = [];
+    if (targetUserId) channelsToBroadcast.push(`global_user_nudge:${targetUserId}`);
+    if (targetEmail) channelsToBroadcast.push(`global_user_nudge:email_${targetEmail}`);
+
+    channelsToBroadcast.forEach((chanName) => {
+      try {
+        const tempChan = supabase.channel(chanName);
+        tempChan.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            tempChan.send({
+              type: 'broadcast',
+              event: 'nudge_received',
+              payload: {
+                sender_id: senderId,
+                sender_email: senderEmail,
+                title: title,
+                body: body
+              }
+            });
+            setTimeout(() => {
+              supabase.removeChannel(tempChan);
+            }, 3000);
+          }
+        });
+      } catch (e) {
+        console.warn('Realtime nudge broadcast error:', e);
+      }
+    });
 
     // 2) Supabase Edge Function 'send-push' 호출 (창이 완전히 닫힌 오프라인 상태 대응!)
     try {

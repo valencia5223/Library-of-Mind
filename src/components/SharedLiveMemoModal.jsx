@@ -1226,7 +1226,35 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                 )}
               </div>
 
-
+              {/* 글씨 크기 조절 수평 캡슐 (제일 오른쪽에 배치) */}
+              <div className="flex align-center gap-1" style={{ background: '#f1f5f9', padding: '0 8px', borderRadius: '8px', border: '1px solid #cbd5e1', height: '28px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}>
+                <span className="text-xs font-bold text-slate-600" style={{ fontSize: '0.72rem' }}>글씨:</span>
+                <button
+                  type="button"
+                  onClick={() => handleFontSizePxChange(fontSizePx - 1)}
+                  style={{ width: '18px', height: '18px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  -
+                </button>
+                <div className="flex align-center gap-0.5">
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={fontSizePx}
+                    onChange={(e) => handleFontSizePxChange(e.target.value)}
+                    style={{ width: '36px', height: '20px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 700, color: '#0284c7', border: '1px solid #38bdf8', borderRadius: '4px', outline: 'none', background: '#ffffff', padding: '0 1px' }}
+                  />
+                  <span className="text-xs font-bold text-slate-500" style={{ fontSize: '0.7rem' }}>px</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleFontSizePxChange(fontSizePx + 1)}
+                  style={{ width: '18px', height: '18px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  +
+                </button>
+              </div>
             </div>
           </div>
 
