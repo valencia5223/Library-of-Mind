@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users, ExternalLink, Download } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 // 클라이언트 단 엔드투엔드(E2E) 암호화 / 복호화 헬퍼 (DB 관리자도 읽을 수 없도록 보안 보장)
@@ -496,6 +496,73 @@ const getKoreanHoliday = (dateObj) => {
     }
   };
 
+  // ──────────────────────────────────────────────────
+  // 📅 Google 캘린더 내보내기 URL 생성 함수
+  // ──────────────────────────────────────────────────
+  const generateGoogleCalendarUrl = (schedule) => {
+    if (!schedule) return '';
+    const dateStr = schedule.date.replace(/-/g, ''); // YYYYMMDD
+    const timeStr = schedule.time ? schedule.time.replace(':', '') + '00' : '100000'; // HHMMSS
+    const dtStart = `${dateStr}T${timeStr}`;
+    // 종료 시간: 시작 시간 + 1시간
+    const startHour = parseInt(schedule.time?.split(':')[0] || '10', 10);
+    const endHour = String(Math.min(startHour + 1, 23)).padStart(2, '0');
+    const endMin = schedule.time?.split(':')[1] || '00';
+    const dtEnd = `${dateStr}T${endHour}${endMin}00`;
+
+    const badge = getCategoryBadge(schedule.category);
+    const details = [badge.label, schedule.memo].filter(Boolean).join(' | ');
+
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: schedule.title,
+      dates: `${dtStart}/${dtEnd}`,
+      details: details,
+      ctz: 'Asia/Seoul'
+    });
+    return `https://calendar.google.com/calendar/render?${params.toString()}`;
+  };
+
+  // ──────────────────────────────────────────────────
+  // 📥 ICS 파일 다운로드 함수 (아이폰/네이버/아웃룩 범용)
+  // ──────────────────────────────────────────────────
+  const downloadICSFile = (schedule) => {
+    if (!schedule) return;
+    const dateStr = schedule.date.replace(/-/g, '');
+    const timeStr = schedule.time ? schedule.time.replace(':', '') + '00' : '100000';
+    const startHour = parseInt(schedule.time?.split(':')[0] || '10', 10);
+    const endHour = String(Math.min(startHour + 1, 23)).padStart(2, '0');
+    const endMin = schedule.time?.split(':')[1] || '00';
+
+    const badge = getCategoryBadge(schedule.category);
+    const description = [badge.label, schedule.memo].filter(Boolean).join(' | ');
+
+    const icsContent = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      'PRODID:-//Library of Mind//Schedule//KO',
+      'CALSCALE:GREGORIAN',
+      'BEGIN:VEVENT',
+      `DTSTART;TZID=Asia/Seoul:${dateStr}T${timeStr}`,
+      `DTEND;TZID=Asia/Seoul:${dateStr}T${endHour}${endMin}00`,
+      `SUMMARY:${schedule.title}`,
+      `DESCRIPTION:${description}`,
+      `UID:${schedule.id}@libraryofmind`,
+      'END:VEVENT',
+      'END:VCALENDAR'
+    ].join('\r\n');
+
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${schedule.title.replace(/[^a-zA-Z0-9가-힣]/g, '_')}_${schedule.date}.ics`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="schedule-calendar-wrapper">
       {/* 상단 컨트롤 헤더 */}
@@ -753,6 +820,61 @@ const getKoreanHoliday = (dateObj) => {
                   onChange={(e) => setMemo(e.target.value)}
                 />
               </div>
+
+              {/* 📅 외부 캘린더 내보내기 버튼 (수정 모드에서만 노출) */}
+              {editingSchedule && (
+                <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0', marginBottom: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = generateGoogleCalendarUrl(editingSchedule);
+                      window.open(url, '_blank');
+                    }}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      background: 'linear-gradient(135deg, #4285f4 0%, #34a853 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(66,133,244,0.3)'
+                    }}
+                    title="이 일정을 Google 캘린더에 바로 등록합니다"
+                  >
+                    <ExternalLink size={14} /> Google 캘린더로 내보내기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadICSFile(editingSchedule)}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(99,102,241,0.3)'
+                    }}
+                    title="ICS 파일을 다운로드하여 아이폰/네이버/아웃룩 캘린더에 등록합니다"
+                  >
+                    <Download size={14} /> ICS 파일 (아이폰/네이버)
+                  </button>
+                </div>
+              )}
 
               <div className="flex justify-end gap-2 pt-3 border-t">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>

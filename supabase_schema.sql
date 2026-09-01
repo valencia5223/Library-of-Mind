@@ -111,3 +111,24 @@ values
     array[35.1645, 129.1587]
   )
 on conflict (id) do nothing;
+
+-- ==========================================
+-- 🔔 4. 오프라인 웹 푸시 구독 테이블 (push_subscriptions)
+-- ==========================================
+
+create table if not exists push_subscriptions (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid not null,
+  endpoint text not null unique,
+  p256dh text,
+  auth text,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table push_subscriptions enable row level security;
+
+drop policy if exists "푸시 구독 전체 조회 및 저장 허용" on push_subscriptions;
+create policy "푸시 구독 전체 조회 및 저장 허용" on push_subscriptions
+  for all using (true) with check (true);
+

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, GripHorizontal, ArrowRightLeft, User, MessageSquare, MapPin, Search } from 'lucide-react';
+import { sendWebPushNotification } from '../utils/webPush';
 
 export default function SharedLiveMemoModal({ user, friend, onClose }) {
   if (!user || !friend) return null;
@@ -55,12 +56,13 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         payload: { sender_id: user.id }
       });
 
-      // 2. 상대방의 전역 수신 채널로도 흔들기 브로드캐스트 (메모창 닫혀 있을 때 대응!)
-      const globalChan = supabase.channel(`global_user_nudge:${friend.friend_id}`);
-      await globalChan.send({
-        type: 'broadcast',
-        event: 'nudge_received',
-        payload: { sender_id: user.id, sender_email: user.email }
+      // 2. 상대방의 전역 수신 채널 및 Web Push (브라우저/메모창 닫혀 있을 때 오프라인 대응!)
+      const senderName = user.email ? user.email.split('@')[0] : '상대방';
+      await sendWebPushNotification(friend.friend_id, {
+        sender_id: user.id,
+        sender_email: user.email,
+        title: '💬 쪽지가 도착했습니다!',
+        body: `${senderName}님이 채팅창을 흔듭니다! ⚡`
       });
     } catch (err) {
       console.warn('흔들기 알람 전송 예외 발생:', err);

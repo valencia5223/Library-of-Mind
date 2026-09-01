@@ -14,6 +14,7 @@ import DailyHabitBoardModal from './components/DailyHabitBoardModal';
 import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon, FileText, CheckSquare } from 'lucide-react';
 import NewsTicker from './components/NewsTicker';
 import WeatherWidget from './components/WeatherWidget';
+import { registerServiceWorker, subscribeUserToPush } from './utils/webPush';
 
 
 export default function App() {
@@ -121,8 +122,15 @@ export default function App() {
     }
   };
 
-  // 로그인 시 메모창 미오픈 상태에서도 흔들기/알람 수신 가능한 전역 Supabase 채널 구독
+  // 로그인 시 메모창 미오픈 상태에서도 흔들기/알람 수신 가능한 전역 Supabase 채널 구독 및 서비스 워커 연동
   useEffect(() => {
+    // 1. 서비스 워커 등록 및 Web Push 구독 자동 등록 (창 닫힘 상태 오프라인 알림 수신용)
+    registerServiceWorker().then(() => {
+      if (user) {
+        subscribeUserToPush(user.id);
+      }
+    });
+
     if (user && isSupabaseConfigured()) {
       // 알림 권한 요청 (최초 1회)
       if ('Notification' in window && Notification.permission === 'default') {
