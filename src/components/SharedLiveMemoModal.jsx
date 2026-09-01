@@ -177,9 +177,10 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     rafIdRef.current = requestAnimationFrame(() => {
       const dx = clientX - resizeStartRef.current.x;
       const dy = clientY - resizeStartRef.current.y;
-      const newWidth = Math.max(260, Math.min((window.innerWidth - 60) / 2, resizeStartRef.current.width + dx));
-      const newHeight = Math.max(160, Math.min(window.innerHeight - 200, resizeStartRef.current.height + dy));
-      setPanelSize({ width: newWidth, height: newHeight });
+      // 듀얼 패널(2열)이므로 전체 창 x축 드래그 이동거리 dx에 맞춰 각 패널폭을 dx / 2만큼 연동
+      const newWidth = Math.max(220, Math.min((window.innerWidth - 70) / 2, resizeStartRef.current.width + dx / 2));
+      const newHeight = Math.max(140, Math.min(window.innerHeight - 180, resizeStartRef.current.height + dy));
+      setPanelSize({ width: Math.round(newWidth), height: Math.round(newHeight) });
     });
   };
 
@@ -817,8 +818,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         className={`modal-card animate-scale-in ${isLocalShaking ? 'app-nudge-shake' : ''}`}
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: 'fit-content',
-          minWidth: `${Math.max(680, panelSize.width * 2 + 60)}px`,
+          width: `${panelSize.width * 2 + 64}px`,
           maxWidth: '98vw',
           maxHeight: '96vh',
           display: 'flex',
@@ -1444,36 +1444,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                       }}
                     />
                   )}
-
-                  {/* 우측 하단 듀얼 전체 크기 조절 손잡이 (마우스/모바일 터치 60fps 가속 지원) */}
-                  <div
-                    onMouseDown={handleMouseDownResize}
-                    onTouchStart={handleTouchStartResize}
-                    title="드래그하여 메모 박스 크기 변경 (마우스/모바일 터치 60fps 가속, localStorage 기억)"
-                    style={{
-                      position: 'absolute',
-                      bottom: '8px',
-                      right: '8px',
-                      width: '26px',
-                      height: '26px',
-                      cursor: 'nwse-resize',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#0284c7',
-                      background: '#f0f9ff',
-                      borderRadius: '6px',
-                      border: '1.5px solid #38bdf8',
-                      boxShadow: '0 2px 5px rgba(2, 132, 199, 0.2)',
-                      zIndex: 5,
-                      userSelect: 'none',
-                      touchAction: 'none'
-                    }}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path d="M10 2L2 10M10 6L6 10M10 10H10.01" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
-                    </svg>
-                  </div>
                 </div>
               </div>
             </>
@@ -1483,7 +1453,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         {/* 하단 푸터 바 */}
         <div
           className="mt-3 pt-3 flex justify-between align-center"
-          style={{ borderTop: '1px solid #e2e8f0', background: 'transparent', flexShrink: 0 }}
+          style={{ borderTop: '1px solid #e2e8f0', background: 'transparent', flexShrink: 0, paddingRight: '1rem' }}
         >
           <div className="flex align-center gap-4 text-slate-500" style={{ fontSize: '0.78rem', fontWeight: 500 }}>
             <span>내 글자 수: <b style={{ color: '#0284c7' }}>{myCharCount}</b>자 ({myLineCount}줄)</span>
@@ -1519,6 +1489,36 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               닫기
             </button>
           </div>
+        </div>
+
+        {/* 📐 전체 백그라운드 창 & 입력창 우측 하단 자유 크기 조절 손잡이 (60fps 마우스 & 터치 드래그 지원) */}
+        <div
+          onMouseDown={handleMouseDownResize}
+          onTouchStart={handleTouchStartResize}
+          title="드래그하여 백그라운드 창 & 메모장 전체 크기를 자유롭게 조절합니다 (마우스/터치 지원)"
+          style={{
+            position: 'absolute',
+            bottom: '6px',
+            right: '6px',
+            width: '28px',
+            height: '28px',
+            cursor: 'nwse-resize',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#0284c7',
+            background: '#e0f2fe',
+            borderRadius: '8px',
+            border: '1.5px solid #0284c7',
+            boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)',
+            zIndex: 50,
+            userSelect: 'none',
+            touchAction: 'none'
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
+            <path d="M10 2L2 10M10 6L6 10M10 10H10.01" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"/>
+          </svg>
         </div>
       </div>
     </div>
