@@ -37,7 +37,7 @@ export async function registerServiceWorker() {
   }
 }
 
-// 2. 푸시 알림 권한 요청 및 PushManager 최신 VAPID 구독 생성 & DB 저장
+// 2. 푸시 알림 권한 요청 및 PushManager 최신 VAPID 구독 생성 & DB 저장 (타임아웃 방어 적용)
 export async function subscribeUserToPush(userId, userEmail, forceRefresh = false) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     console.warn('이 브라우저는 PushManager API를 지원하지 않습니다.');
@@ -52,13 +52,21 @@ export async function subscribeUserToPush(userId, userEmail, forceRefresh = fals
       return null;
     }
 
-    // 2) 서비스 워커 준비 확인
-    let registration = await navigator.serviceWorker.ready;
+    // 2) 서비스 워커 준비 (3초 타임아웃 방어)
+    let registration = await Promise.race([
+      navigator.serviceWorker.ready,
+      registerServiceWorker(),
+      new Promise((resolve) => setTimeout(() => resolve(null), 3000))
+    ]);
+
     if (!registration) {
       registration = await registerServiceWorker();
     }
 
-    if (!registration) return null;
+    if (!registration) {
+      console.warn('서비스 워커를 준비할 수 없습니다.');
+      return null;
+    }
 
     // 3) 기존 구형 또는 타 VAPID 구독이 존재하면 해제 후 항상 최신 VAPID 키로 재구독
     let subscription = await registration.pushManager.getSubscription();

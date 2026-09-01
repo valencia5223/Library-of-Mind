@@ -11,7 +11,7 @@ import AdminApprovalModal from './components/AdminApprovalModal';
 import ScheduleCalendarView from './components/ScheduleCalendarView';
 import PdfLibraryModal from './components/PdfLibraryModal';
 import DailyHabitBoardModal from './components/DailyHabitBoardModal';
-import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon, FileText, CheckSquare } from 'lucide-react';
+import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon, FileText, CheckSquare, Zap } from 'lucide-react';
 import NewsTicker from './components/NewsTicker';
 import WeatherWidget from './components/WeatherWidget';
 import SharedLiveMemoModal from './components/SharedLiveMemoModal';
@@ -594,6 +594,47 @@ export default function App() {
                 <FileText size={16} /> PDF 서재
               </button>
             </>
+          )}
+
+          {user && (
+            <button
+              className="nav-tab-capsule"
+              onClick={async () => {
+                if (!('Notification' in window)) {
+                  alert('이 브라우저는 데스크톱 알림을 지원하지 않습니다.');
+                  return;
+                }
+                if (Notification.permission === 'granted') {
+                  const sub = await subscribeUserToPush(user.id, user.email, true);
+                  if (sub) {
+                    alert('✅ [데스크톱 오프라인 알림 활성화 완수]\nVAPID 푸시 키가 최신 상태로 DB에 등록되었습니다!\n\n상대방이 나에게 흔들기를 할 때 창이 완전히 닫혀 있어도 Windows 데스크톱 팝업이 전송됩니다.');
+                  } else {
+                    alert('⚠️ 푸시 구독 저장 중 오류가 발생했습니다. 브라우저 설정에서 알림 허용을 확인해 주세요.');
+                  }
+                } else if (Notification.permission === 'denied') {
+                  alert('⚠️ [브라우저 알림이 차단되어 있습니다]\n\n해결 방법:\n1. 브라우저 주소창 맨 좌측의 🔒(자물쇠/설정) 아이콘 클릭\n2. [알림] 권한을 [허용]으로 변경\n3. 페이지 새로고침(F5) 실행');
+                } else {
+                  const res = await Notification.requestPermission();
+                  if (res === 'granted' && user) {
+                    await subscribeUserToPush(user.id, user.email, true);
+                    alert('🎉 데스크톱 알림 권한이 정상적으로 허용되었습니다!');
+                  }
+                }
+              }}
+              style={{
+                backgroundColor: 'rgba(234, 179, 8, 0.14)',
+                color: '#b45309',
+                borderColor: 'rgba(234, 179, 8, 0.4)',
+                fontWeight: 700,
+                flexShrink: 0
+              }}
+              title="인터넷 창이 닫혀 있어도 수신받는 오프라인 웹 푸시 알림 상태 켜기/갱신"
+            >
+              <Zap size={16} className="text-amber-500 animate-pulse" />
+              <span>
+                {typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' ? '🔔 알림 ON (갱신)' : '🔔 알림 켜기'}
+              </span>
+            </button>
           )}
 
           <WeatherWidget />
