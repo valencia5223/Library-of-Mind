@@ -198,9 +198,36 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
 
   return (
     <div className="friend-manager-container p-4">
-      <div className="stats-header text-center mb-5">
+      <div className="stats-header text-center mb-4">
         <h2><Users className="text-pink inline-block me-2" size={28} /> 소셜 서재 & 친구 관리</h2>
-        <p className="sub-text">다른 독서가들의 이메일을 등록하고, 서재에 꽂힌 3D 명작 책장을 탐색해보세요.</p>
+        <p className="sub-text mb-3">다른 독서가들의 이메일을 등록하고, 서재에 꽂힌 3D 명작 책장을 탐색해보세요.</p>
+        
+        {/* 데스크톱 알림 권한 확인 및 활성화 버튼 */}
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 border border-slate-200 shadow-sm cursor-pointer hover:bg-slate-200 transition"
+             onClick={async () => {
+               if (!('Notification' in window)) {
+                 alert('이 브라우저는 데스크톱 알림을 지원하지 않습니다.');
+                 return;
+               }
+               if (Notification.permission === 'granted') {
+                 if (user) await subscribeUserToPush(user.id);
+                 alert('✅ [데스크톱 알림 활성화 상태]\n인터넷 창이 닫혀 있어도 흔들기 및 라이브 채팅 알림을 팝업으로 수신받으실 수 있습니다.');
+               } else if (Notification.permission === 'denied') {
+                 alert('⚠️ [브라우저 알림이 차단되어 있습니다]\n\n해결 방법:\n1. 브라우저 주소창 맨 좌측의 🔒(자물쇠/설정) 아이콘 클릭\n2. [알림] 권한을 [허용]으로 변경\n3. 페이지 새로고침(F5) 실행');
+               } else {
+                 const res = await Notification.requestPermission();
+                 if (res === 'granted' && user) {
+                   await subscribeUserToPush(user.id);
+                   alert('🎉 데스크톱 알림 권한이 정상적으로 허용되었습니다!');
+                 }
+               }
+             }}>
+          <Zap size={14} className="text-amber-500 animate-pulse" />
+          <span>데스크톱 오프라인 알림 상태: </span>
+          <strong className={Notification.permission === 'granted' ? 'text-green-600' : Notification.permission === 'denied' ? 'text-red-500' : 'text-blue-600'}>
+            {Notification.permission === 'granted' ? '🟢 허용됨 (수신 가능)' : Notification.permission === 'denied' ? '🔴 차단됨 (클릭하여 설정)' : '🟡 권한 설정하기 (클릭)'}
+          </strong>
+        </div>
       </div>
 
       {currentViewedFriend && (
