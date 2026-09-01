@@ -139,6 +139,9 @@ export default function App() {
 
       const channel = supabase.channel(`global_user_nudge:${user.id}`)
         .on('broadcast', { event: 'nudge_received' }, (payload) => {
+          // 본인이 보낸 흔들기 이벤트라면 본인 알림 무시 (상대방만 알림 수신)
+          if (payload.payload?.sender_id === user.id) return;
+
           // 1. 화면 전체 진동 애니메이션
           setIsNudgeShaking(true);
           setTimeout(() => {

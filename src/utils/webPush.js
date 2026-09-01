@@ -153,19 +153,4 @@ export async function sendWebPushNotification(targetUserId, payload) {
     }
   }
 
-  // 3. 서비스 워커가 등록되어 있다면 로컬 백그라운드 팝업 트리거도 함께 보조 실행
-  if ('serviceWorker' in navigator && Notification.permission === 'granted') {
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      if (reg && reg.active) {
-        // 서비스 워커 메시지 전송
-        reg.active.postMessage({
-          type: 'TRIGGER_NUDGE_NOTIFICATION',
-          title: title,
-          body: body,
-          senderEmail: senderEmail
-        });
-      }
-    } catch (e) {}
-  }
 }
