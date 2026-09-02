@@ -215,6 +215,18 @@ export default function SharedRestaurantMapView({ user }) {
     }
   };
 
+  // 카카오 장소 카테고리 자동 분석 및 추출 함수
+  const parseCategoryFromKakao = (rawCat) => {
+    if (!rawCat) return 'korean';
+    const str = String(rawCat);
+    if (str.includes('카페') || str.includes('디저트') || str.includes('제과') || str.includes('빵') || str.includes('커피')) return 'cafe';
+    if (str.includes('일식') || str.includes('초밥') || str.includes('돈가스') || str.includes('라멘') || str.includes('회')) return 'japanese';
+    if (str.includes('양식') || str.includes('파스타') || str.includes('피자') || str.includes('스테이크') || str.includes('이탈리안')) return 'western';
+    if (str.includes('중식') || str.includes('중국') || str.includes('짜장') || str.includes('짬뽕')) return 'chinese';
+    if (str.includes('아시안') || str.includes('베트남') || str.includes('태국') || str.includes('인도') || str.includes('쌀국수')) return 'asian';
+    return 'korean'; // 기본값: 한식
+  };
+
   // 카카오맵 장소 키워드 검색
   const handleSearchPlace = (e) => {
     e.preventDefault();
@@ -232,6 +244,7 @@ export default function SharedRestaurantMapView({ user }) {
               id: item.id,
               name: item.place_name,
               category: item.category_group_name || '음식점',
+              rawCategory: item.category_name || item.category_group_name || '',
               address: item.road_address_name || item.address_name,
               phone: item.phone,
               mapUrl: item.place_url || `https://map.kakao.com/?q=${encodeURIComponent(item.place_name)}`,
@@ -254,6 +267,7 @@ export default function SharedRestaurantMapView({ user }) {
               id: item.id,
               name: item.place_name,
               category: item.category_group_name || '음식점',
+              rawCategory: item.category_name || item.category_group_name || '',
               address: item.road_address_name || item.address_name,
               phone: item.phone,
               mapUrl: item.place_url,
@@ -266,14 +280,16 @@ export default function SharedRestaurantMapView({ user }) {
     }
   };
 
-  // 검색 결과 선택 시 폼 채우기
+  // 검색 결과 선택 시 폼 채우기 (카테고리 자동 추출 포함)
   const handleSelectSearchResult = (item) => {
+    const autoCat = parseCategoryFromKakao(item.rawCategory || item.category);
     setFormData(prev => ({
       ...prev,
       name: item.name,
       address: item.address,
       phone: item.phone || '',
       mapUrl: item.mapUrl,
+      category: autoCat,
       lat: item.lat,
       lng: item.lng
     }));
@@ -409,7 +425,7 @@ export default function SharedRestaurantMapView({ user }) {
             fontSize: '0.92rem'
           }}
         >
-          <Plus size={18} /> + 새 맛집 저장하기
+          <Plus size={18} /> 새 맛집 저장하기
         </button>
       </div>
 
@@ -576,7 +592,7 @@ export default function SharedRestaurantMapView({ user }) {
                     </span>
                     <div style={{ display: 'flex', alignItems: 'center', color: '#eab308' }}>
                       <Star size={13} fill="#eab308" />
-                      <span style={{ fontSize: '0.8rem', fontWeight: 800, marginLeft: '3px' }}>{item.rating}.0</span>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 800, marginLeft: '3px' }}>{Number(item.rating || 5).toFixed(1)}</span>
                     </div>
                   </div>
 
@@ -688,15 +704,21 @@ export default function SharedRestaurantMapView({ user }) {
                   </div>
 
                   <div>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>평점 (별점 1~5)</label>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>평점 (별점 1.0 ~ 5.0)</label>
                     <select
                       value={formData.rating}
-                      onChange={(e) => setFormData({ ...formData, rating: parseInt(e.target.value, 10) })}
+                      onChange={(e) => setFormData({ ...formData, rating: parseFloat(e.target.value) })}
                       style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
                     >
-                      <option value={5}>⭐⭐⭐⭐⭐ (5점 만점)</option>
-                      <option value={4}>⭐⭐⭐⭐ (4점 강추)</option>
-                      <option value={3}>⭐⭐⭐ (3점 무난)</option>
+                      <option value={5.0}>⭐⭐⭐⭐⭐ 5.0 (최상)</option>
+                      <option value={4.5}>⭐⭐⭐⭐✨ 4.5 (강추)</option>
+                      <option value={4.0}>⭐⭐⭐⭐ 4.0 (추천)</option>
+                      <option value={3.5}>⭐⭐⭐✨ 3.5 (우수)</option>
+                      <option value={3.0}>⭐⭐⭐ 3.0 (무난)</option>
+                      <option value={2.5}>⭐⭐✨ 2.5 (보통)</option>
+                      <option value={2.0}>⭐⭐ 2.0 (아쉬움)</option>
+                      <option value={1.5}>⭐✨ 1.5 (미흡)</option>
+                      <option value={1.0}>⭐ 1.0 (비추)</option>
                     </select>
                   </div>
                 </div>
