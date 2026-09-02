@@ -42,22 +42,98 @@ export default function SharedRestaurantMapView({ user }) {
   const kakaoMapInstance = useRef(null);
   const markersRef = useRef([]);
   const myLocationOverlayRef = useRef(null);
+  const broadcastChannelRef = useRef(null);
+  const restaurantsRef = useRef(restaurants);
 
-  // 1. 친구 목록 및 맛집 목록 데이터 불러오기 및 실시간 DB 동기화 구독
+  // 최신 맛집 상태를 ref에 동기화
+  useEffect(() => {
+    restaurantsRef.current = restaurants;
+  }, [restaurants]);
+
+  // 1. 친구 목록 및 맛집 목록 데이터 불러오기 및 실시간 DB / 브로드캐스트 동기화 구독
   useEffect(() => {
     fetchFriends();
     fetchRestaurants();
 
     if (isSupabaseConfigured()) {
-      const channel = supabase
+      // DB 테이블 변경 감지 구독
+      const dbChannel = supabase
         .channel('shared_restaurants_changes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_restaurants' }, () => {
           fetchRestaurants();
         })
         .subscribe();
 
+      // 글로벌 실시간 P2P 브로드캐스트 채널 (DB RLS 제한에 영향을 받지 않는 100% 맛집 정보 동기화)
+      const bChannel = supabase.channel('global_shared_restaurants');
+      
+      bChannel
+        .on('broadcast', { event: 'RESTAURANT_UPSERT' }, ({ payload }) => {
+          if (payload && payload.item) {
+            setRestaurants(prev => {
+              const exists = prev.some(x => x.name === payload.item.name || x.id === payload.item.id);
+              let updated;
+              if (exists) {
+                updated = prev.map(x => (x.name === payload.item.name || x.id === payload.item.id) ? payload.item : x);
+              } else {
+                updated = [payload.item, ...prev];
+              }
+              localStorage.setItem('shared_restaurants_local', JSON.stringify(updated));
+              return updated;
+            });
+          }
+        })
+        .on('broadcast', { event: 'RESTAURANT_DELETE' }, ({ payload }) => {
+          if (payload && payload.id) {
+            setRestaurants(prev => {
+              const updated = prev.filter(x => x.id !== payload.id);
+              localStorage.setItem('shared_restaurants_local', JSON.stringify(updated));
+              return updated;
+            });
+          }
+        })
+        .on('broadcast', { event: 'SYNC_REQUEST' }, ({ payload }) => {
+          if (payload && payload.requester_id !== (user ? user.id : 'demo')) {
+            if (restaurantsRef.current && restaurantsRef.current.length > 0) {
+              bChannel.send({
+                type: 'broadcast',
+                event: 'SYNC_RESPONSE',
+                payload: { items: restaurantsRef.current }
+              });
+            }
+          }
+        })
+        .on('broadcast', { event: 'SYNC_RESPONSE' }, ({ payload }) => {
+          if (payload && payload.items && payload.items.length > 0) {
+            setRestaurants(prev => {
+              const map = new Map();
+              prev.forEach(item => map.set(item.name, item));
+              payload.items.forEach(item => {
+                if (!map.has(item.name)) {
+                  map.set(item.name, item);
+                }
+              });
+              const updated = Array.from(map.values());
+              localStorage.setItem('shared_restaurants_local', JSON.stringify(updated));
+              return updated;
+            });
+          }
+        })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            bChannel.send({
+              type: 'broadcast',
+              event: 'SYNC_REQUEST',
+              payload: { requester_id: user ? user.id : 'demo' }
+            });
+          }
+        });
+
+      broadcastChannelRef.current = bChannel;
+
       return () => {
-        supabase.removeChannel(channel);
+        supabase.removeChannel(dbChannel);
+        supabase.removeChannel(bChannel);
       };
     }
   }, [user]);
@@ -250,6 +326,17 @@ export default function SharedRestaurantMapView({ user }) {
     const updated = restaurants.filter(x => x.id !== item.id);
     setRestaurants(updated);
     localStorage.setItem('shared_restaurants_local', JSON.stringify(updated.filter(x => String(x.id).startsWith('rest_'))));
+
+    if (broadcastChannelRef.current) {
+      try {
+        broadcastChannelRef.current.send({
+          type: 'broadcast',
+          event: 'RESTAURANT_DELETE',
+          payload: { id: item.id }
+        });
+      } catch (e) {}
+    }
+
     setActiveDetailRestaurant(null);
     alert(`🗑️ [${item.name}] 맛집이 성공적으로 삭제되었습니다.`);
   };
@@ -621,6 +708,20 @@ export default function SharedRestaurantMapView({ user }) {
 
       setRestaurants(updated);
       localStorage.setItem('shared_restaurants_local', JSON.stringify(updated.filter(x => String(x.id).startsWith('rest_'))));
+
+      if (broadcastChannelRef.current) {
+        try {
+          const editedObj = updated.find(x => x.id === editingRestaurantId);
+          if (editedObj) {
+            broadcastChannelRef.current.send({
+              type: 'broadcast',
+              event: 'RESTAURANT_UPSERT',
+              payload: { item: editedObj }
+            });
+          }
+        } catch (e) {}
+      }
+
       setIsAddModalOpen(false);
       setEditingRestaurantId(null);
       alert(`🎉 [${formData.name}] 맛집 정보가 수정되었습니다!`);
@@ -673,6 +774,17 @@ export default function SharedRestaurantMapView({ user }) {
       const updated = [newObj, ...restaurants];
       setRestaurants(updated);
       localStorage.setItem('shared_restaurants_local', JSON.stringify(updated.filter(x => String(x.id).startsWith('rest_'))));
+
+      if (broadcastChannelRef.current) {
+        try {
+          broadcastChannelRef.current.send({
+            type: 'broadcast',
+            event: 'RESTAURANT_UPSERT',
+            payload: { item: newObj }
+          });
+        } catch (e) {}
+      }
+
       setIsAddModalOpen(false);
       alert(`🎉 [${newObj.name}] 맛집이 성공적으로 공유 저장되었습니다!`);
     }
