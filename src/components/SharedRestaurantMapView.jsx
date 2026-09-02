@@ -43,10 +43,23 @@ export default function SharedRestaurantMapView({ user }) {
   const markersRef = useRef([]);
   const myLocationOverlayRef = useRef(null);
 
-  // 1. 친구 목록 및 맛집 목록 데이터 불러오기
+  // 1. 친구 목록 및 맛집 목록 데이터 불러오기 및 실시간 DB 동기화 구독
   useEffect(() => {
     fetchFriends();
     fetchRestaurants();
+
+    if (isSupabaseConfigured()) {
+      const channel = supabase
+        .channel('shared_restaurants_changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_restaurants' }, () => {
+          fetchRestaurants();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [user]);
 
   // 친구 목록 조회
@@ -199,7 +212,6 @@ export default function SharedRestaurantMapView({ user }) {
     content.innerHTML = `
       <div style="position: absolute; width: 32px; height: 32px; border-radius: 50%; background: rgba(239, 68, 68, 0.35); box-shadow: 0 0 12px rgba(239,68,68,0.6);"></div>
       <div style="width: 16px; height: 16px; border-radius: 50%; background: #ef4444; border: 3px solid #ffffff; box-shadow: 0 2px 10px rgba(239,68,68,0.7); z-index: 2;"></div>
-      <div style="position: absolute; top: -26px; background: #ef4444; color: #ffffff; padding: 2px 7px; border-radius: 10px; font-size: 0.72rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">🔴 내 현재 위치</div>
     `;
 
     const overlay = new window.kakao.maps.CustomOverlay({
