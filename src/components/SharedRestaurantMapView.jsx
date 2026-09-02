@@ -269,6 +269,19 @@ export default function SharedRestaurantMapView({ user }) {
     setLoading(false);
   };
 
+  // 카테고리 ID -> 한글 라벨 맵핑 헬퍼
+  const getCategoryLabel = (catId) => {
+    const found = foodCategories.find(c => c.id === catId);
+    if (found && found.id !== 'all') return found.name;
+    if (catId === 'korean') return '한식 🍚';
+    if (catId === 'western') return '양식 🍝';
+    if (catId === 'japanese') return '일식 🍣';
+    if (catId === 'chinese') return '중식 🥟';
+    if (catId === 'asian') return '아시안 🍜';
+    if (catId === 'cafe') return '카페/디저트 ☕';
+    return catId || '한식 🍚';
+  };
+
   // 신규 등록 모달 열기 (기존 입력 폼 초기화)
   const handleOpenAddModal = () => {
     setEditingRestaurantId(null);
@@ -1046,7 +1059,12 @@ export default function SharedRestaurantMapView({ user }) {
                     </div>
                   </div>
 
-                  <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>{item.name}</h4>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px', marginBottom: '6px' }}>
+                    <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>{item.name}</h4>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0284c7', background: '#e0f2fe', border: '1px solid #bae6fd', padding: '2px 8px', borderRadius: '8px', flexShrink: 0 }}>
+                      {getCategoryLabel(item.category)}
+                    </span>
+                  </div>
                   
                   {item.recomMenu && (
                     <p style={{ fontSize: '0.8rem', color: '#b45309', background: '#fef3c7', padding: '2px 6px', borderRadius: '4px', display: 'inline-block', fontWeight: 700, marginBottom: '6px' }}>
@@ -1218,9 +1236,14 @@ export default function SharedRestaurantMapView({ user }) {
               </button>
             </div>
 
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
-              {activeDetailRestaurant.name}
-            </h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                {activeDetailRestaurant.name}
+              </h3>
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0284c7', background: '#e0f2fe', border: '1px solid #bae6fd', padding: '2px 8px', borderRadius: '8px' }}>
+                {getCategoryLabel(activeDetailRestaurant.category)}
+              </span>
+            </div>
 
             <p style={{ fontSize: '0.88rem', color: '#b45309', background: '#fef3c7', padding: '4px 8px', borderRadius: '6px', fontWeight: 800, display: 'inline-block', marginBottom: '12px' }}>
               🍱 추천 대표 메뉴: {activeDetailRestaurant.recomMenu || '전 메뉴 강추'}
