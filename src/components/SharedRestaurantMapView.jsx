@@ -85,10 +85,10 @@ export default function SharedRestaurantMapView({ user }) {
     }
   };
 
-  // 맛집 목록 DB 및 fallback 조회
+  // 맛집 목록 DB 및 fallback 조회 (로컬 데이터 자동 DB 동기화 포함)
   const fetchRestaurants = async () => {
     setLoading(true);
-    let loadedData = [];
+    let dbData = [];
     
     if (isSupabaseConfigured()) {
       try {
@@ -97,8 +97,8 @@ export default function SharedRestaurantMapView({ user }) {
           .select('*')
           .order('created_at', { ascending: false });
 
-        if (!error && data && data.length > 0) {
-          loadedData = data.map(item => ({
+        if (!error && data) {
+          dbData = data.map(item => ({
             id: item.id,
             name: item.name,
             member_id: item.user_id,
@@ -121,15 +121,75 @@ export default function SharedRestaurantMapView({ user }) {
       }
     }
 
-    // DB 데이터가 없을 경우 로컬스토리지 데이터 조회
-    if (loadedData.length === 0) {
-      const localSaved = localStorage.getItem('shared_restaurants_local');
-      if (localSaved) {
-        try { loadedData = JSON.parse(localSaved); } catch (e) {}
+    // 로컬 스토리지 기존 저장 데이터 확인
+    let localSaved = [];
+    const localStr = localStorage.getItem('shared_restaurants_local');
+    if (localStr) {
+      try { localSaved = JSON.parse(localStr); } catch (e) {}
+    }
+
+    // 로그인이 되어있고 DB 연결이 된 경우, 로컬 데이터를 DB로 자동 업로드(동기화)하여 친구들과 공유
+    if (user && isSupabaseConfigured() && localSaved.length > 0) {
+      const dbNames = new Set(dbData.map(d => d.name));
+      const unsynced = localSaved.filter(item => !dbNames.has(item.name));
+
+      if (unsynced.length > 0) {
+        for (const item of unsynced) {
+          try {
+            await supabase.from('shared_restaurants').insert([{
+              user_id: user.id,
+              user_email: user.email,
+              user_name: user.user_metadata?.full_name || user.email.split('@')[0],
+              name: item.name,
+              region: item.region || '서울',
+              category: item.category || 'korean',
+              rating: item.rating || 5,
+              recom_menu: item.recomMenu || '',
+              review: item.review || '',
+              address: item.address || '',
+              phone: item.phone || '',
+              map_url: item.mapUrl || '',
+              lat: item.coords ? item.coords[0] : 37.5665,
+              lng: item.coords ? item.coords[1] : 126.9780
+            }]);
+          } catch (e) {
+            console.warn('기존 로컬 데이터 DB 동기화 업로드 중 예외:', e);
+          }
+        }
+        // DB 재조회
+        const { data: refreshed } = await supabase.from('shared_restaurants').select('*').order('created_at', { ascending: false });
+        if (refreshed && refreshed.length > 0) {
+          dbData = refreshed.map(item => ({
+            id: item.id,
+            name: item.name,
+            member_id: item.user_id,
+            member_email: item.user_email || '알 수 없는 사용자',
+            member_name: item.user_name || (item.user_email ? item.user_email.split('@')[0] : '익명'),
+            region: item.region || '서울',
+            category: item.category || 'korean',
+            rating: item.rating || 5,
+            recomMenu: item.recom_menu || '',
+            review: item.review || '',
+            address: item.address || '',
+            mapUrl: item.map_url || `https://map.kakao.com/?q=${encodeURIComponent(item.name)}`,
+            phone: item.phone || '',
+            coords: item.lat && item.lng ? [item.lat, item.lng] : [37.5665, 126.9780],
+            created_at: item.created_at
+          }));
+        }
       }
     }
 
-    setRestaurants(loadedData);
+    // DB 데이터와 로컬 데이터 결합 (중복 상호명 제거)
+    const combinedMap = new Map();
+    dbData.forEach(item => combinedMap.set(item.name, item));
+    localSaved.forEach(item => {
+      if (!combinedMap.has(item.name)) {
+        combinedMap.set(item.name, item);
+      }
+    });
+
+    setRestaurants(Array.from(combinedMap.values()));
     setLoading(false);
   };
 
@@ -664,41 +724,15 @@ export default function SharedRestaurantMapView({ user }) {
   });
 
   return (
-    <div className="shared-restaurant-container" style={{ padding: '1.5rem', maxWidth: '1400px', margin: '0 auto' }}>
-      {/* 1. 상단 웰컴 & 맛집 등록 헤더 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.2rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <div>
-          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <MapPin className="text-amber-500" size={28} /> 📍 우리들의 카카오 맛집 지도
-          </h2>
-          <p style={{ fontSize: '0.88rem', color: '#64748b', marginTop: '4px' }}>
-            나와 이웃 친구들이 직접 다녀온 검증된 맛집을 지도 위에서 확인하고, 등록자별 뱃지로 한눈에 구별하세요!
-          </p>
-        </div>
-
-        <button
-          className="btn btn-primary font-bold flex align-center gap-2"
-          onClick={handleOpenAddModal}
-          style={{
-            background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
-            border: 'none',
-            padding: '0.65rem 1.3rem',
-            borderRadius: '10px',
-            boxShadow: '0 4px 14px rgba(234,179,8,0.35)',
-            fontSize: '0.92rem'
-          }}
-        >
-          <Plus size={18} /> 새 맛집 저장하기
-        </button>
-      </div>
-
-      {/* 2. 작성자별(인원별) 퀵 탭 & 멀티 필터바 */}
-      <div style={{ background: '#ffffff', padding: '1rem 1.2rem', borderRadius: '14px', border: '1.5px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginBottom: '1.5rem' }}>
-        {/* 작성자 (인원별 구별) 필터 태그 */}
-        <div style={{ marginBottom: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'flex', alignItems: 'center', gap: '4px', marginRight: '6px' }}>
-            <User size={15} className="text-sky-600" /> 저장한 멤버:
-          </span>
+    <div className="shared-restaurant-container" style={{ padding: '1rem 1.5rem', maxWidth: '1400px', margin: '0 auto' }}>
+      {/* 2. 작성자별(인원별) 퀵 탭 & 멀티 필터바 + 새 맛집 저장 버튼 */}
+      <div style={{ background: '#ffffff', padding: '1rem 1.2rem', borderRadius: '14px', border: '1.5px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', marginBottom: '1.2rem' }}>
+        {/* 작성자 (인원별 구별) 필터 태그 & 우측 새 맛집 저장 버튼 */}
+        <div style={{ marginBottom: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#475569', display: 'flex', alignItems: 'center', gap: '4px', marginRight: '6px' }}>
+              <User size={15} className="text-sky-600" /> 저장한 멤버:
+            </span>
 
           <button
             onClick={() => setSelectedUserFilter('all')}
@@ -752,6 +786,22 @@ export default function SharedRestaurantMapView({ user }) {
               🟢 {friend.name || friend.email.split('@')[0]} 님의 추천
             </button>
           ))}
+          </div>
+
+          <button
+            className="btn btn-primary font-bold flex align-center gap-2"
+            onClick={handleOpenAddModal}
+            style={{
+              background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
+              border: 'none',
+              padding: '0.55rem 1.1rem',
+              borderRadius: '10px',
+              boxShadow: '0 4px 14px rgba(234,179,8,0.35)',
+              fontSize: '0.88rem'
+            }}
+          >
+            <Plus size={16} /> 새 맛집 저장하기
+          </button>
         </div>
 
         {/* 요리 카테고리 & 검색바 2줄 정렬 */}
