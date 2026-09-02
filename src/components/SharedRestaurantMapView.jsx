@@ -39,6 +39,7 @@ export default function SharedRestaurantMapView({ user }) {
   const mapContainerRef = useRef(null);
   const kakaoMapInstance = useRef(null);
   const markersRef = useRef([]);
+  const myLocationOverlayRef = useRef(null);
 
   // 1. 친구 목록 및 맛집 목록 데이터 불러오기
   useEffect(() => {
@@ -117,6 +118,57 @@ export default function SharedRestaurantMapView({ user }) {
     setLoading(false);
   };
 
+  // 내 위치 커스텀 빨간색 동그라미 오버레이 렌더링
+  const renderMyLocationMarker = (map, pos) => {
+    if (!map || !pos) return;
+    if (myLocationOverlayRef.current) {
+      myLocationOverlayRef.current.setMap(null);
+    }
+
+    const content = document.createElement('div');
+    content.style.cssText = `
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    `;
+    content.innerHTML = `
+      <div style="position: absolute; width: 32px; height: 32px; border-radius: 50%; background: rgba(239, 68, 68, 0.35); box-shadow: 0 0 12px rgba(239,68,68,0.6);"></div>
+      <div style="width: 16px; height: 16px; border-radius: 50%; background: #ef4444; border: 3px solid #ffffff; box-shadow: 0 2px 10px rgba(239,68,68,0.7); z-index: 2;"></div>
+      <div style="position: absolute; top: -26px; background: #ef4444; color: #ffffff; padding: 2px 7px; border-radius: 10px; font-size: 0.72rem; font-weight: 800; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">🔴 내 현재 위치</div>
+    `;
+
+    const overlay = new window.kakao.maps.CustomOverlay({
+      position: pos,
+      content: content,
+      zIndex: 99
+    });
+
+    overlay.setMap(map);
+    myLocationOverlayRef.current = overlay;
+  };
+
+  // 내 위치로 지도 이동 함수
+  const moveToMyLocation = () => {
+    if (navigator.geolocation && kakaoMapInstance.current) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const userLoc = new window.kakao.maps.LatLng(lat, lng);
+          kakaoMapInstance.current.setCenter(userLoc);
+          renderMyLocationMarker(kakaoMapInstance.current, userLoc);
+        },
+        (err) => {
+          console.warn('내 위치 정보 조회 실패:', err);
+          alert('내 현재 위치를 가져올 수 없습니다. 브라우저 위치 권한을 확인해주세요.');
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    }
+  };
+
   // 2. 카카오맵 지도 스크립트 로딩 & 마커 표시
   useEffect(() => {
     if (!mapContainerRef.current) return;
@@ -128,8 +180,8 @@ export default function SharedRestaurantMapView({ user }) {
           if (!container) return;
           
           const options = {
-            center: new window.kakao.maps.LatLng(37.5665, 126.9780), // 서울 시청 중심
-            level: 8
+            center: new window.kakao.maps.LatLng(37.5665, 126.9780), // 기본 fallback (서울 시청)
+            level: 8 // 유지되는 배율
           };
 
           const map = new window.kakao.maps.Map(container, options);
@@ -138,6 +190,23 @@ export default function SharedRestaurantMapView({ user }) {
           // 지도 컨트롤 추가
           const zoomControl = new window.kakao.maps.ZoomControl();
           map.addControl(zoomControl, window.kakao.maps.ControlPosition.RIGHT);
+
+          // 내 현재 위치 감지 후 바로 지도 중심 이동 및 빨간 동그라미 오버레이 표시
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                const userLoc = new window.kakao.maps.LatLng(lat, lng);
+                map.setCenter(userLoc);
+                renderMyLocationMarker(map, userLoc);
+              },
+              (err) => {
+                console.warn('지오로케이션 기본 위치 조회 실패:', err);
+              },
+              { enableHighAccuracy: true, timeout: 5000 }
+            );
+          }
 
           renderMarkersOnMap(map, filteredRestaurants);
         });
@@ -543,9 +612,34 @@ export default function SharedRestaurantMapView({ user }) {
         <div style={{ background: '#ffffff', borderRadius: '16px', border: '1.5px solid #cbd5e1', overflow: 'hidden', position: 'relative', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
           <div ref={mapContainerRef} style={{ width: '100%', height: '100%', minHeight: '620px' }} />
           
+          {/* 내 위치로 이동 플로팅 버튼 */}
+          <button
+            onClick={moveToMyLocation}
+            style={{
+              position: 'absolute',
+              top: '16px',
+              right: '16px',
+              zIndex: 10,
+              background: '#ffffff',
+              border: '1.5px solid #cbd5e1',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              fontWeight: 800,
+              fontSize: '0.78rem',
+              color: '#ef4444',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            <Navigation size={14} className="text-red-500" /> 🎯 내 위치로 이동
+          </button>
+
           {/* 지도 좌측 하단 정보 범례 뱃지 */}
           <div style={{ position: 'absolute', bottom: '16px', left: '16px', zIndex: 10, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(8px)', padding: '8px 12px', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', fontSize: '0.78rem', fontWeight: 700, color: '#334155' }}>
-            📍 지도 표기: <span style={{ color: '#0284c7' }}>🔵 내 맛집</span> | <span style={{ color: '#059669' }}>🟢 친구 맛집</span> (클릭 시 상세 모달)
+            📍 지도 표기: <span style={{ color: '#ef4444', fontWeight: 800 }}>🔴 내 현재 위치</span> | <span style={{ color: '#0284c7' }}>🔵 내 맛집</span> | <span style={{ color: '#059669' }}>🟢 친구 맛집</span>
           </div>
         </div>
 
