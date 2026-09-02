@@ -35,6 +35,8 @@ export default function SharedRestaurantMapView({ user }) {
 
   // 선택된 상세보기 맛집 모달
   const [activeDetailRestaurant, setActiveDetailRestaurant] = useState(null);
+  // 수정 중인 맛집 ID (null이면 신규 등록 모드)
+  const [editingRestaurantId, setEditingRestaurantId] = useState(null);
 
   const mapContainerRef = useRef(null);
   const kakaoMapInstance = useRef(null);
@@ -116,6 +118,67 @@ export default function SharedRestaurantMapView({ user }) {
 
     setRestaurants(loadedData);
     setLoading(false);
+  };
+
+  // 신규 등록 모달 열기 (기존 입력 폼 초기화)
+  const handleOpenAddModal = () => {
+    setEditingRestaurantId(null);
+    setFormData({
+      name: '',
+      category: 'korean',
+      region: '서울',
+      rating: 5.0,
+      recomMenu: '',
+      review: '',
+      address: '',
+      mapUrl: '',
+      phone: '',
+      lat: null,
+      lng: null
+    });
+    setIsAddModalOpen(true);
+  };
+
+  // 맛집 정보 수정 모달 열기 (기존 값으로 채움)
+  const handleOpenEditModal = (item) => {
+    setEditingRestaurantId(item.id);
+    setFormData({
+      name: item.name,
+      category: item.category || 'korean',
+      region: item.region || '서울',
+      rating: item.rating || 5.0,
+      recomMenu: item.recomMenu || '',
+      review: item.review || '',
+      address: item.address || '',
+      mapUrl: item.mapUrl || '',
+      phone: item.phone || '',
+      lat: item.coords ? item.coords[0] : null,
+      lng: item.coords ? item.coords[1] : null
+    });
+    setActiveDetailRestaurant(null);
+    setIsAddModalOpen(true);
+  };
+
+  // 맛집 삭제 처리
+  const handleDeleteRestaurant = async (item) => {
+    if (!window.confirm(`'${item.name}' 맛집을 정말 삭제하시겠습니까?`)) return;
+
+    if (isSupabaseConfigured() && user) {
+      try {
+        await supabase
+          .from('shared_restaurants')
+          .delete()
+          .eq('id', item.id);
+      } catch (err) {
+        console.warn('shared_restaurants 삭제 예외:', err);
+      }
+    }
+
+    const updated = restaurants.filter(x => x.id !== item.id);
+    setRestaurants(updated);
+    localStorage.setItem('shared_restaurants_local', JSON.stringify(updated.filter(x => String(x.id).startsWith('rest_'))));
+    setActiveDetailRestaurant(null);
+    alert(`🗑️ [${item.name}] 맛집이 성공적으로 삭제되었습니다.`);
   };
 
   // 내 위치 커스텀 빨간색 동그라미 오버레이 렌더링
@@ -365,7 +428,7 @@ export default function SharedRestaurantMapView({ user }) {
     setPlaceSearchResults([]);
   };
 
-  // 맛집 신규 저장 제출
+  // 맛집 저장/수정 제출
   const handleSaveRestaurant = async (e) => {
     e.preventDefault();
     if (!formData.name.trim()) {
@@ -373,55 +436,112 @@ export default function SharedRestaurantMapView({ user }) {
       return;
     }
 
-    const newObj = {
-      id: `rest_${Date.now()}`,
-      name: formData.name,
-      member_id: user ? user.id : 'demo_user',
-      member_email: user ? user.email : '내 계정',
-      member_name: user ? (user.user_metadata?.full_name || user.email.split('@')[0]) : '나',
-      region: formData.region,
-      category: formData.category,
-      rating: formData.rating,
-      recomMenu: formData.recomMenu,
-      review: formData.review,
-      address: formData.address,
-      phone: formData.phone,
-      mapUrl: formData.mapUrl || `https://map.kakao.com/?q=${encodeURIComponent(formData.name)}`,
-      coords: formData.lat && formData.lng ? [formData.lat, formData.lng] : [37.5665, 126.9780],
-      created_at: new Date().toISOString()
-    };
+    if (editingRestaurantId) {
+      // --- 맛집 정보 수정 (UPDATE) ---
+      const targetCoords = formData.lat && formData.lng ? [formData.lat, formData.lng] : [37.5665, 126.9780];
+      const targetMapUrl = formData.mapUrl || `https://map.kakao.com/?q=${encodeURIComponent(formData.name)}`;
 
-    if (isSupabaseConfigured() && user) {
-      try {
-        await supabase
-          .from('shared_restaurants')
-          .insert([{
-            user_id: user.id,
-            user_email: user.email,
-            user_name: newObj.member_name,
-            name: newObj.name,
-            region: newObj.region,
-            category: newObj.category,
-            rating: newObj.rating,
-            recom_menu: newObj.recomMenu,
-            review: newObj.review,
-            address: newObj.address,
-            phone: newObj.phone,
-            map_url: newObj.mapUrl,
-            lat: newObj.coords[0],
-            lng: newObj.coords[1]
-          }]);
-      } catch (err) {
-        console.warn('shared_restaurants DB 저장 예외:', err);
+      if (isSupabaseConfigured() && user) {
+        try {
+          await supabase
+            .from('shared_restaurants')
+            .update({
+              name: formData.name,
+              region: formData.region,
+              category: formData.category,
+              rating: formData.rating,
+              recom_menu: formData.recomMenu,
+              review: formData.review,
+              address: formData.address,
+              phone: formData.phone,
+              map_url: targetMapUrl,
+              lat: targetCoords[0],
+              lng: targetCoords[1]
+            })
+            .eq('id', editingRestaurantId);
+        } catch (err) {
+          console.warn('shared_restaurants DB 수정 예외:', err);
+        }
       }
+
+      const updated = restaurants.map(item => {
+        if (item.id === editingRestaurantId) {
+          return {
+            ...item,
+            name: formData.name,
+            region: formData.region,
+            category: formData.category,
+            rating: formData.rating,
+            recomMenu: formData.recomMenu,
+            review: formData.review,
+            address: formData.address,
+            phone: formData.phone,
+            mapUrl: targetMapUrl,
+            coords: targetCoords
+          };
+        }
+        return item;
+      });
+
+      setRestaurants(updated);
+      localStorage.setItem('shared_restaurants_local', JSON.stringify(updated.filter(x => String(x.id).startsWith('rest_'))));
+      setIsAddModalOpen(false);
+      setEditingRestaurantId(null);
+      alert(`🎉 [${formData.name}] 맛집 정보가 수정되었습니다!`);
+    } else {
+      // --- 신규 맛집 저장 (INSERT) ---
+      const newObj = {
+        id: `rest_${Date.now()}`,
+        name: formData.name,
+        member_id: user ? user.id : 'demo_user',
+        member_email: user ? user.email : '내 계정',
+        member_name: user ? (user.user_metadata?.full_name || user.email.split('@')[0]) : '나',
+        region: formData.region,
+        category: formData.category,
+        rating: formData.rating,
+        recomMenu: formData.recomMenu,
+        review: formData.review,
+        address: formData.address,
+        phone: formData.phone,
+        mapUrl: formData.mapUrl || `https://map.kakao.com/?q=${encodeURIComponent(formData.name)}`,
+        coords: formData.lat && formData.lng ? [formData.lat, formData.lng] : [37.5665, 126.9780],
+        created_at: new Date().toISOString()
+      };
+
+      if (isSupabaseConfigured() && user) {
+        try {
+          await supabase
+            .from('shared_restaurants')
+            .insert([{
+              user_id: user.id,
+              user_email: user.email,
+              user_name: newObj.member_name,
+              name: newObj.name,
+              region: newObj.region,
+              category: newObj.category,
+              rating: newObj.rating,
+              recom_menu: newObj.recomMenu,
+              review: newObj.review,
+              address: newObj.address,
+              phone: newObj.phone,
+              map_url: newObj.mapUrl,
+              lat: newObj.coords[0],
+              lng: newObj.coords[1]
+            }]);
+        } catch (err) {
+          console.warn('shared_restaurants DB 저장 예외:', err);
+        }
+      }
+
+      // 로컬 상태 즉시 갱신
+      const updated = [newObj, ...restaurants];
+      setRestaurants(updated);
+      localStorage.setItem('shared_restaurants_local', JSON.stringify(updated.filter(x => String(x.id).startsWith('rest_'))));
+      setIsAddModalOpen(false);
+      alert(`🎉 [${newObj.name}] 맛집이 성공적으로 공유 저장되었습니다!`);
     }
 
-    // 로컬 상태 즉시 갱신
-    const updated = [newObj, ...restaurants];
-    setRestaurants(updated);
-    localStorage.setItem('shared_restaurants_local', JSON.stringify(updated.filter(x => String(x.id).startsWith('rest_'))));
-
-    // 폼 및 모달 초기화
+    // 폼 초기화
     setFormData({
       name: '',
       category: 'korean',
@@ -433,8 +553,6 @@ export default function SharedRestaurantMapView({ user }) {
       mapUrl: '',
       phone: ''
     });
-    setIsAddModalOpen(false);
-    alert(`🎉 [${newObj.name}] 맛집이 성공적으로 공유 저장되었습니다!`);
   };
 
   // 필터링 적용 목록
@@ -484,7 +602,7 @@ export default function SharedRestaurantMapView({ user }) {
 
         <button
           className="btn btn-primary font-bold flex align-center gap-2"
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={handleOpenAddModal}
           style={{
             background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
             border: 'none',
@@ -727,7 +845,7 @@ export default function SharedRestaurantMapView({ user }) {
           <div style={{ background: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '540px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)', border: '1.5px solid #fef08a' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.2rem', borderBottom: '1px solid #e2e8f0', background: 'linear-gradient(135deg, #fefce8 0%, #fef08a 100%)' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#713f12', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Plus size={18} /> 📍 카카오 연동 새 맛집 저장하기
+                <Plus size={18} /> {editingRestaurantId ? '✏️ 맛집 정보 수정하기' : '📍 카카오 연동 새 맛집 저장하기'}
               </h3>
               <button onClick={() => setIsAddModalOpen(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#854d0e' }}>
                 <X size={18} />
@@ -841,7 +959,7 @@ export default function SharedRestaurantMapView({ user }) {
 
                 <div style={{ display: 'flex', justifyRight: 'flex-end', gap: '8px', marginTop: '10px' }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setIsAddModalOpen(false)}>취소</button>
-                  <button type="submit" className="btn btn-primary font-bold">저장하기</button>
+                  <button type="submit" className="btn btn-primary font-bold">{editingRestaurantId ? '수정 완료' : '저장하기'}</button>
                 </div>
               </form>
             </div>
@@ -878,6 +996,24 @@ export default function SharedRestaurantMapView({ user }) {
               <div>📍 <b>주소:</b> {activeDetailRestaurant.address || '주소 정보 없음'}</div>
               {activeDetailRestaurant.phone && <div>📞 <b>전화:</b> {activeDetailRestaurant.phone}</div>}
             </div>
+
+            {/* 작성자 본인일 경우 수정 & 삭제 버튼 노출 */}
+            {(!user || activeDetailRestaurant.member_id === user.id || activeDetailRestaurant.member_id === 'demo_user' || String(activeDetailRestaurant.id).startsWith('rest_')) && (
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '1rem' }}>
+                <button
+                  onClick={() => handleOpenEditModal(activeDetailRestaurant)}
+                  style={{ flex: 1, padding: '7px 12px', borderRadius: '8px', border: '1px solid #0284c7', background: '#e0f2fe', color: '#0369a1', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                >
+                  ✏️ 맛집 정보 수정
+                </button>
+                <button
+                  onClick={() => handleDeleteRestaurant(activeDetailRestaurant)}
+                  style={{ flex: 1, padding: '7px 12px', borderRadius: '8px', border: '1px solid #f87171', background: '#fef2f2', color: '#dc2626', fontWeight: 800, fontSize: '0.82rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                >
+                  🗑️ 맛집 삭제
+                </button>
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: '8px' }}>
               <a
