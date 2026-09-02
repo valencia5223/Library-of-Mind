@@ -304,29 +304,93 @@ export default function SharedRestaurantMapView({ user }) {
 
       const isMy = user && item.member_id === user.id;
       const badgeColor = isMy ? '#0284c7' : '#059669';
-      const badgeName = isMy ? '나 (본인)' : (item.member_name || item.member_email.split('@')[0]);
+      const badgeName = isMy ? '나' : (item.member_name || item.member_email.split('@')[0]);
+      const formattedRating = Number(item.rating || 5).toFixed(1);
 
-      // 커스텀 오버레이 마커 태그 생성
+      // 커스텀 오버레이 마커 태그 생성 (기본: 컴팩트 핀, 마우스 호버 시 상세 라벨+평점 툴팁 팝업)
       const content = document.createElement('div');
       content.style.cssText = `
-        padding: 5px 10px;
-        background: #ffffff;
-        border: 2px solid ${badgeColor};
-        border-radius: 20px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        font-size: 0.78rem;
-        font-weight: 800;
+        position: relative;
         cursor: pointer;
-        white-space: nowrap;
-        transform: translateY(-100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        z-index: 10;
       `;
+
       content.innerHTML = `
-        <span style="background:${badgeColor}; color:#fff; padding:1px 6px; border-radius:10px; font-size:0.7rem;">${badgeName}</span>
-        <span style="color:#0f172a;">${item.name}</span>
+        <!-- 마우스 호버 시 표출되는 상호명 & 평점 툴팁 카드 -->
+        <div class="marker-hover-tooltip" style="
+          display: none;
+          position: absolute;
+          bottom: 100%;
+          margin-bottom: 8px;
+          background: #ffffff;
+          border: 2px solid ${badgeColor};
+          border-radius: 12px;
+          padding: 7px 11px;
+          box-shadow: 0 10px 20px rgba(0,0,0,0.22);
+          white-space: nowrap;
+          z-index: 999;
+          flex-direction: column;
+          gap: 3px;
+          align-items: flex-start;
+          pointer-events: none;
+        ">
+          <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 10px;">
+            <span style="background:${badgeColor}; color:#fff; padding:1px 7px; border-radius:10px; font-size:0.7rem; font-weight:800;">
+              👤 ${badgeName} 추천
+            </span>
+            <span style="color:#eab308; font-size:0.8rem; font-weight:800; display:flex; align-items:center; gap:3px;">
+              ★ ${formattedRating}
+            </span>
+          </div>
+          <div style="font-size:0.9rem; font-weight:800; color:#0f172a; margin-top:2px;">${item.name}</div>
+          ${item.recomMenu ? `<div style="font-size:0.75rem; color:#b45309; font-weight:700; background:#fef3c7; padding:1px 6px; border-radius:4px; margin-top:2px;">🍱 ${item.recomMenu}</div>` : ''}
+        </div>
+
+        <!-- 기본 항상 노출되는 깔끔한 컴팩트 서클/뱃지 핀 마커 (상호명 텍스트 비노출) -->
+        <div class="marker-compact-pin" style="
+          background: #ffffff;
+          border: 2.5px solid ${badgeColor};
+          border-radius: 20px;
+          padding: 3px 8px;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 0.72rem;
+          font-weight: 800;
+          color: ${badgeColor};
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        ">
+          <span style="width:8px; height:8px; border-radius:50%; background:${badgeColor}; display:inline-block; box-shadow: 0 0 4px ${badgeColor};"></span>
+          <span>${badgeName}</span>
+        </div>
       `;
+
+      const tooltipEl = content.querySelector('.marker-hover-tooltip');
+      const pinEl = content.querySelector('.marker-compact-pin');
+
+      // 마우스 갖다 대었을 때 (Hover)
+      content.onmouseenter = () => {
+        if (tooltipEl) tooltipEl.style.display = 'flex';
+        if (pinEl) {
+          pinEl.style.transform = 'scale(1.12)';
+          pinEl.style.boxShadow = `0 6px 16px rgba(0,0,0,0.25)`;
+        }
+        content.style.zIndex = '999';
+      };
+
+      // 마우스 떼었을 때 (Un-hover)
+      content.onmouseleave = () => {
+        if (tooltipEl) tooltipEl.style.display = 'none';
+        if (pinEl) {
+          pinEl.style.transform = 'scale(1.0)';
+          pinEl.style.boxShadow = '0 4px 10px rgba(0,0,0,0.18)';
+        }
+        content.style.zIndex = '10';
+      };
 
       content.onclick = () => {
         setActiveDetailRestaurant(item);
@@ -730,13 +794,13 @@ export default function SharedRestaurantMapView({ user }) {
         <div style={{ background: '#ffffff', borderRadius: '16px', border: '1.5px solid #cbd5e1', overflow: 'hidden', position: 'relative', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
           <div ref={mapContainerRef} style={{ width: '100%', height: '100%', minHeight: '620px' }} />
           
-          {/* 내 위치로 이동 플로팅 버튼 */}
+          {/* 내 위치로 이동 플로팅 버튼 (줌 컨트롤과 겹치지 않게 좌측 상단 배치) */}
           <button
             onClick={moveToMyLocation}
             style={{
               position: 'absolute',
               top: '16px',
-              right: '16px',
+              left: '16px',
               zIndex: 10,
               background: '#ffffff',
               border: '1.5px solid #cbd5e1',
