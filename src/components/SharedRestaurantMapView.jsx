@@ -105,31 +105,12 @@ export default function SharedRestaurantMapView({ user }) {
       }
     }
 
-    // DB 데이터가 없을 경우 기본 데이터 + 로컬스토리지 합성
+    // DB 데이터가 없을 경우 로컬스토리지 데이터 조회
     if (loadedData.length === 0) {
       const localSaved = localStorage.getItem('shared_restaurants_local');
-      let localList = [];
       if (localSaved) {
-        try { localList = JSON.parse(localSaved); } catch (e) {}
+        try { loadedData = JSON.parse(localSaved); } catch (e) {}
       }
-      
-      const convertedDefaults = defaultRestaurants.map(item => ({
-        id: `def_${item.id}`,
-        name: item.name,
-        member_id: item.member === 'papa' ? 'papa' : item.member === 'mama' ? 'mama' : 'def',
-        member_email: item.member === 'papa' ? '할아버지 (아빠)' : item.member === 'mama' ? '할머니 (엄마)' : '가족 멤버',
-        member_name: item.member === 'papa' ? '할아버지' : item.member === 'mama' ? '할머니' : '가족',
-        region: item.region,
-        category: item.category,
-        rating: item.rating,
-        recomMenu: item.recomMenu,
-        review: item.review,
-        address: item.address,
-        mapUrl: item.mapUrl,
-        coords: item.coords || [37.5665, 126.9780]
-      }));
-
-      loadedData = [...localList, ...convertedDefaults];
     }
 
     setRestaurants(loadedData);
