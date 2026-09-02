@@ -11,7 +11,8 @@ import AdminApprovalModal from './components/AdminApprovalModal';
 import ScheduleCalendarView from './components/ScheduleCalendarView';
 import PdfLibraryModal from './components/PdfLibraryModal';
 import DailyHabitBoardModal from './components/DailyHabitBoardModal';
-import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon, FileText, CheckSquare, Zap } from 'lucide-react';
+import SharedRestaurantMapView from './components/SharedRestaurantMapView';
+import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon, FileText, CheckSquare, Zap, MapPin } from 'lucide-react';
 import NewsTicker from './components/NewsTicker';
 import WeatherWidget from './components/WeatherWidget';
 import SharedLiveMemoModal from './components/SharedLiveMemoModal';
@@ -568,6 +569,13 @@ export default function App() {
             >
               <Users size={16} /> 이웃 서재
             </button>
+
+            <button
+              className={`nav-tab-capsule ${activeTab === 'places' ? 'active' : ''}`}
+              onClick={() => setActiveTab('places')}
+            >
+              <MapPin size={16} /> 맛집지도
+            </button>
           </nav>
         )}
 
@@ -678,6 +686,10 @@ export default function App() {
               currentViewedFriend={viewedFriend}
               onBackToMyBookshelf={() => setViewedFriend(null)}
             />
+          )}
+
+          {activeTab === 'places' && (
+            <SharedRestaurantMapView user={user} />
           )}
         </main>
       )}
