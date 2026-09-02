@@ -269,20 +269,6 @@ export default function SharedRestaurantMapView({ user }) {
     setLoading(false);
   };
 
-  // 수동 실시간 맛집 데이터 동기화 요청
-  const handleManualSync = () => {
-    fetchRestaurants();
-    if (broadcastChannelRef.current) {
-      try {
-        broadcastChannelRef.current.send({
-          type: 'broadcast',
-          event: 'SYNC_REQUEST',
-          payload: { requester_id: user ? user.id : 'demo' }
-        });
-      } catch (e) {}
-    }
-  };
-
   // 신규 등록 모달 열기 (기존 입력 폼 초기화)
   const handleOpenAddModal = () => {
     setEditingRestaurantId(null);
@@ -914,39 +900,20 @@ export default function SharedRestaurantMapView({ user }) {
           ))}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              className="btn btn-secondary font-bold flex align-center gap-1.5"
-              onClick={handleManualSync}
-              title="친구의 맛집 데이터를 즉시 동기화하여 가져옵니다"
-              style={{
-                background: '#f1f5f9',
-                border: '1px solid #cbd5e1',
-                color: '#334155',
-                padding: '0.55rem 0.9rem',
-                borderRadius: '10px',
-                fontSize: '0.85rem',
-                cursor: 'pointer'
-              }}
-            >
-              <RefreshCw size={15} className="text-sky-600" /> 동기화
-            </button>
-
-            <button
-              className="btn btn-primary font-bold flex align-center gap-2"
-              onClick={handleOpenAddModal}
-              style={{
-                background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
-                border: 'none',
-                padding: '0.55rem 1.1rem',
-                borderRadius: '10px',
-                boxShadow: '0 4px 14px rgba(234,179,8,0.35)',
-                fontSize: '0.88rem'
-              }}
-            >
-              <Plus size={16} /> 새 맛집 저장하기
-            </button>
-          </div>
+          <button
+            className="btn btn-primary font-bold flex align-center gap-2"
+            onClick={handleOpenAddModal}
+            style={{
+              background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
+              border: 'none',
+              padding: '0.55rem 1.1rem',
+              borderRadius: '10px',
+              boxShadow: '0 4px 14px rgba(234,179,8,0.35)',
+              fontSize: '0.88rem'
+            }}
+          >
+            <Plus size={16} /> 새 맛집 저장하기
+          </button>
         </div>
 
         {/* 요리 카테고리 & 검색바 2줄 정렬 */}
