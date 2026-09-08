@@ -12,7 +12,8 @@ import ScheduleCalendarView from './components/ScheduleCalendarView';
 import PdfLibraryModal from './components/PdfLibraryModal';
 import DailyHabitBoardModal from './components/DailyHabitBoardModal';
 import SharedRestaurantMapView from './components/SharedRestaurantMapView';
-import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon, FileText, CheckSquare, Zap, MapPin } from 'lucide-react';
+import BabyPlayStudio from './components/BabyPlayStudio';
+import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon, FileText, CheckSquare, Zap, MapPin, Baby } from 'lucide-react';
 import NewsTicker from './components/NewsTicker';
 import WeatherWidget from './components/WeatherWidget';
 import SharedLiveMemoModal from './components/SharedLiveMemoModal';
@@ -576,6 +577,19 @@ export default function App() {
             >
               <MapPin size={16} /> 맛집지도
             </button>
+
+            <button
+              className={`nav-tab-capsule ${activeTab === 'babyplay' ? 'active' : ''}`}
+              onClick={() => setActiveTab('babyplay')}
+              style={{
+                backgroundColor: activeTab === 'babyplay' ? '#ea580c' : 'rgba(234, 88, 12, 0.12)',
+                color: activeTab === 'babyplay' ? '#ffffff' : '#ea580c',
+                borderColor: 'rgba(234, 88, 12, 0.4)',
+                fontWeight: 800
+              }}
+            >
+              👶 아기놀이
+            </button>
           </nav>
         )}
 
@@ -690,6 +704,10 @@ export default function App() {
 
           {activeTab === 'places' && (
             <SharedRestaurantMapView user={user} />
+          )}
+
+          {activeTab === 'babyplay' && (
+            <BabyPlayStudio />
           )}
         </main>
       )}
