@@ -14,6 +14,7 @@ class BabySoundEngine {
     this.ctx = null;
     this.muted = false;
     this.currentAudio = null;
+    this.audioCache = new Map();
   }
 
   init() {
@@ -26,7 +27,22 @@ class BabySoundEngine {
     }
   }
 
-  // 실제 동물 녹음 MP3 파일 재생 (/sounds/ 및 /songs/ 대소문자 구분 없이 100% 재생)
+  // 앱 진입 시 모든 동물 울음소리를 백그라운드에서 사전 프리로드 및 메모리 캐싱 (딜레이 0초 달성)
+  preloadItemSounds(items) {
+    items.forEach(item => {
+      const url = item.soundUrl || `/sounds/${item.id}.mp3`;
+      if (url && !this.audioCache.has(url)) {
+        try {
+          const audio = new Audio(url);
+          audio.preload = 'auto';
+          audio.load();
+          this.audioCache.set(url, audio);
+        } catch (e) {}
+      }
+    });
+  }
+
+  // 실제 동물 녹음 MP3 파일 재생 (지연 없는 0초 반응)
   playItemSound(item) {
     if (this.muted) return;
     this.init();
@@ -41,20 +57,24 @@ class BabySoundEngine {
       const idCap = id.charAt(0).toUpperCase() + id.slice(1);
       const idUpper = id.toUpperCase();
 
-      const candidates = [
-        `/sounds/${id}.mp3`,
-        `/sounds/${idCap}.mp3`,
-        `/sounds/${idUpper}.mp3`,
-        `/songs/${id}.mp3`,
-        `/songs/${idCap}.mp3`,
-        `/songs/${idUpper}.mp3`,
-        item.soundUrl
-      ].filter(Boolean);
+      // soundUrl이 있으면 최우선(1순위)으로 직접 재생하여 불필요한 404 network delay 완전 방지
+      const candidates = item.soundUrl
+        ? [item.soundUrl, `/sounds/${id}.mp3`, `/sounds/${idCap}.mp3`, `/sounds/${idUpper}.mp3`]
+        : [`/sounds/${id}.mp3`, `/sounds/${idCap}.mp3`, `/sounds/${idUpper}.mp3`, `/songs/${id}.mp3`].filter(Boolean);
 
       const tryNext = (index) => {
         if (index >= candidates.length) return;
-        const audio = new Audio(candidates[index]);
+        const src = candidates[index];
+        let audio;
+
+        if (this.audioCache.has(src)) {
+          audio = this.audioCache.get(src).cloneNode(true);
+        } else {
+          audio = new Audio(src);
+        }
+
         audio.volume = 0.85;
+        audio.currentTime = 0;
         audio.play().then(() => {
           this.currentAudio = audio;
         }).catch(() => {
@@ -111,6 +131,16 @@ class BabySoundEngine {
     try {
       confetti({ particleCount: 75, spread: 80, origin: { y: 0.6 } });
     } catch (e) { }
+  }
+
+  stopAllSounds() {
+    if (this.currentAudio) {
+      try {
+        this.currentAudio.pause();
+        this.currentAudio.currentTime = 0;
+      } catch (e) {}
+      this.currentAudio = null;
+    }
   }
 
   playYum() {
@@ -272,64 +302,64 @@ const REAL_ANIMALS = [
 // =============================================================================
 const REAL_FRUITS = [
   {
-    id: 'apple', name: '아삭아삭 사과', icon: '🍎',
+    id: 'apple', name: '사과', icon: '🍎',
     img: 'https://images.pexels.com/photos/102104/pexels-photo-102104.jpeg?auto=compress&cs=tinysrgb&w=600',
     color: '#ef4444', bg: '#fee2e2', fitPos: 'center 30%'
   },
   {
-    id: 'banana', name: '달콤한 바나나', icon: '🍌',
+    id: 'banana', name: '바나나', icon: '🍌',
     img: 'https://images.pexels.com/photos/2872755/pexels-photo-2872755.jpeg?auto=compress&cs=tinysrgb&w=600',
     color: '#d97706', bg: '#fef3c7', fitPos: 'center 30%'
   },
   {
-    id: 'grape', name: '동글동글 포도', icon: '🍇',
+    id: 'grape', name: '포도', icon: '🍇',
     img: 'https://images.pexels.com/photos/708777/pexels-photo-708777.jpeg?auto=compress&cs=tinysrgb&w=600',
     color: '#7e22ce', bg: '#f3e8ff', fitPos: 'center 20%'
   },
   {
-    id: 'watermelon', name: '시원한 수박', icon: '🍉',
+    id: 'watermelon', name: '수박', icon: '🍉',
     img: 'https://images.pexels.com/photos/1313267/pexels-photo-1313267.jpeg?auto=compress&cs=tinysrgb&w=600',
     color: '#15803d', bg: '#dcfce7', fitPos: 'center 30%'
   },
   {
-    id: 'strawberry', name: '새콤달콤 딸기', icon: '🍓',
+    id: 'strawberry', name: '딸기', icon: '🍓',
     img: strawberryImg,
     color: '#e11d48', bg: '#ffe4e6', fitPos: 'center 20%'
   },
   {
-    id: 'tangerine', name: '새콤 오렌지 귤', icon: '🍊',
+    id: 'tangerine', name: '귤', icon: '🍊',
     img: tangerineImg,
     color: '#ea580c', bg: '#ffedd5', fitPos: 'center 20%'
   },
   {
-    id: 'peach', name: '향긋한 복숭아', icon: '🍑',
+    id: 'peach', name: '복숭아', icon: '🍑',
     img: peachImg,
     color: '#f43f5e', bg: '#ffe4e6', fitPos: 'center center'
   },
   {
-    id: 'pineapple', name: '새콤 파인애플', icon: '🍍',
+    id: 'pineapple', name: '파인애플', icon: '🍍',
     img: pineappleImg,
     color: '#b45309', bg: '#fef3c7', fitPos: 'center center', objectFit: 'contain'
   },
   {
-    id: 'melon', name: '달달한 멜론', icon: '🍈',
+    id: 'melon', name: '멜론', icon: '🍈',
     img: melonImg,
     color: '#16a34a', bg: '#dcfce7', fitPos: 'center center'
   },
   {
-    id: 'cherry', name: '귀여운 체리', icon: '🍒',
+    id: 'cherry', name: '체리', icon: '🍒',
     img: 'https://images.pexels.com/photos/109274/pexels-photo-109274.jpeg?auto=compress&cs=tinysrgb&w=600',
     color: '#be123c', bg: '#ffe4e6', fitPos: 'center 20%'
   }
 ];
 
 const FOOD_ITEMS = [
-  { id: 'apple', name: '빨간 사과', colorName: '빨간색', icon: '🍎', color: '#ef4444', bg: '#fee2e2' },
-  { id: 'banana', name: '노란 바나나', colorName: '노란색', icon: '🍌', color: '#eab308', bg: '#fef9c3' },
-  { id: 'grape', name: '보라 포도', colorName: '보라색', icon: '🍇', color: '#8b5cf6', bg: '#f3e8ff' },
-  { id: 'broccoli', name: '초록 브로콜리', colorName: '초록색', icon: '🥦', color: '#10b981', bg: '#d1fae5' },
-  { id: 'carrot', name: '주황 당근', colorName: '주황색', icon: '🥕', color: '#f97316', bg: '#ffedd5' },
-  { id: 'strawberry', name: '새콤 딸기', colorName: '빨간색', icon: '🍓', color: '#f43f5e', bg: '#ffe4e6' }
+  { id: 'apple', name: '사과', colorName: '빨간색', icon: '🍎', color: '#ef4444', bg: '#fee2e2' },
+  { id: 'banana', name: '바나나', colorName: '노란색', icon: '🍌', color: '#eab308', bg: '#fef9c3' },
+  { id: 'grape', name: '포도', colorName: '보라색', icon: '🍇', color: '#8b5cf6', bg: '#f3e8ff' },
+  { id: 'broccoli', name: '브로콜리', colorName: '초록색', icon: '🥦', color: '#10b981', bg: '#d1fae5' },
+  { id: 'carrot', name: '당근', colorName: '주황색', icon: '🥕', color: '#f97316', bg: '#ffedd5' },
+  { id: 'strawberry', name: '딸기', colorName: '빨간색', icon: '🍓', color: '#f43f5e', bg: '#ffe4e6' }
 ];
 
 // 🎵 Vite 동적 파일 스캐너: public/music/ 폴더 안의 모든 MP3 파일을 자동으로 감지하여 100% 실시간 리스트화!
@@ -337,14 +367,15 @@ const musicModules = import.meta.glob('/public/music/*.mp3', { query: '?url', ea
 
 const LOCAL_NURSERY_SONGS = Object.keys(musicModules).map((filePath, i) => {
   const fileName = filePath.split('/').pop();
-  const rawTitle = decodeURIComponent(fileName.replace(/\.mp3$/i, '').replace(/^\d+\s*/, ''));
+  const decodedFileName = decodeURIComponent(fileName);
+  const rawTitle = decodedFileName.replace(/\.mp3$/i, '').replace(/^\d+\s*/, '');
   return {
     id: `song_${i}_${fileName}`,
-    fileName: fileName,
+    fileName: decodedFileName,
     title: rawTitle,
     url: `/music/${encodeURIComponent(fileName)}`
   };
-}).sort((a, b) => a.title.localeCompare(b.title, 'ko'));
+}).sort((a, b) => a.fileName.localeCompare(b.fileName, 'ko', { numeric: true }));
 
 const RAINBOW_PAINTS = [
   { name: '빨간색 🔴', color: '#ef4444', freq: 523.25 },
@@ -354,6 +385,30 @@ const RAINBOW_PAINTS = [
   { name: '파란색 💙', color: '#3b82f6', freq: 783.99 },
   { name: '남색 🌌', color: '#6366f1', freq: 880.00 },
   { name: '보라색 🔮', color: '#a855f7', freq: 987.77 }
+];
+
+// ✏️ 따라쓰기 템플릿 데이터 (숫자 0~9 SVG 가이드)
+const TRACING_TEMPLATES = [
+  { id: 'num0', label: '0', category: '숫자',
+    paths: ['M 50 15 C 25 15 25 35 25 50 C 25 65 25 85 50 85 C 75 85 75 65 75 50 C 75 35 75 15 50 15 Z'], viewBox: '0 0 100 100' },
+  { id: 'num1', label: '1', category: '숫자',
+    paths: ['M 38 32 L 52 18 L 52 82 M 34 82 L 70 82'], viewBox: '0 0 100 100' },
+  { id: 'num2', label: '2', category: '숫자',
+    paths: ['M 25 32 Q 25 12 50 12 Q 75 12 75 32 Q 75 52 50 58 L 25 85 L 75 85'], viewBox: '0 0 100 100' },
+  { id: 'num3', label: '3', category: '숫자',
+    paths: ['M 25 15 L 72 15 L 46 46 Q 75 46 75 68 Q 75 90 45 90 Q 25 90 25 78'], viewBox: '0 0 100 100' },
+  { id: 'num4', label: '4', category: '숫자',
+    paths: ['M 62 85 L 62 12 L 20 62 L 78 62'], viewBox: '0 0 100 100' },
+  { id: 'num5', label: '5', category: '숫자',
+    paths: ['M 70 15 L 32 15 L 28 48 Q 50 36 72 48 Q 80 64 65 82 Q 48 92 25 80'], viewBox: '0 0 100 100' },
+  { id: 'num6', label: '6', category: '숫자',
+    paths: ['M 66 22 Q 35 15 28 48 Q 24 64 36 82 Q 52 90 68 82 Q 76 68 74 54 Q 70 42 50 42 Q 34 42 28 54'], viewBox: '0 0 100 100' },
+  { id: 'num7', label: '7', category: '숫자',
+    paths: ['M 25 18 L 75 18 L 42 85'], viewBox: '0 0 100 100' },
+  { id: 'num8', label: '8', category: '숫자',
+    paths: ['M 50 50 Q 28 50 28 32 Q 28 15 50 15 Q 72 15 72 32 Q 72 50 50 50 Q 28 50 28 68 Q 28 85 50 85 Q 72 85 72 68 Q 72 50 50 50'], viewBox: '0 0 100 100' },
+  { id: 'num9', label: '9', category: '숫자',
+    paths: ['M 72 48 Q 72 32 62 20 Q 48 12 34 22 Q 24 34 28 48 Q 36 60 52 60 Q 72 60 72 40 Z M 72 48 L 72 68 Q 70 84 48 88'], viewBox: '0 0 100 100' },
 ];
 
 // 🎈 퐁퐁 풍선 데이터
@@ -380,12 +435,98 @@ export default function App() {
   const [wantedFood, setWantedFood] = useState(FOOD_ITEMS[1]);
   const [bearMood, setBearMood] = useState('hungry');
   const [feedScore, setFeedScore] = useState(0);
+  const [isBearModalOpen, setIsBearModalOpen] = useState(false);
 
-  const [paintSplashes, setPaintSplashes] = useState([]);
+  // 🐻 곰돌이 과일 먹이기 드래그 앤 드롭 상태
+  const bearBoxRef = useRef(null);
+  const draggingFoodRef = useRef(null);
+  const [draggingFood, setDraggingFood] = useState(null);
+  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const [isOverBear, setIsOverBear] = useState(false);
+
+  const handleStartDragFood = (e, food) => {
+    e.preventDefault();
+    draggingFoodRef.current = food;
+    setDraggingFood(food);
+    const clientX = e.clientX || (e.touches && e.touches[0]?.clientX) || 0;
+    const clientY = e.clientY || (e.touches && e.touches[0]?.clientY) || 0;
+    setDragPos({ x: clientX, y: clientY });
+  };
+
+  useEffect(() => {
+    if (!isBearModalOpen) return;
+
+    const handleWindowPointerMove = (e) => {
+      if (!draggingFoodRef.current) return;
+      const x = e.clientX;
+      const y = e.clientY;
+      setDragPos({ x, y });
+
+      if (bearBoxRef.current) {
+        const rect = bearBoxRef.current.getBoundingClientRect();
+        const isOver = (
+          x >= rect.left - 20 &&
+          x <= rect.right + 20 &&
+          y >= rect.top - 20 &&
+          y <= rect.bottom + 20
+        );
+        setIsOverBear(isOver);
+      }
+    };
+
+    const handleWindowPointerUp = (e) => {
+      if (!draggingFoodRef.current) return;
+      const food = draggingFoodRef.current;
+      const x = e.clientX;
+      const y = e.clientY;
+
+      let isOver = false;
+      if (bearBoxRef.current) {
+        const rect = bearBoxRef.current.getBoundingClientRect();
+        isOver = (
+          x >= rect.left - 20 &&
+          x <= rect.right + 20 &&
+          y >= rect.top - 20 &&
+          y <= rect.bottom + 20
+        );
+      }
+
+      if (isOver) {
+        handleFeedBear(food);
+      } else {
+        // 단일 클릭 시에도 먹여지도록 처리
+        handleFeedBear(food);
+      }
+
+      draggingFoodRef.current = null;
+      setDraggingFood(null);
+      setIsOverBear(false);
+    };
+
+    window.addEventListener('pointermove', handleWindowPointerMove);
+    window.addEventListener('pointerup', handleWindowPointerUp);
+    window.addEventListener('pointercancel', handleWindowPointerUp);
+
+    return () => {
+      window.removeEventListener('pointermove', handleWindowPointerMove);
+      window.removeEventListener('pointerup', handleWindowPointerUp);
+      window.removeEventListener('pointercancel', handleWindowPointerUp);
+    };
+  }, [isBearModalOpen, wantedFood]);
+
+  const [strokes, setStrokes] = useState([]);
+  const [brushSize, setBrushSize] = useState('medium');
+  const [tracingMode, setTracingMode] = useState(null); // null = 자유그리기, template object = 따라쓰기
+
+  const isDrawingRef = useRef(false);
+  const currentStrokeRef = useRef(null);
+  const lastSoundTimeRef = useRef(0);
 
   // 동요 MP3 재생 관련 상태 및 Audio Ref
   const [currentSongIdx, setCurrentSongIdx] = useState(0);
   const [isSongPlaying, setIsSongPlaying] = useState(false);
+  const [isAutoPlayNext, setIsAutoPlayNext] = useState(true); // 자동 연속 재생
+  const [isShuffle, setIsShuffle] = useState(false); // 셔플 랜덤 재생
   const songAudioRef = useRef(null);
 
   // 풍선
@@ -395,6 +536,16 @@ export default function App() {
   useEffect(() => {
     audioEngine.muted = !soundEnabled;
   }, [soundEnabled]);
+
+  useEffect(() => {
+    audioEngine.preloadItemSounds(REAL_ANIMALS);
+    [...REAL_ANIMALS, ...REAL_FRUITS].forEach(item => {
+      if (item.img) {
+        const img = new Image();
+        img.src = item.img;
+      }
+    });
+  }, []);
 
   // 동요 탭 변경 시 오디오 정지 및 재생 처리
   useEffect(() => {
@@ -422,7 +573,6 @@ export default function App() {
     });
 
     audio.onended = () => {
-      // 자동 연속 재생 (다음곡)
       const nextIdx = (idx + 1) % LOCAL_NURSERY_SONGS.length;
       playSelectedSong(nextIdx);
     };
@@ -449,13 +599,11 @@ export default function App() {
     playSelectedSong(prevIdx);
   };
 
-  useEffect(() => {
-    audioEngine.muted = !soundEnabled;
-  }, [soundEnabled]);
-
   const openRealDetailModal = (item) => {
-    if (item.soundUrl) audioEngine.playItemSound(item);
     setSelectedRealItem(item);
+    setTimeout(() => {
+      if (item.soundUrl) audioEngine.playItemSound(item);
+    }, 0);
   };
 
   const closeItemModal = () => {
@@ -479,6 +627,7 @@ export default function App() {
   };
 
   const generateQuizQuestion = () => {
+    audioEngine.stopAllSounds();
     const target = REAL_ANIMALS[Math.floor(Math.random() * REAL_ANIMALS.length)];
     const others = REAL_ANIMALS.filter(i => i.id !== target.id);
     const shuffledOthers = [...others].sort(() => 0.5 - Math.random()).slice(0, 3);
@@ -494,7 +643,7 @@ export default function App() {
   };
 
   const handleAnswerQuiz = (option) => {
-    if (!quizQuestion) return;
+    if (!quizQuestion || quizFeedback) return;
     if (option.id === quizQuestion.target.id) {
       setQuizFeedback('correct');
       audioEngine.playFanfare();
@@ -503,7 +652,10 @@ export default function App() {
           audioEngine.playItemSound(quizQuestion.target);
         }, 300);
       }
-      setTimeout(() => generateQuizQuestion(), 3000);
+      setTimeout(() => {
+        audioEngine.stopAllSounds();
+        generateQuizQuestion();
+      }, 3000);
     } else {
       setQuizFeedback('wrong');
       audioEngine.playFreq(200, 'sawtooth', 0.3);
@@ -511,51 +663,130 @@ export default function App() {
     }
   };
 
+  const speakBearWish = (food) => {
+    const targetFood = food || wantedFood || FOOD_ITEMS[0];
+    if (!targetFood) return;
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const text = `${targetFood.name} 먹고싶어요`;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'ko-KR';
+      utterance.rate = 0.9;
+      utterance.pitch = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const openBearModal = () => {
+    const initialFood = wantedFood || FOOD_ITEMS[Math.floor(Math.random() * FOOD_ITEMS.length)];
+    setWantedFood(initialFood);
+    setIsBearModalOpen(true);
+    speakBearWish(initialFood);
+  };
+
   const handleFeedBear = (food) => {
-    if (food.id === wantedFood.id) {
+    const currentWanted = wantedFood || FOOD_ITEMS[0];
+    if (food.id === currentWanted.id) {
       audioEngine.playYum();
       setBearMood('happy');
       setFeedScore(prev => prev + 1);
       setTimeout(() => {
         setBearMood('hungry');
-        setWantedFood(FOOD_ITEMS[Math.floor(Math.random() * FOOD_ITEMS.length)]);
+        const nextFood = FOOD_ITEMS[Math.floor(Math.random() * FOOD_ITEMS.length)];
+        setWantedFood(nextFood);
+        speakBearWish(nextFood);
       }, 1500);
     } else {
       audioEngine.playFreq(250, 'sawtooth', 0.2);
     }
   };
 
-  const handleCanvasClick = (e) => {
+  const BRUSH_SIZES = { small: { width: 6, label: '슬림 연필' }, medium: { width: 14, label: '색연필' }, large: { width: 24, label: '굵은 붓' } };
+
+  const handlePointerDown = (e) => {
+    e.preventDefault();
+    isDrawingRef.current = true;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
+
     const paint = RAINBOW_PAINTS[Math.floor(Math.random() * RAINBOW_PAINTS.length)];
     audioEngine.playXylophone(paint.freq);
-    setPaintSplashes(prev => [...prev.slice(-18), {
-      id: Date.now() + Math.random(), x, y, color: paint.color, name: paint.name, size: Math.floor(Math.random() * 60) + 80
-    }]);
+    lastSoundTimeRef.current = Date.now();
+
+    const newStroke = {
+      id: Date.now() + Math.random(),
+      color: paint.color,
+      width: BRUSH_SIZES[brushSize].width,
+      points: [{ x, y }]
+    };
+
+    currentStrokeRef.current = newStroke;
+    setStrokes(prev => [...prev.slice(-40), newStroke]);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDrawingRef.current || !currentStrokeRef.current) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.round(e.clientX - rect.left);
+    const y = Math.round(e.clientY - rect.top);
+
+    const stroke = currentStrokeRef.current;
+    const lastPt = stroke.points[stroke.points.length - 1];
+
+    if (lastPt) {
+      const dist = Math.hypot(x - lastPt.x, y - lastPt.y);
+      if (dist < 4) return; // 미세 반응은 묶어서 매끄럽게 처리
+    }
+
+    stroke.points.push({ x, y });
+
+    const now = Date.now();
+    if (now - lastSoundTimeRef.current > 120) {
+      const paint = RAINBOW_PAINTS[Math.floor(Math.random() * RAINBOW_PAINTS.length)];
+      audioEngine.playXylophone(paint.freq);
+      lastSoundTimeRef.current = now;
+    }
+
+    setStrokes(prev => prev.map(s => s.id === stroke.id ? { ...stroke, points: [...stroke.points] } : s));
+  };
+
+  const handlePointerUp = () => {
+    isDrawingRef.current = false;
+    currentStrokeRef.current = null;
   };
 
   return (
     <div style={{
-      width: '100vw', minHeight: '100vh',
-      background: 'linear-gradient(135deg, #fff7ed 0%, #fef3c7 40%, #e0f2fe 100%)',
+      width: '100vw', height: '100vh',
+      background: 'linear-gradient(135deg, #fffbebf8 0%, #fef3c7 40%, #d1fae5 100%)',
       padding: isIpadFrame ? '1.5rem 1rem' : '1rem',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', userSelect: 'none'
+      display: 'flex', flexDirection: 'column', alignItems: 'center', userSelect: 'none',
+      overflow: 'hidden'
     }}>
-      {/* 헤더 */}
+      {/* 짱구 스타일 헤더 */}
       <header style={{
         width: '100%', maxWidth: '1366px', background: '#ffffff', borderRadius: '24px',
-        padding: '1rem 1.8rem', boxShadow: '0 10px 25px -5px rgba(251, 146, 60, 0.25)',
-        border: '3.5px solid #fdba74', display: 'flex', alignItems: 'center',
+        padding: '1rem 1.8rem', boxShadow: '0 12px 28px -6px rgba(239, 68, 68, 0.22)',
+        border: '4px solid #ef4444', display: 'flex', alignItems: 'center',
         justifyContent: 'space-between', marginBottom: '1rem'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{
-            fontSize: '2.5rem', background: '#ffffff', border: '2.5px solid #fed7aa',
-            padding: '8px 14px', borderRadius: '22px', lineHeight: 1, boxShadow: '0 4px 10px rgba(0,0,0,0.06)'
-          }}>🐼</div>
-          <h1 style={{ fontSize: '1.85rem', fontWeight: 900, color: '#ea580c', margin: 0 }}>유나의 발달 놀이터</h1>
+            background: '#fff1f2', border: '3px solid #f87171',
+            padding: '6px 12px', borderRadius: '22px', display: 'flex', alignItems: 'center', gap: '10px',
+            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.15)'
+          }}>
+            <img src="/shinchan_sticker.png" alt="짱구" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+          </div>
+          <div>
+            <h1 style={{ fontSize: '1.85rem', fontWeight: 900, color: '#dc2626', margin: 0, letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              유나의 짱구 발달 놀이터 🖍️
+            </h1>
+            <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#047857', background: '#d1fae5', padding: '2px 10px', borderRadius: '12px', display: 'inline-block', marginTop: '2px' }}>
+              ✨ 짱구와 함께하는 신나는 놀이 세상!
+            </span>
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button onClick={() => setIsIpadFrame(!isIpadFrame)} style={{
@@ -568,9 +799,9 @@ export default function App() {
           </button>
           <button onClick={() => setSoundEnabled(!soundEnabled)} style={{
             display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '16px',
-            border: soundEnabled ? '2.5px solid #16a34a' : '2px solid #cbd5e1',
-            background: soundEnabled ? '#dcfce7' : '#f1f5f9',
-            color: soundEnabled ? '#15803d' : '#64748b', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer'
+            border: soundEnabled ? '2.5px solid #10b981' : '2px solid #cbd5e1',
+            background: soundEnabled ? '#d1fae5' : '#f1f5f9',
+            color: soundEnabled ? '#047857' : '#64748b', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer'
           }}>
             {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
             {soundEnabled ? '소리 켜짐 🔊' : '음소거 🔇'}
@@ -581,21 +812,21 @@ export default function App() {
       {/* 메인 */}
       <main style={{
         width: '100%', maxWidth: isIpadFrame ? '1366px' : '100%',
-        minHeight: isIpadFrame ? '880px' : 'auto', background: '#ffffff', borderRadius: '32px',
-        border: isIpadFrame ? '6px solid #fb923c' : '2px solid #e2e8f0',
-        boxShadow: '0 25px 50px -12px rgba(249, 115, 22, 0.25)',
+        flex: 1, minHeight: 0, background: '#ffffff', borderRadius: '32px',
+        border: isIpadFrame ? '6px solid #ef4444' : '2px solid #e2e8f0',
+        boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.25)',
         overflow: 'hidden', display: 'flex', flexDirection: 'column'
       }}>
-        {/* 탭 네비게이션 (4개 핵심 탭) */}
+        {/* 탭 네비게이션 (짱구 테마 컬러) */}
         <nav style={{
           display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px',
-          padding: '14px', background: '#fff7ed', borderBottom: '3px solid #fed7aa'
+          padding: '14px', background: '#fff1f2', borderBottom: '3.5px solid #fca5a5'
         }}>
           {[
-            { id: 'animal', label: '📸 생생 동물', sub: '울음소리 탐험', color: '#ea580c' },
-            { id: 'fruit', label: '🍎 싱싱 과일', sub: '고화질 실사 관찰', color: '#ef4444' },
-            { id: 'paint', label: '🎨 무지개 물감', sub: '터치 감각 미술', color: '#0284c7' },
-            { id: 'song', label: '🎵 동요 재생', sub: `한국 동요 (${LOCAL_NURSERY_SONGS.length}곡)`, color: '#16a34a' }
+            { id: 'animal', label: '📸 생생 동물', sub: '울음소리 탐험', color: '#ef4444' },
+            { id: 'fruit', label: '🍎 싱싱 과일', sub: '고화질 실사 관찰', color: '#10b981' },
+            { id: 'paint', label: '🎨 무지개 물감', sub: '터치 감각 미술', color: '#3b82f6' },
+            { id: 'song', label: '🎵 동요 재생', sub: `한국 동요 (${LOCAL_NURSERY_SONGS.length}곡)`, color: '#f97316' }
           ].map(tab => {
             const isActive = activeTab === tab.id;
             return (
@@ -616,7 +847,7 @@ export default function App() {
         </nav>
 
         {/* 캔버스 영역 */}
-        <div style={{ flex: 1, padding: '1.8rem', position: 'relative', background: '#fafafa', overflowY: 'auto' }}>
+        <div style={{ flex: 1, padding: activeTab === 'paint' ? '1rem 1.8rem' : '1.8rem', position: 'relative', background: '#fafafa', overflowY: activeTab === 'paint' ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
 
           {/* ===== 모듈 1: 20종 동물 실사 ===== */}
           {activeTab === 'animal' && (
@@ -691,6 +922,14 @@ export default function App() {
                 <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#9f1239', margin: 0 }}>
                   🍎 싱싱한 과일 카드를 콕콕 눌러보세요! 커다란 고화질 사진이 보여요!
                 </h2>
+                <button onClick={openBearModal} style={{
+                  background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff',
+                  border: 'none', padding: '12px 24px', borderRadius: '18px', fontWeight: 900,
+                  fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 6px 18px rgba(245,158,11,0.35)',
+                  display: 'flex', alignItems: 'center', gap: '8px'
+                }}>
+                  <Sparkles size={22} /> 🐻 곰돌이 과일 먹이기!
+                </button>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1.2rem' }}>
@@ -722,44 +961,141 @@ export default function App() {
 
           {/* ===== 모듈 3: 무지개 물감 ===== */}
           {activeTab === 'paint' && (
-            <div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+              {/* 상단 툴바 */}
               <div style={{
                 background: '#e0f2fe', border: '2.5px solid #bae6fd', borderRadius: '20px',
-                padding: '0.9rem 1.4rem', marginBottom: '1.2rem',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                padding: '0.7rem 1.2rem', marginBottom: '0.8rem',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px',
+                flexShrink: 0
               }}>
-                <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0369a1' }}>
-                  🎨 캔버스를 콕콕 눌러보세요! 무지개 물감과 실로폰 소리가 터져요!
+                <span style={{ fontSize: '1.05rem', fontWeight: 900, color: '#0369a1' }}>
+                  {tracingMode ? `✏️ "${tracingMode.label}" 따라쓰기 모드` : '🎨 캔버스를 콕콕 눌러보세요!'}
                 </span>
-                <button onClick={() => setPaintSplashes([])} style={{
-                  background: '#ef4444', color: '#ffffff', border: 'none', padding: '10px 18px',
-                  borderRadius: '16px', fontWeight: 900, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.98rem',
-                  boxShadow: '0 4px 12px rgba(239,68,68,0.25)'
-                }}><Eraser size={20} /> 지우기</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  {/* 브러시 크기 선택 */}
+                  {[{ key: 'small', label: '작게', sz: 16 }, { key: 'medium', label: '보통', sz: 24 }, { key: 'large', label: '크게', sz: 34 }].map(b => (
+                    <button key={b.key} onClick={() => setBrushSize(b.key)} style={{
+                      background: brushSize === b.key ? '#3b82f6' : '#ffffff',
+                      color: brushSize === b.key ? '#ffffff' : '#334155',
+                      border: brushSize === b.key ? '3px solid #1d4ed8' : '2px solid #cbd5e1',
+                      borderRadius: '14px', padding: '6px 12px', fontWeight: 900, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem'
+                    }}>
+                      <span style={{ width: b.sz, height: b.sz, borderRadius: '50%', background: brushSize === b.key ? '#93c5fd' : '#94a3b8', display: 'inline-block', flexShrink: 0 }} />
+                      {b.label}
+                    </button>
+                  ))}
+
+                  {/* 구분선 */}
+                  <span style={{ width: '2px', height: '28px', background: '#bae6fd', borderRadius: '2px' }} />
+
+                  {/* 따라쓰기 모드 토글 */}
+                  <button onClick={() => { setTracingMode(tracingMode ? null : TRACING_TEMPLATES[0]); setStrokes([]); }} style={{
+                    background: tracingMode ? '#f59e0b' : '#ffffff',
+                    color: tracingMode ? '#ffffff' : '#92400e',
+                    border: tracingMode ? '3px solid #d97706' : '2px solid #fcd34d',
+                    borderRadius: '14px', padding: '6px 14px', fontWeight: 900, cursor: 'pointer',
+                    fontSize: '0.88rem'
+                  }}>
+                    ✏️ {tracingMode ? '자유그리기' : '따라쓰기'}
+                  </button>
+
+                  <button onClick={() => setStrokes([])} style={{
+                    background: '#ef4444', color: '#ffffff', border: 'none', padding: '8px 14px',
+                    borderRadius: '14px', fontWeight: 900, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.88rem',
+                    boxShadow: '0 3px 10px rgba(239,68,68,0.25)'
+                  }}><Eraser size={18} /> 지우기</button>
+                </div>
               </div>
 
-              <div onClick={handleCanvasClick} style={{
-                width: '100%', height: '560px', background: '#ffffff', borderRadius: '32px',
-                border: '4px dashed #38bdf8', position: 'relative', overflow: 'hidden', cursor: 'crosshair'
-              }}>
-                {paintSplashes.length === 0 && (
+              {/* 따라쓰기 글자 선택 (따라쓰기 모드일 때만) */}
+              {tracingMode && (
+                <div style={{
+                  display: 'flex', gap: '6px', marginBottom: '0.6rem', flexWrap: 'wrap',
+                  flexShrink: 0, alignItems: 'center'
+                }}>
+                  <span style={{ fontSize: '0.88rem', fontWeight: 900, color: '#92400e', marginRight: '4px' }}>글자 선택:</span>
+                  {TRACING_TEMPLATES.map(t => (
+                    <button key={t.id} onClick={() => { setTracingMode(t); setStrokes([]); }} style={{
+                      width: '42px', height: '42px', borderRadius: '12px',
+                      background: tracingMode.id === t.id ? '#fbbf24' : '#fffbeb',
+                      border: tracingMode.id === t.id ? '3px solid #d97706' : '2px solid #fcd34d',
+                      fontSize: '1.2rem', fontWeight: 900,
+                      color: tracingMode.id === t.id ? '#78350f' : '#92400e',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>{t.label}</button>
+                  ))}
+                </div>
+              )}
+
+              {/* 캔버스 (flex: 1로 남은 공간 전부 사용, 연필 stroke 드로잉) */}
+              <div
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerLeave={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+                style={{
+                  width: '100%', flex: 1, minHeight: 0, background: '#ffffff', borderRadius: '24px',
+                  border: '4px dashed #38bdf8', position: 'relative', overflow: 'hidden', cursor: 'crosshair',
+                  touchAction: 'none'
+                }}
+              >
+                {/* 따라쓰기 가이드 실선 (배경) */}
+                {tracingMode && (
+                  <svg viewBox={tracingMode.viewBox} style={{
+                    position: 'absolute', inset: '8%', width: '84%', height: '84%',
+                    pointerEvents: 'none', opacity: 0.35
+                  }}>
+                    {tracingMode.paths.map((d, i) => (
+                      <path key={i} d={d} fill="none" stroke="#94a3b8" strokeWidth="12"
+                        strokeLinecap="round" strokeLinejoin="round" />
+                    ))}
+                  </svg>
+                )}
+
+                {/* 사용자가 그린 연필 브러시 스트로크 선 (SVG Vector Lines) */}
+                <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 2 }}>
+                  {strokes.map(s => {
+                    if (!s.points || s.points.length === 0) return null;
+                    const d = s.points.length === 1
+                      ? `M ${s.points[0].x} ${s.points[0].y} L ${s.points[0].x + 0.1} ${s.points[0].y + 0.1}`
+                      : s.points.reduce((acc, p, idx) => acc + (idx === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`), '');
+
+                    return (
+                      <path
+                        key={s.id}
+                        d={d}
+                        fill="none"
+                        stroke={s.color}
+                        strokeWidth={s.width}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{ opacity: 0.9 }}
+                      />
+                    );
+                  })}
+                </svg>
+
+                {strokes.length === 0 && !tracingMode && (
                   <div style={{
                     position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
                     alignItems: 'center', justifyContent: 'center', color: '#94a3b8', pointerEvents: 'none'
                   }}>
                     <Sparkles size={56} style={{ color: '#38bdf8', marginBottom: '12px' }} />
-                    <p style={{ fontSize: '1.4rem', fontWeight: 900 }}>화면 어디든 자유롭게 눌러보세요!</p>
+                    <p style={{ fontSize: '1.4rem', fontWeight: 900 }}>화면에 연필처럼 쓱쓱 자유롭게 그려보세요!</p>
                   </div>
                 )}
-                {paintSplashes.map(s => (
-                  <div key={s.id} style={{
-                    position: 'absolute', left: s.x - s.size / 2, top: s.y - s.size / 2,
-                    width: s.size, height: s.size, borderRadius: '50%', background: s.color, opacity: 0.85,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#ffffff', fontWeight: 900, fontSize: '0.9rem', boxShadow: '0 4px 16px rgba(0,0,0,0.15)'
-                  }}>{s.name}</div>
-                ))}
+                {strokes.length === 0 && tracingMode && (
+                  <div style={{
+                    position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', color: '#92400e', pointerEvents: 'none'
+                  }}>
+                    <p style={{ fontSize: '1.3rem', fontWeight: 900, opacity: 0.6 }}>✏️ 점선을 따라 연필처럼 쓱쓱 그려보세요!</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -769,9 +1105,33 @@ export default function App() {
             <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
               <div style={{
                 background: '#dcfce7', border: '2.5px solid #86efac', borderRadius: '20px',
-                padding: '0.6rem 1.4rem', display: 'inline-block', marginBottom: '1rem',
-                fontSize: '1.1rem', fontWeight: 900, color: '#166534'
-              }}>🎵 유나와 함께 들어요! 총 {LOCAL_NURSERY_SONGS.length}곡의 신나는 동요 🎶</div>
+                padding: '0.6rem 1.4rem', display: 'inline-flex', alignItems: 'center', gap: '16px', marginBottom: '1rem',
+                fontSize: '1.05rem', fontWeight: 900, color: '#166534', flexWrap: 'wrap', justifyContent: 'center'
+              }}>
+                <span>🎵 유나와 함께 들어요! 총 {LOCAL_NURSERY_SONGS.length}곡의 신나는 동요 🎶</span>
+                
+                {/* 연속 / 셔플 자동 재생 토글 */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button onClick={() => setIsAutoPlayNext(!isAutoPlayNext)} style={{
+                    background: isAutoPlayNext ? '#16a34a' : '#ffffff',
+                    color: isAutoPlayNext ? '#ffffff' : '#475569',
+                    border: isAutoPlayNext ? '2px solid #15803d' : '2px solid #cbd5e1',
+                    borderRadius: '14px', padding: '5px 12px', fontWeight: 900, cursor: 'pointer',
+                    fontSize: '0.85rem'
+                  }}>
+                    🔂 연속 재생 {isAutoPlayNext ? 'ON' : 'OFF'}
+                  </button>
+                  <button onClick={() => setIsShuffle(!isShuffle)} style={{
+                    background: isShuffle ? '#9333ea' : '#ffffff',
+                    color: isShuffle ? '#ffffff' : '#475569',
+                    border: isShuffle ? '2px solid #7e22ce' : '2px solid #cbd5e1',
+                    borderRadius: '14px', padding: '5px 12px', fontWeight: 900, cursor: 'pointer',
+                    fontSize: '0.85rem'
+                  }}>
+                    🔀 셔플 {isShuffle ? 'ON' : 'OFF'}
+                  </button>
+                </div>
+              </div>
 
               {/* 가로 슬림 콤팩트 MP3 플레이어 컨트롤러 */}
               <div style={{
@@ -789,7 +1149,7 @@ export default function App() {
                       {LOCAL_NURSERY_SONGS[currentSongIdx]?.title || '동요 선택'}
                     </h2>
                     <p style={{ color: '#64748b', fontSize: '0.88rem', fontWeight: 700, margin: '2px 0 0 0' }}>
-                      {currentSongIdx + 1} / {LOCAL_NURSERY_SONGS.length} 곡
+                      {currentSongIdx + 1} / {LOCAL_NURSERY_SONGS.length} 곡 {isShuffle ? '(셔플 모드)' : ''}
                     </p>
                   </div>
                 </div>
@@ -968,6 +1328,113 @@ export default function App() {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ===== 🐻 곰돌이 과일 먹이기 놀이 모달 (드래그 앤 드롭 지원) ===== */}
+      {isBearModalOpen && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', zIndex: 1000, padding: '1.5rem', userSelect: 'none'
+          }}
+        >
+          <div style={{
+            background: '#fffbeb', borderRadius: '36px', maxWidth: '720px', width: '100%',
+            padding: '2rem', border: '6px solid #f59e0b',
+            boxShadow: '0 25px 50px -12px rgba(245, 158, 11, 0.35)', position: 'relative', textAlign: 'center'
+          }}>
+            <button onClick={() => setIsBearModalOpen(false)} style={{
+              position: 'absolute', top: '18px', right: '18px', background: '#fef3c7', color: '#78350f',
+              border: '2px solid #fde68a', borderRadius: '50%', width: '40px', height: '40px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10
+            }}><X size={24} /></button>
+
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#fef3c7', padding: '6px 18px', borderRadius: '20px', marginBottom: '1rem', border: '2px solid #fde68a' }}>
+              <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#92400e' }}>⭐ 먹인 과일: {feedScore}개</span>
+            </div>
+
+            {/* 🐻 곰돌이 캐릭터 & 드롭 영역 (bearBoxRef) */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <div
+                onClick={() => speakBearWish(wantedFood)}
+                title="콕 누르면 곰돌이가 목소리로 다시 말해요!"
+                style={{
+                  background: '#ffffff', border: '3.5px solid #fbbf24', borderRadius: '24px',
+                  padding: '1rem 1.6rem', marginBottom: '1rem', boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
+                  cursor: 'pointer'
+                }}
+              >
+                <p style={{ fontSize: '1.45rem', fontWeight: 900, color: '#78350f', margin: 0 }}>
+                  {bearMood === 'happy'
+                    ? '💖 🐻 "아구아구 냠냠! 너무 맛있다! 🥰"'
+                    : isOverBear
+                      ? '😮 🐻 "아~~ 입 벌리고 있어! 과일을 쏙 넣어줘!"'
+                      : `🐻 "${(wantedFood || FOOD_ITEMS[0])?.name || '사과'} 먹고 싶어요! ${(wantedFood || FOOD_ITEMS[0])?.icon || '🍎'}"`}
+                </p>
+              </div>
+
+              {/* 곰돌이 드롭 영역 (표정 이모지 세분화) */}
+              <div
+                ref={bearBoxRef}
+                style={{
+                  fontSize: '6.5rem', lineHeight: 1, padding: '1rem 2rem', borderRadius: '32px',
+                  border: isOverBear ? '4px dashed #f59e0b' : '4px solid transparent',
+                  background: isOverBear ? '#fef3c7' : 'transparent',
+                  transform: isOverBear ? 'scale(1.2)' : bearMood === 'happy' ? 'scale(1.1)' : 'scale(1)',
+                  transition: 'transform 0.2s ease, background 0.2s ease',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                }}
+              >
+                {bearMood === 'happy' ? (
+                  <span>🐻🥰</span>
+                ) : isOverBear ? (
+                  <span>🐻😮</span>
+                ) : (
+                  <span>🐻</span>
+                )}
+              </div>
+            </div>
+
+            <p style={{ fontSize: '1.1rem', fontWeight: 900, color: '#92400e', marginBottom: '1rem' }}>
+              👇 과일을 손가락으로 끌어다(Drag) 곰돌이 입에 쏙 넣어주세요!
+            </p>
+
+            {/* 과일 선택 카드 목록 */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
+              {FOOD_ITEMS.map(food => (
+                <button
+                  key={food.id}
+                  onPointerDown={(e) => handleStartDragFood(e, food)}
+                  onClick={() => handleFeedBear(food)}
+                  style={{
+                    background: (wantedFood?.id || FOOD_ITEMS[0].id) === food.id ? '#fef3c7' : '#ffffff',
+                    border: (wantedFood?.id || FOOD_ITEMS[0].id) === food.id ? '4px solid #f59e0b' : '2px solid #e2e8f0',
+                    borderRadius: '20px', padding: '12px 8px', cursor: 'grab',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)', touchAction: 'none',
+                    opacity: draggingFood?.id === food.id ? 0.4 : 1
+                  }}
+                >
+                  <span style={{ fontSize: '2.5rem', lineHeight: 1 }}>{food.icon}</span>
+                  <span style={{ fontSize: '1rem', fontWeight: 900, color: '#1e293b' }}>{food.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 손가락/마우스를 따라 움직이는 드래그 과일 이펙트 */}
+          {draggingFood && (
+            <div style={{
+              position: 'fixed', left: dragPos.x, top: dragPos.y,
+              transform: 'translate(-50%, -50%) scale(1.3)',
+              zIndex: 2000, pointerEvents: 'none', fontSize: '4.5rem',
+              filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.35))'
+            }}>
+              {draggingFood.icon}
+            </div>
+          )}
         </div>
       )}
     </div>
