@@ -308,39 +308,39 @@ const REAL_ANIMALS = [
 ];
 
 // =============================================================================
-// 🍎 싱싱 과일 & 채소 데이터셋 (실사 이미지 관찰 + 곰돌이 먹이기 공통 사용)
+// 🍎 싱싱 과일 & 채소 데이터셋 (고화질 실사 이미지 100% 로컬 연동)
 // =============================================================================
 const REAL_FRUITS = [
   // ── 과일 ──
   {
     id: 'apple', name: '사과', icon: '🍎', category: '과일',
-    img: 'https://images.pexels.com/photos/102104/pexels-photo-102104.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#ef4444', bg: '#fee2e2', fitPos: 'center 30%'
+    img: appleImg,
+    color: '#ef4444', bg: '#fee2e2', fitPos: 'center center'
   },
   {
     id: 'banana', name: '바나나', icon: '🍌', category: '과일',
-    img: 'https://images.pexels.com/photos/2872755/pexels-photo-2872755.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#d97706', bg: '#fef3c7', fitPos: 'center 30%'
+    img: bananaImg,
+    color: '#d97706', bg: '#fef3c7', fitPos: 'center center'
   },
   {
     id: 'grape', name: '포도', icon: '🍇', category: '과일',
-    img: 'https://images.pexels.com/photos/708777/pexels-photo-708777.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#7e22ce', bg: '#f3e8ff', fitPos: 'center 20%'
+    img: grapeImg,
+    color: '#7e22ce', bg: '#f3e8ff', fitPos: 'center center'
   },
   {
     id: 'watermelon', name: '수박', icon: '🍉', category: '과일',
-    img: 'https://images.pexels.com/photos/1313267/pexels-photo-1313267.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#15803d', bg: '#dcfce7', fitPos: 'center 30%'
+    img: watermelonImg,
+    color: '#15803d', bg: '#dcfce7', fitPos: 'center center'
   },
   {
     id: 'strawberry', name: '딸기', icon: '🍓', category: '과일',
     img: strawberryImg,
-    color: '#e11d48', bg: '#ffe4e6', fitPos: 'center 20%'
+    color: '#e11d48', bg: '#ffe4e6', fitPos: 'center center'
   },
   {
     id: 'tangerine', name: '귤', icon: '🍊', category: '과일',
     img: tangerineImg,
-    color: '#ea580c', bg: '#ffedd5', fitPos: 'center 20%'
+    color: '#ea580c', bg: '#ffedd5', fitPos: 'center center'
   },
   {
     id: 'peach', name: '복숭아', icon: '🍑', category: '과일',
@@ -359,19 +359,19 @@ const REAL_FRUITS = [
   },
   {
     id: 'cherry', name: '체리', icon: '🍒', category: '과일',
-    img: 'https://images.pexels.com/photos/109274/pexels-photo-109274.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#be123c', bg: '#ffe4e6', fitPos: 'center 20%'
+    img: cherryImg,
+    color: '#be123c', bg: '#ffe4e6', fitPos: 'center center'
   },
   {
     id: 'blueberry', name: '블루베리', icon: '🫐', category: '과일',
-    img: 'https://images.pexels.com/photos/1395958/pexels-photo-1395958.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#4338ca', bg: '#e0e7ff', fitPos: 'center 30%'
+    img: blueberryImg,
+    color: '#4338ca', bg: '#e0e7ff', fitPos: 'center center'
   },
   // ── 채소 ──
   {
     id: 'carrot', name: '당근', icon: '🥕', category: '채소',
-    img: 'https://images.pexels.com/photos/143133/pexels-photo-143133.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#f97316', bg: '#ffedd5', fitPos: 'center 30%'
+    img: carrotImg,
+    color: '#f97316', bg: '#ffedd5', fitPos: 'center center'
   },
   {
     id: 'broccoli', name: '브로콜리', icon: '🥦', category: '채소',
@@ -380,8 +380,8 @@ const REAL_FRUITS = [
   },
   {
     id: 'corn', name: '옥수수', icon: '🌽', category: '채소',
-    img: 'https://images.pexels.com/photos/547263/pexels-photo-547263.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#ca8a04', bg: '#fef9c3', fitPos: 'center 30%'
+    img: cornImg,
+    color: '#ca8a04', bg: '#fef9c3', fitPos: 'center center'
   },
   {
     id: 'sweet_potato', name: '고구마', icon: '🍠', category: '채소',
@@ -390,23 +390,23 @@ const REAL_FRUITS = [
   },
   {
     id: 'potato', name: '감자', icon: '🥔', category: '채소',
-    img: 'https://images.pexels.com/photos/144248/potatoes-vegetables-erdfrucht-bio-144248.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#a16207', bg: '#fef3c7', fitPos: 'center 30%'
+    img: potatoImg,
+    color: '#a16207', bg: '#fef3c7', fitPos: 'center center'
   },
   {
     id: 'tomato', name: '토마토', icon: '🍅', category: '채소',
-    img: 'https://images.pexels.com/photos/1327838/pexels-photo-1327838.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#dc2626', bg: '#fee2e2', fitPos: 'center 30%'
+    img: tomatoImg,
+    color: '#dc2626', bg: '#fee2e2', fitPos: 'center center'
   },
   {
     id: 'cucumber', name: '오이', icon: '🥒', category: '채소',
-    img: 'https://images.pexels.com/photos/2329440/pexels-photo-2329440.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#16a34a', bg: '#dcfce7', fitPos: 'center 30%'
+    img: cucumberImg,
+    color: '#16a34a', bg: '#dcfce7', fitPos: 'center center'
   },
   {
     id: 'eggplant', name: '가지', icon: '🍆', category: '채소',
-    img: 'https://images.pexels.com/photos/321551/pexels-photo-321551.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#7e22ce', bg: '#f3e8ff', fitPos: 'center 30%'
+    img: eggplantImg,
+    color: '#7e22ce', bg: '#f3e8ff', fitPos: 'center center'
   }
 ];
 
@@ -576,7 +576,7 @@ const choices = pickBearChoices(food);
 // =============================================================================
 // 🐾 SVG 애니메이션 다채로운 동물 캐릭터 컴포넌트 (10종 고유 실루엣 극대화 모델)
 // =============================================================================
-function AnimatedAnimalCharacter({ animal, mood = 'hungry', isOver = false, rejectedFoodIcon = null, isTarget = false }) {
+function AnimatedAnimalCharacter({ animal, mood = 'hungry', isOver = false, rejectedFoodIcon = null, rejectedFoodImg = null, isTarget = false }) {
   const [chewOpen, setChewOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -605,11 +605,24 @@ function AnimatedAnimalCharacter({ animal, mood = 'hungry', isOver = false, reje
           <div className="bear-sparkle" style={{ position: 'absolute', top: '-5px', right: '28px', fontSize: '1.1rem', animationDelay: '0.5s' }}>🌟</div>
         </>
       )}
-      {dm === 'reject' && rejectedFoodIcon && (
+      {dm === 'reject' && (rejectedFoodImg || rejectedFoodIcon) && (
         <div className="bear-fruit-reject" style={{
           position: 'absolute', top: '38%', left: '50%',
-          fontSize: '2.2rem', pointerEvents: 'none'
-        }}>{rejectedFoodIcon}</div>
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none', zIndex: 10
+        }}>
+          {rejectedFoodImg ? (
+            <div style={{
+              width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden',
+              border: '3px solid #ef4444', boxShadow: '0 6px 16px rgba(239,68,68,0.4)',
+              background: '#ffffff'
+            }}>
+              <img src={rejectedFoodImg} alt="거절된 음식을 나타내는 사진" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          ) : (
+            <span style={{ fontSize: '2.2rem' }}>{rejectedFoodIcon}</span>
+          )}
+        </div>
       )}
     </>
   );
@@ -3847,16 +3860,30 @@ export default function App() {
               <span style={{ fontSize: '1.1rem', fontWeight: 900, color: '#92400e' }}>⭐ 먹인 과일: {feedScore}개</span>
             </div>
 
-            {/* 목표 동물 말풍선 */}
+            {/* 목표 동물 말풍선 (고화질 실사 과일 요구사항 뱃지 탑재) */}
             <div
               onClick={() => speakFeedWish(feedRound.target, feedRound.food)}
               title="콕 누르면 동물 친구가 목소리로 다시 말해요!"
               style={{
                 background: '#ffffff', border: '3.5px solid #fbbf24', borderRadius: '24px',
-                padding: '0.9rem 1.4rem', marginBottom: '1.2rem', boxShadow: '0 8px 20px rgba(0,0,0,0.06)',
-                cursor: 'pointer', position: 'relative', display: 'inline-block', maxWidth: '90%'
+                padding: '0.8rem 1.4rem', marginBottom: '1.2rem', boxShadow: '0 8px 24px rgba(245, 158, 11, 0.18)',
+                cursor: 'pointer', position: 'relative', display: 'inline-flex', alignItems: 'center', gap: '12px', maxWidth: '90%'
               }}
             >
+              {/* 실사 과일 요구사항 미니 뱃지 📸 */}
+              {feedRound.food?.img && (
+                <div style={{
+                  width: '44px', height: '44px', borderRadius: '50%', overflow: 'hidden',
+                  border: `3px solid ${feedRound.food.color || '#fbbf24'}`,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)', flexShrink: 0, background: '#ffffff'
+                }}>
+                  <img
+                    src={feedRound.food.img}
+                    alt={feedRound.food.name}
+                    style={{ width: '100%', height: '100%', objectFit: feedRound.food.objectFit || 'cover' }}
+                  />
+                </div>
+              )}
               <p style={{ fontSize: '1.35rem', fontWeight: 900, color: '#78350f', margin: 0 }}>
                 {rejectedAnimalId === feedRound.target.id
                   ? `😤 "${feedRound.target.name}: 이거 말고~!! ${feedRound.food.name} 달라고~! 😣"`
@@ -3868,7 +3895,7 @@ export default function App() {
                         ? `💖 "${feedRound.target.name}: 너무 맛있다~! 최고야! 🥰"`
                         : hoverAnimalId === feedRound.target.id
                           ? `😮 "${feedRound.target.name}: 아~~ 입 벌리고 있어! 쏙 넣어줘!"`
-                          : `"${feedRound.target.name}가 ${feedRound.food.name} 먹고 싶어요! ${feedRound.food.icon}"`}
+                          : `"${feedRound.target.name}가 ${feedRound.food.name} 먹고 싶어요!"`}
               </p>
               {/* 말풍선 꼬리 */}
               <div style={{
@@ -3919,7 +3946,7 @@ export default function App() {
                       position: 'relative'
                     }}
                   >
-                    {/* 상단 뱃지: 실사 사진 + 동물 이름 (정답 힌트 블럭 제거) */}
+                    {/* 상단 뱃지: 실사 사진 + 동물 이름 */}
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: '8px',
                       background: '#f1f5f9',
@@ -3944,12 +3971,13 @@ export default function App() {
                       </span>
                     </div>
 
-                    {/* SVG 애니메이션 캐릭터 */}
+                    {/* SVG 애니메이션 캐릭터 (실사 과일 거절 지원) */}
                     <AnimatedAnimalCharacter
                       animal={animal}
                       mood={mood}
                       isOver={isOver}
                       rejectedFoodIcon={rejectedAnimalId === animal.id ? rejectedFood?.icon : null}
+                      rejectedFoodImg={rejectedAnimalId === animal.id ? rejectedFood?.img : null}
                     />
 
                     {/* 하단 칭호 태그 */}
@@ -3974,7 +4002,7 @@ export default function App() {
               👇 원하는 과일·채소를 손가락으로 끌어다(Drag) <strong>{feedRound.target.name}</strong>에게 쏙 넣어주세요!
             </p>
 
-            {/* 과일/채소 랜덤 5개 선택 카드 (먹는 동안 PROTECT 비활성화) */}
+            {/* 과일/채소 랜덤 5개 고화질 실사 선택 카드 (먹는 동안 PROTECT 비활성화) */}
             <div style={{
               display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px',
               opacity: isFeedBusyRef.current ? 0.45 : 1,
@@ -3987,19 +4015,20 @@ export default function App() {
                   onPointerDown={(e) => handleStartDragFood(e, food)}
                   style={{
                     background: '#ffffff',
-                    border: `3px solid ${food.color || '#fed7aa'}`,
-                    borderRadius: '22px', padding: '8px 6px',
+                    border: `3.5px solid ${food.color || '#fed7aa'}`,
+                    borderRadius: '24px', padding: '10px 6px',
                     cursor: isFeedBusyRef.current ? 'not-allowed' : 'grab',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
-                    boxShadow: '0 6px 14px rgba(0,0,0,0.08)', touchAction: 'none',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+                    boxShadow: '0 8px 18px rgba(0,0,0,0.12)', touchAction: 'none',
                     opacity: draggingFood?.id === food.id ? 0.25 : 1,
                     userSelect: 'none', overflow: 'hidden'
                   }}
                 >
                   <div style={{
-                    width: '64px', height: '64px', borderRadius: '18px', overflow: 'hidden',
-                    background: food.bg || '#f8fafc', border: '1.5px solid rgba(0,0,0,0.08)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    width: '72px', height: '72px', borderRadius: '20px', overflow: 'hidden',
+                    background: food.bg || '#f8fafc', border: '2px solid rgba(0,0,0,0.06)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.05)'
                   }}>
                     {food.img ? (
                       <img
@@ -4012,24 +4041,24 @@ export default function App() {
                         }}
                       />
                     ) : (
-                      <span style={{ fontSize: '2rem' }}>{food.icon}</span>
+                      <span style={{ fontSize: '2.4rem' }}>{food.icon}</span>
                     )}
                   </div>
-                  <span style={{ fontSize: '1.02rem', fontWeight: 900, color: '#1e293b' }}>{food.name}</span>
+                  <span style={{ fontSize: '1.08rem', fontWeight: 900, color: '#1e293b' }}>{food.name}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* 손가락/마우스를 따라 움직이는 드래그 과일 이펙트 (고화질 실사 뱃지) */}
+          {/* 손가락/마우스를 따라 움직이는 드래그 과일 이펙트 (고화질 실사 뱃지 📸) */}
           {draggingFood && (
             <div style={{
               position: 'fixed', left: dragPos.x, top: dragPos.y,
               transform: 'translate(-50%, -50%) scale(1.15)',
               zIndex: 2000, pointerEvents: 'none',
-              width: '76px', height: '76px', borderRadius: '50%',
+              width: '84px', height: '84px', borderRadius: '50%',
               overflow: 'hidden', border: `4px solid ${draggingFood.color || '#ffffff'}`,
-              boxShadow: '0 12px 28px rgba(0,0,0,0.38)', background: '#ffffff',
+              boxShadow: '0 14px 32px rgba(0,0,0,0.42)', background: '#ffffff',
               display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
               {draggingFood.img ? (
@@ -4043,7 +4072,7 @@ export default function App() {
                   }}
                 />
               ) : (
-                <span style={{ fontSize: '3rem' }}>{draggingFood.icon}</span>
+                <span style={{ fontSize: '3.2rem' }}>{draggingFood.icon}</span>
               )}
             </div>
           )}
