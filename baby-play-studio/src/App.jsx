@@ -2,13 +2,25 @@ import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { Sparkles, Volume2, VolumeX, RotateCcw, Smartphone, X, Play, Pause, SkipForward, SkipBack, Music, Eraser } from 'lucide-react';
 import duckImg from './assets/duck.jpg';
+import appleImg from './assets/apple.jpg';
+import bananaImg from './assets/banana.jpg';
+import grapeImg from './assets/grape.jpg';
+import watermelonImg from './assets/watermelon.jpg';
 import strawberryImg from './assets/strawberry.jpg';
 import tangerineImg from './assets/tangerine.jpg';
 import peachImg from './assets/peach.jpg';
 import melonImg from './assets/melon.jpg';
 import pineappleImg from './assets/pineapple.jpg';
+import cherryImg from './assets/cherry.jpg';
+import blueberryImg from './assets/blueberry.jpg';
+import carrotImg from './assets/carrot.jpg';
 import broccoliImg from './assets/broccoli.jpg';
+import cornImg from './assets/corn.jpg';
 import sweetPotatoImg from './assets/sweet_potato.jpg';
+import potatoImg from './assets/potato.jpg';
+import tomatoImg from './assets/tomato.jpg';
+import cucumberImg from './assets/cucumber.jpg';
+import eggplantImg from './assets/eggplant.jpg';
 
 // --- 실제 동물 울음소리 MP3 재생 사운드 엔진 ---
 class BabySoundEngine {
@@ -1409,24 +1421,26 @@ function getBestKoreanVoice() {
     const name = voice.name.toLowerCase();
     let score = 0;
 
-    // 나긋나긋 다정한 남성 자연어 보이스 최우선 1순위 타겟 (InJoon Natural / 인준 등)
-    if (name.includes('injoon') || name.includes('인준')) score += 300;
-    if (name.includes('male') || name.includes('남성')) score += 150;
+    // 🏆 다정하고 나긋나긋한 남성 목소리 최우선 1순위 (InJoon Natural, 봉진, 국민, Male 등)
+    if (name.includes('injoon') || name.includes('인준')) score += 1000;
+    if (name.includes('bongjin') || name.includes('봉진')) score += 850;
+    if (name.includes('gookmin') || name.includes('국민')) score += 750;
+    if (name.includes('male') || name.includes('남성') || name.includes('남자')) score += 600;
+
     if (name.includes('natural')) score += 100;
     if (name.includes('online')) score += 90;
     if (name.includes('neural')) score += 90;
-    if (name.includes('yuna')) score += 80;
-    if (name.includes('sunhi')) score += 75;
-    if (name.includes('google')) score += 75;
-    if (name.includes('seoyeon')) score += 60;
-    if (name.includes('gaeun')) score += 60;
-    if (name.includes('multilingual')) score += 50;
 
-    // 기계음/전자음 유발 구형 데스크톱/SAPI5 보이스 차단 및 강한 감점 (Heami 등)
-    if (name.includes('heami')) score -= 150;
+    // ❌ 여자 목소리는 확실하게 감점하여 배제 (-800점)
+    if (name.includes('sunhi') || name.includes('선희')) score -= 800;
+    if (name.includes('yuna') || name.includes('유나')) score -= 800;
+    if (name.includes('heami') || name.includes('혜미')) score -= 900;
+    if (name.includes('seoyeon') || name.includes('서연')) score -= 800;
+    if (name.includes('gaeun') || name.includes('가은')) score -= 800;
+    if (name.includes('female') || name.includes('여성') || name.includes('여자')) score -= 800;
+
     if (name.includes('desktop')) score -= 100;
     if (name.includes('sapi5')) score -= 100;
-    if (name.includes('local')) score -= 30;
 
     return { voice, score };
   });
@@ -1435,29 +1449,32 @@ function getBestKoreanVoice() {
   return scoredVoices[0]?.voice || koreanVoices[0];
 }
 
-// 텍스트를 자연스러운 구어체(다정한 대화체)로 튜닝하고 기호/이모지 쉼표 호흡 정형화
+// 텍스트를 자연스러운 구어체(다정한 대화체)로 튜닝하고 기호/이모지/물결표 제거
 export function formatSpokenKoreanText(text) {
   if (!text) return '';
 
-  // 1. 이모지 및 특수 기호 제거 (TTS 유닛 발음 오류 및 깨짐 완전 방지)
-  let cleanText = text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '');
+  // 1. 이모지, 물결표(~), 특수 기호 제거 (TTS 유닛이 "물결표", "물결표 사인" 등 기호를 소리내어 읽는 현상 100% 방지)
+  let cleanText = text
+    .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '')
+    .replace(/[~～]/g, ' ')
+    .replace(/[*#@^&_+={}\[\]<>"'`]/g, ' ')
+    .replace(/["'""'']/g, '');
 
-  // 2. 문장 끝 다정한 구어체 변환 및 자연스러운 쉼표(숨쉬기) 억양 부여
+  // 2. 문장 끝 다정한 구어체 변환 (물결표 없이 마침표/느낌표/물음표로 자연스러운 숨쉬기 호흡)
   cleanText = cleanText
-    .replace(/어디 있을까요\?/g, '어디에 있을까요~?')
-    .replace(/누구일까요\?/g, '누구일까요~?')
-    .replace(/맞춰볼까요\?/g, '맞춰볼까요~?')
-    .replace(/먹고 싶어요!/g, '먹고 싶대요~!')
-    .replace(/먹고 싶어요~/g, '먹고 싶대요~!')
-    .replace(/참 잘했어요~/g, '참 잘했어요! 대단해요!')
-    .replace(/정말 최고예요~/g, '정말 최고예요!')
+    .replace(/어디 있을까요\?/g, '어디에 있을까요?')
+    .replace(/누구일까요\?/g, '누구일까요?')
+    .replace(/맞춰볼까요\?/g, '맞춰볼까요?')
+    .replace(/먹고 싶어요[!.]?/g, '먹고 싶대요!')
+    .replace(/참 잘했어요[!.]?/g, '참 잘했어요! 대단해요!')
+    .replace(/정말 최고예요[!.]?/g, '정말 최고예요!')
     .replace(/\s+/g, ' ')
     .trim();
 
   return cleanText;
 }
 
-export function speakNaturalKorean(text, { pitch = 1.02, rate = 0.94, priority = true } = {}) {
+export function speakNaturalKorean(text, { pitch = 0.96, rate = 0.92, priority = true } = {}) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
   try {
@@ -1471,7 +1488,7 @@ export function speakNaturalKorean(text, { pitch = 1.02, rate = 0.94, priority =
     const utterance = new SpeechSynthesisUtterance(spokenText);
     utterance.lang = 'ko-KR';
 
-    // 구어체 자연스러운 톤 Calibration: pitch 1.02, rate 0.94 (전자음 distortion 완전 방지)
+    // 나긋나긋하고 안정적인 남성 톤: pitch 0.96, rate 0.92
     utterance.pitch = pitch;
     utterance.rate = rate;
 
@@ -2548,14 +2565,14 @@ export default function App() {
     }
   };
 
-  // 🦁 동물 과일 먹이기 음성 안내 (다정하고 상냥한 목소리)
+  // 🦁 동물 과일 먹이기 음성 안내 (다정하고 편안한 남성 목소리)
   const speakFeedWish = (animal, food) => {
     const targetAnimal = animal || feedRound?.target;
     const targetFood = food || feedRound?.food;
     if (!targetAnimal || !targetFood) return;
     const subj = attachJosa(targetAnimal.name, '이/가');
     const obj = attachJosa(targetFood.name, '을/를');
-    speakNaturalKorean(`배고파요~ ${subj} 맛있는 ${obj} 먹고 싶어요!`, { pitch: 1.18, rate: 0.93 });
+    speakNaturalKorean(`배고파요. ${subj} 맛있는 ${obj} 먹고 싶대요!`, { pitch: 0.96, rate: 0.92 });
   };
 
   const openFeedModal = () => {
@@ -2585,14 +2602,14 @@ export default function App() {
         });
         setFeedScore(prev => prev + 1);
 
-        // 🗣️ 동물이 직접 "냠냠~ {과일} 맛있어요! 고마워요~" 라고 상냥하게 소감 표현
+        // 🗣️ 동물이 직접 소감 표현 (물결표 없는 깨끗한 다정한 남성톤)
         const praisePhrases = [
-          `냠냠~ ${wantedFood.name} 정말 맛있어요! 고마워요~ 🥰`,
-          `와아! ${wantedFood.name} 최고예요! 냠냠 맛있어요~ 💖`,
-          `냠냠 꿀꺽~ 달콤한 ${wantedFood.name} 맛있어요! 배가 든든해요~ ✨`
+          `냠냠! ${wantedFood.name} 정말 맛있어요! 고마워요!`,
+          `와아! ${wantedFood.name} 최고예요! 냠냠 맛있어요!`,
+          `냠냠 꿀꺽! 달콤한 ${wantedFood.name} 맛있어요! 배가 든든해요!`
         ];
         const randomPraise = praisePhrases[Math.floor(Math.random() * praisePhrases.length)];
-        speakNaturalKorean(randomPraise, { pitch: 1.22, rate: 0.92 });
+        speakNaturalKorean(randomPraise, { pitch: 0.96, rate: 0.92 });
 
         // 1.2초 후 기뻐하기 (만세 + 하트눈 + 팡파레)
         setTimeout(() => {
@@ -2621,7 +2638,7 @@ export default function App() {
 
         const animalSubj = attachJosa(targetAnimal.name, '은/는');
         const foodObj = attachJosa(wantedFood.name, '을/를');
-        speakNaturalKorean(`으응~ 이거 말고! ${animalSubj} ${foodObj} 먹고 싶어요~`, { pitch: 1.16, rate: 0.94 });
+        speakNaturalKorean(`으응, 이거 말고! ${animalSubj} ${foodObj} 먹고 싶대요.`, { pitch: 0.96, rate: 0.92 });
 
         setTimeout(() => {
           setAnimalMoods(prev => ({ ...prev, [targetAnimal.id]: 'hungry' }));
@@ -2642,7 +2659,7 @@ export default function App() {
       setTimeout(() => audioEngine.playFreq(160, 'sawtooth', 0.2, 0.5), 240);
 
       const foodObj = attachJosa(wantedFood.name, '을/를');
-      speakNaturalKorean(`나는 아니에요~ ${targetAnimal.name}에게 ${foodObj} 주세요!`, { pitch: 1.16, rate: 0.94 });
+      speakNaturalKorean(`나는 아니에요. ${targetAnimal.name}에게 ${foodObj} 주세요!`, { pitch: 0.96, rate: 0.92 });
 
       setTimeout(() => {
         setAnimalMoods(prev => ({ ...prev, [droppedAnimalId]: 'hungry' }));
