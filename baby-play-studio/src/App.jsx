@@ -1408,48 +1408,82 @@ function AnimatedAnimalCharacter({ animal, mood = 'hungry', isOver = false, reje
 // 🔊 고품질 자연어 한국어 음성 (TTS) 엔진 (상냥하고 다정한 유아 친화 구어체 톤)
 // ═════════════════════════════════════════════════════════════════════════════
 
-// 보이스 객체 획득 및 음질 점수 계산 (다정한 남성 보이스 최우선 타겟)
-function getBestKoreanVoice() {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
-  const voices = window.speechSynthesis.getVoices();
-  if (!voices || voices.length === 0) return null;
+// 브라우저 보이스 캐시 및 비동기 이벤트 리스너 등록 (아이패드 Safari 보이스 늦은 로딩 대응)
+let cachedVoices = [];
+function updateVoicesCache() {
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    const list = window.speechSynthesis.getVoices();
+    if (list && list.length > 0) {
+      cachedVoices = list;
+    }
+  }
+}
+
+if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  updateVoicesCache();
+  if ('onvoiceschanged' in window.speechSynthesis) {
+    window.speechSynthesis.onvoiceschanged = updateVoicesCache;
+  }
+}
+
+// 보이스 객체 획득 및 성별/기기 환경 분석
+export function getKoreanVoiceInfo() {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return { voice: null, isMale: false };
+  let voices = cachedVoices.length > 0 ? cachedVoices : window.speechSynthesis.getVoices();
+  if (voices && voices.length > 0) cachedVoices = voices;
+  if (!voices || voices.length === 0) return { voice: null, isMale: false };
 
   const koreanVoices = voices.filter(v => v.lang === 'ko-KR' || v.lang.startsWith('ko') || v.lang.includes('ko'));
-  if (koreanVoices.length === 0) return null;
+  if (koreanVoices.length === 0) return { voice: null, isMale: false };
 
   const scoredVoices = koreanVoices.map(voice => {
     const name = voice.name.toLowerCase();
     const uri = (voice.voiceURI || '').toLowerCase();
     let score = 0;
+    let isMale = false;
 
-    // 🏆 다정하고 나긋나긋한 남성 목소리 최우선 1순위 (InJoon Natural, 봉진, 국민, Apple Siri Male 등)
-    if (name.includes('injoon') || name.includes('인준')) score += 1000;
-    if (name.includes('bongjin') || name.includes('봉진')) score += 850;
-    if (name.includes('gookmin') || name.includes('국민')) score += 750;
-    if (name.includes('male') || uri.includes('male') || name.includes('남성') || name.includes('남자')) score += 650;
-    if (name.includes('siri') && (name.includes('1') || name.includes('voice 1') || name.includes('음성 1'))) score += 600;
+    // 🏆 다정하고 나긋나긋한 남성 목소리 최우선 1순위 (PC InJoon Natural, 봉진, 국민, Apple Siri Male 등)
+    if (name.includes('injoon') || name.includes('인준')) { score += 1000; isMale = true; }
+    else if (name.includes('bongjin') || name.includes('봉진')) { score += 850; isMale = true; }
+    else if (name.includes('gookmin') || name.includes('국민')) { score += 750; isMale = true; }
+    else if (name.includes('male') || uri.includes('male') || name.includes('남성') || name.includes('남자')) { score += 650; isMale = true; }
+    else if (name.includes('siri') && (name.includes('1') || name.includes('voice 1') || name.includes('음성 1') || name.includes('남'))) { score += 600; isMale = true; }
+    else if (name.includes('sinji') || name.includes('신지')) { score += 400; isMale = true; }
 
     if (name.includes('natural')) score += 100;
     if (name.includes('online')) score += 90;
     if (name.includes('neural')) score += 90;
     if (name.includes('premium') || name.includes('enhanced')) score += 80;
 
-    // ❌ 여성 목소리는 기본 감점 (-500점)
-    if (name.includes('sunhi') || name.includes('선희')) score -= 500;
-    if (name.includes('yuna') || name.includes('유나')) score -= 500;
-    if (name.includes('heami') || name.includes('혜미')) score -= 700;
-    if (name.includes('seoyeon') || name.includes('서연')) score -= 500;
-    if (name.includes('gaeun') || name.includes('가은')) score -= 500;
-    if (name.includes('female') || uri.includes('female') || name.includes('여성') || name.includes('여자')) score -= 500;
+    // ❌ 여성 목소리는 점수 감점 (남성 음성이 없을 때만 최종 선택되도록 함)
+    const isFemale = name.includes('sunhi') || name.includes('선희') ||
+                     name.includes('yuna') || name.includes('유나') ||
+                     name.includes('heami') || name.includes('혜미') ||
+                     name.includes('seoyeon') || name.includes('서연') ||
+                     name.includes('gaeun') || name.includes('가은') ||
+                     name.includes('female') || uri.includes('female') ||
+                     name.includes('여성') || name.includes('여자') ||
+                     (name.includes('siri') && (name.includes('2') || name.includes('voice 2') || name.includes('음성 2')));
+
+    if (isFemale) {
+      score -= 500;
+      isMale = false;
+    }
 
     if (name.includes('desktop')) score -= 100;
     if (name.includes('sapi5')) score -= 100;
 
-    return { voice, score };
+    return { voice, score, isMale };
   });
 
   scoredVoices.sort((a, b) => b.score - a.score);
-  return scoredVoices[0]?.voice || koreanVoices[0];
+  const best = scoredVoices[0];
+  return { voice: best.voice, isMale: !!best.isMale };
+}
+
+// 하위 호환용 래퍼 함수
+export function getBestKoreanVoice() {
+  return getKoreanVoiceInfo().voice;
 }
 
 // 텍스트를 자연스러운 구어체(다정한 대화체)로 튜닝하고 기호/이모지/물결표 제거
@@ -1465,6 +1499,7 @@ export function formatSpokenKoreanText(text) {
 
   // 2. 문장 끝 다정한 구어체 변환 (물결표 없이 마침표/느낌표/물음표로 자연스러운 숨쉬기 호흡)
   cleanText = cleanText
+    .replace(/배고파요[.·…]+(?=\s*)/g, '배고파요!')
     .replace(/어디 있을까요\?/g, '어디에 있을까요?')
     .replace(/누구일까요\?/g, '누구일까요?')
     .replace(/맞춰볼까요\?/g, '맞춰볼까요?')
@@ -1491,14 +1526,26 @@ export function speakNaturalKorean(text, { pitch = 1.16, rate = 0.92, priority =
     const utterance = new SpeechSynthesisUtterance(spokenText);
     utterance.lang = 'ko-KR';
 
-    const bestVoice = getBestKoreanVoice();
+    const { voice: bestVoice, isMale } = getKoreanVoiceInfo();
     if (bestVoice) {
       utterance.voice = bestVoice;
     }
 
-    // 🌊 사용자가 가장 만족한 '신비 바다속'의 명쾌하고 다정한 황금 톤 & 속도로 전면 통일
-    utterance.pitch = pitch;
-    utterance.rate = rate;
+    // 🎧 기기 및 보이스 환경별 피치(Pitch) 지능형 자동 보정:
+    // 1) 남성 보이스(PC InJoon, 봉진, Siri 남성 등): 기본 음역대가 낮으므로 1.14~1.16이 다정하고 밝은 삼촌/아빠 톤으로 완벽함.
+    // 2) 여성 보이스(아이패드/iOS 기본 Yuna 등): 기본 음역대가 높아 피치 1.16을 곱하면 고음으로 째지므로,
+    //    피치를 0.83~0.85로 낮춰 편안하고 차분한 중저음 톤으로 자동 변환합니다.
+    let finalPitch = pitch;
+    let finalRate = rate;
+
+    if (!isMale) {
+      // 여성 보이스일 경우: 고음 째짐을 차단하고 따뜻하고 차분한 동화 구연가/중저음 톤으로 매핑
+      finalPitch = Math.max(0.78, Math.min(0.90, pitch * 0.72));
+      finalRate = Math.min(rate, 0.93);
+    }
+
+    utterance.pitch = finalPitch;
+    utterance.rate = finalRate;
 
     window.speechSynthesis.speak(utterance);
   } catch (err) {
@@ -2575,7 +2622,8 @@ export default function App() {
     if (!targetAnimal || !targetFood) return;
     const subj = attachJosa(targetAnimal.name, '이/가');
     const obj = attachJosa(targetFood.name, '을/를');
-    speakNaturalKorean(`배고파요. ${subj} 맛있는 ${obj} 먹고 싶대요!`, { pitch: 1.16, rate: 0.92 });
+    // 🦁 '배고파요!'로 연결하여 문장 종결 하향 억양(낮은 톤) 및 긴 정적(텀) 제거, 신비 바다속과 동일하게 경쾌한 톤(1.18, 0.93)으로 즉시 연결
+    speakNaturalKorean(`배고파요! ${subj} 맛있는 ${obj} 먹고 싶대요!`, { pitch: 1.18, rate: 0.93 });
   };
 
   const openFeedModal = () => {
