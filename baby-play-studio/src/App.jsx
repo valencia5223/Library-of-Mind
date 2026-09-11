@@ -413,8 +413,11 @@ const REAL_FRUITS = [
 // 배열 무작위 셔플 헬퍼
 const shuffleArray = (arr) => [...arr].sort(() => 0.5 - Math.random());
 
-// 곰돌이 먹이기용: REAL_FRUITS에서 자동 파생 (icon, name, id, color, bg 사용)
-const ALL_FOOD_ITEMS = REAL_FRUITS.map(f => ({ id: f.id, name: f.name, icon: f.icon, color: f.color, bg: f.bg }));
+// 곰돌이 먹이기용: REAL_FRUITS에서 자동 파생 (실사 이미지, fitPos, objectFit 포함)
+const ALL_FOOD_ITEMS = REAL_FRUITS.map(f => ({
+  id: f.id, name: f.name, icon: f.icon, color: f.color, bg: f.bg,
+  img: f.img, fitPos: f.fitPos, objectFit: f.objectFit
+}));
 
 // 정답 포함 5개 랜덤 선택지 생성 헬퍼
 function pickBearChoices(targetFood) {
@@ -3983,31 +3986,64 @@ export default function App() {
                   onPointerDown={(e) => handleStartDragFood(e, food)}
                   style={{
                     background: '#ffffff',
-                    border: '2.5px solid #fed7aa',
-                    borderRadius: '20px', padding: '12px 8px',
+                    border: `3px solid ${food.color || '#fed7aa'}`,
+                    borderRadius: '22px', padding: '8px 6px',
                     cursor: isFeedBusyRef.current ? 'not-allowed' : 'grab',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)', touchAction: 'none',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
+                    boxShadow: '0 6px 14px rgba(0,0,0,0.08)', touchAction: 'none',
                     opacity: draggingFood?.id === food.id ? 0.25 : 1,
-                    userSelect: 'none'
+                    userSelect: 'none', overflow: 'hidden'
                   }}
                 >
-                  <span style={{ fontSize: '2.5rem', lineHeight: 1 }}>{food.icon}</span>
-                  <span style={{ fontSize: '1rem', fontWeight: 900, color: '#1e293b' }}>{food.name}</span>
+                  <div style={{
+                    width: '64px', height: '64px', borderRadius: '18px', overflow: 'hidden',
+                    background: food.bg || '#f8fafc', border: '1.5px solid rgba(0,0,0,0.08)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    {food.img ? (
+                      <img
+                        src={food.img}
+                        alt={food.name}
+                        style={{
+                          width: '100%', height: '100%',
+                          objectFit: food.objectFit || 'cover',
+                          objectPosition: food.fitPos || 'center center'
+                        }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: '2rem' }}>{food.icon}</span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '1.02rem', fontWeight: 900, color: '#1e293b' }}>{food.name}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* 손가락/마우스를 따라 움직이는 드래그 과일 이펙트 */}
+          {/* 손가락/마우스를 따라 움직이는 드래그 과일 이펙트 (고화질 실사 뱃지) */}
           {draggingFood && (
             <div style={{
               position: 'fixed', left: dragPos.x, top: dragPos.y,
-              transform: 'translate(-50%, -50%) scale(1.3)',
-              zIndex: 2000, pointerEvents: 'none', fontSize: '4.5rem',
-              filter: 'drop-shadow(0 12px 20px rgba(0,0,0,0.35))'
+              transform: 'translate(-50%, -50%) scale(1.15)',
+              zIndex: 2000, pointerEvents: 'none',
+              width: '76px', height: '76px', borderRadius: '50%',
+              overflow: 'hidden', border: `4px solid ${draggingFood.color || '#ffffff'}`,
+              boxShadow: '0 12px 28px rgba(0,0,0,0.38)', background: '#ffffff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
-              {draggingFood.icon}
+              {draggingFood.img ? (
+                <img
+                  src={draggingFood.img}
+                  alt={draggingFood.name}
+                  style={{
+                    width: '100%', height: '100%',
+                    objectFit: draggingFood.objectFit || 'cover',
+                    objectPosition: draggingFood.fitPos || 'center center'
+                  }}
+                />
+              ) : (
+                <span style={{ fontSize: '3rem' }}>{draggingFood.icon}</span>
+              )}
             </div>
           )}
         </div>
