@@ -1477,7 +1477,7 @@ export function formatSpokenKoreanText(text) {
   return cleanText;
 }
 
-export function speakNaturalKorean(text, { pitch = 0.96, rate = 0.92, priority = true } = {}) {
+export function speakNaturalKorean(text, { pitch = 1.16, rate = 0.92, priority = true } = {}) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
   try {
@@ -1496,22 +1496,8 @@ export function speakNaturalKorean(text, { pitch = 0.96, rate = 0.92, priority =
       utterance.voice = bestVoice;
     }
 
-    const name = bestVoice ? (bestVoice.name || '').toLowerCase() : '';
-    const uri = bestVoice ? (bestVoice.voiceURI || '').toLowerCase() : '';
-    const isExplicitMale = name.includes('injoon') || name.includes('인준') ||
-      name.includes('bongjin') || name.includes('봉진') ||
-      name.includes('gookmin') || name.includes('국민') ||
-      name.includes('male') || uri.includes('male') ||
-      (name.includes('siri') && (name.includes('1') || name.includes('voice 1')));
-
-    // 💡 아이패드/아이폰(iOS)처럼 남성 보이스가 기본 탑재되지 않고 유나(여성)만 있는 경우:
-    // 피치를 0.76~0.78로 낮추어 차분하고 다정한 삼촌/남성 톤으로 실시간 주파수 변조!
-    let finalPitch = pitch;
-    if (!isExplicitMale) {
-      finalPitch = 0.77;
-    }
-
-    utterance.pitch = finalPitch;
+    // 🌊 사용자가 가장 만족한 '신비 바다속'의 명쾌하고 다정한 황금 톤 & 속도로 전면 통일
+    utterance.pitch = pitch;
     utterance.rate = rate;
 
     window.speechSynthesis.speak(utterance);
@@ -2530,7 +2516,7 @@ export default function App() {
       if (item.soundUrl) {
         audioEngine.playItemSound(item);
       } else {
-        speakNaturalKorean(`맛있는 ${item.name}!`, { pitch: 1.02, rate: 0.94 });
+        speakNaturalKorean(`맛있는 ${item.name}!`, { pitch: 1.16, rate: 0.92 });
       }
     }, 100);
   };
@@ -2582,14 +2568,14 @@ export default function App() {
     }
   };
 
-  // 🦁 동물 과일 먹이기 음성 안내 (다정하고 편안한 남성 목소리)
+  // 🦁 동물 과일 먹이기 음성 안내 (신비 바다속 음성과 동일한 다정하고 맑은 톤으로 전면 통일)
   const speakFeedWish = (animal, food) => {
     const targetAnimal = animal || feedRound?.target;
     const targetFood = food || feedRound?.food;
     if (!targetAnimal || !targetFood) return;
     const subj = attachJosa(targetAnimal.name, '이/가');
     const obj = attachJosa(targetFood.name, '을/를');
-    speakNaturalKorean(`배고파요. ${subj} 맛있는 ${obj} 먹고 싶대요!`, { pitch: 0.96, rate: 0.92 });
+    speakNaturalKorean(`배고파요. ${subj} 맛있는 ${obj} 먹고 싶대요!`, { pitch: 1.16, rate: 0.92 });
   };
 
   const openFeedModal = () => {
@@ -2619,14 +2605,14 @@ export default function App() {
         });
         setFeedScore(prev => prev + 1);
 
-        // 🗣️ 동물이 직접 소감 표현 (물결표 없는 깨끗한 다정한 남성톤)
+        // 🗣️ 동물이 직접 소감 표현 (신비 바다속 톤: pitch 1.16, rate 0.92 통일)
         const praisePhrases = [
           `냠냠! ${wantedFood.name} 정말 맛있어요! 고마워요!`,
           `와아! ${wantedFood.name} 최고예요! 냠냠 맛있어요!`,
           `냠냠 꿀꺽! 달콤한 ${wantedFood.name} 맛있어요! 배가 든든해요!`
         ];
         const randomPraise = praisePhrases[Math.floor(Math.random() * praisePhrases.length)];
-        speakNaturalKorean(randomPraise, { pitch: 0.96, rate: 0.92 });
+        speakNaturalKorean(randomPraise, { pitch: 1.16, rate: 0.92 });
 
         // 1.2초 후 기뻐하기 (만세 + 하트눈 + 팡파레)
         setTimeout(() => {
@@ -2655,7 +2641,7 @@ export default function App() {
 
         const animalSubj = attachJosa(targetAnimal.name, '은/는');
         const foodObj = attachJosa(wantedFood.name, '을/를');
-        speakNaturalKorean(`으응, 이거 말고! ${animalSubj} ${foodObj} 먹고 싶대요.`, { pitch: 0.96, rate: 0.92 });
+        speakNaturalKorean(`으응, 이거 말고! ${animalSubj} ${foodObj} 먹고 싶대요.`, { pitch: 1.16, rate: 0.92 });
 
         setTimeout(() => {
           setAnimalMoods(prev => ({ ...prev, [targetAnimal.id]: 'hungry' }));
@@ -2676,7 +2662,7 @@ export default function App() {
       setTimeout(() => audioEngine.playFreq(160, 'sawtooth', 0.2, 0.5), 240);
 
       const foodObj = attachJosa(wantedFood.name, '을/를');
-      speakNaturalKorean(`나는 아니에요. ${targetAnimal.name}에게 ${foodObj} 주세요!`, { pitch: 0.96, rate: 0.92 });
+      speakNaturalKorean(`나는 아니에요. ${targetAnimal.name}에게 ${foodObj} 주세요!`, { pitch: 1.16, rate: 0.92 });
 
       setTimeout(() => {
         setAnimalMoods(prev => ({ ...prev, [droppedAnimalId]: 'hungry' }));
@@ -3786,7 +3772,7 @@ export default function App() {
                     <Volume2 size={24} /> 울음소리 다시 듣기 🔊
                   </button>
                 )}
-                <button onClick={() => speakNaturalKorean(selectedRealItem.soundText ? `${selectedRealItem.name}! ${selectedRealItem.soundText}` : `맛있는 ${selectedRealItem.name}!`, { pitch: 1.02, rate: 0.94 })} style={{
+                <button onClick={() => speakNaturalKorean(selectedRealItem.soundText ? `${selectedRealItem.name}! ${selectedRealItem.soundText}` : `맛있는 ${selectedRealItem.name}!`, { pitch: 1.16, rate: 0.92 })} style={{
                   background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', color: '#ffffff', border: 'none',
                   padding: '14px 24px', borderRadius: '22px', fontSize: '1.2rem', fontWeight: 900,
                   cursor: 'pointer', boxShadow: '0 8px 20px rgba(99,102,241,0.25)',
