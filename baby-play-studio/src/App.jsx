@@ -1377,30 +1377,88 @@ function AnimatedAnimalCharacter({ animal, mood = 'hungry', isOver = false, reje
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// 🔊 고품질 자연어 한국어 음성 (TTS) 엔진 (상냥하고 다정한 유아 친화 톤)
+// 🔊 고품질 자연어 한국어 음성 (TTS) 엔진 (상냥하고 다정한 유아 친화 구어체 톤)
 // ═════════════════════════════════════════════════════════════════════════════
-export function speakNaturalKorean(text, { pitch = 1.18, rate = 0.93, priority = true } = {}) {
+
+// 보이스 객체 획득 및 음질 점수 계산 (전자음/Heami 데스크톱 보이스 감점, MS Natural/Google Neural/Apple Yuna 가점)
+function getBestKoreanVoice() {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices || voices.length === 0) return null;
+
+  const koreanVoices = voices.filter(v => v.lang === 'ko-KR' || v.lang.startsWith('ko') || v.lang.includes('ko'));
+  if (koreanVoices.length === 0) return null;
+
+  const scoredVoices = koreanVoices.map(voice => {
+    const name = voice.name.toLowerCase();
+    let score = 0;
+
+    // AI Neural / Online 고품질 구어체 보이스 최우선 가점
+    if (name.includes('natural')) score += 100;
+    if (name.includes('online')) score += 90;
+    if (name.includes('neural')) score += 90;
+    if (name.includes('sunhi')) score += 85;  // MS SunHi Natural (가장 자연스러운 한국어 여성 구어체)
+    if (name.includes('injoon')) score += 80; // MS InJoon Natural (남성 구어체)
+    if (name.includes('yuna')) score += 80;   // Apple Yuna Enhanced
+    if (name.includes('google')) score += 75; // Google Neural 한국어
+    if (name.includes('seoyeon')) score += 60;
+    if (name.includes('gaeun')) score += 60;
+    if (name.includes('multilingual')) score += 50;
+
+    // 기계음/전자음 유발 구형 데스크톱/SAPI5 보이스 차단 및 강한 감점 (Heami 등)
+    if (name.includes('heami')) score -= 100;
+    if (name.includes('desktop')) score -= 80;
+    if (name.includes('sapi5')) score -= 80;
+    if (name.includes('local')) score -= 20;
+
+    return { voice, score };
+  });
+
+  scoredVoices.sort((a, b) => b.score - a.score);
+  return scoredVoices[0]?.voice || koreanVoices[0];
+}
+
+// 텍스트를 자연스러운 구어체(다정한 대화체)로 튜닝하고 기호/이모지 쉼표 호흡 정형화
+export function formatSpokenKoreanText(text) {
+  if (!text) return '';
+
+  // 1. 이모지 및 특수 기호 제거 (TTS 유닛 발음 오류 및 깨짐 완전 방지)
+  let cleanText = text.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '');
+
+  // 2. 문장 끝 다정한 구어체 변환 및 자연스러운 쉼표(숨쉬기) 억양 부여
+  cleanText = cleanText
+    .replace(/어디 있을까요\?/g, '어디에 있을까요~?')
+    .replace(/누구일까요\?/g, '누구일까요~?')
+    .replace(/맞춰볼까요\?/g, '맞춰볼까요~?')
+    .replace(/먹고 싶어요!/g, '먹고 싶대요~!')
+    .replace(/먹고 싶어요~/g, '먹고 싶대요~!')
+    .replace(/참 잘했어요~/g, '참 잘했어요! 대단해요!')
+    .replace(/정말 최고예요~/g, '정말 최고예요!')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return cleanText;
+}
+
+export function speakNaturalKorean(text, { pitch = 1.02, rate = 0.94, priority = true } = {}) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
   try {
     if (priority) {
       window.speechSynthesis.cancel();
     }
-    const utterance = new SpeechSynthesisUtterance(text);
+
+    const spokenText = formatSpokenKoreanText(text);
+    if (!spokenText) return;
+
+    const utterance = new SpeechSynthesisUtterance(spokenText);
     utterance.lang = 'ko-KR';
+
+    // 구어체 자연스러운 톤 Calibration: pitch 1.02, rate 0.94 (전자음 distortion 완전 방지)
     utterance.pitch = pitch;
     utterance.rate = rate;
 
-    const voices = window.speechSynthesis.getVoices();
-    const koreanVoices = voices.filter(v => v.lang === 'ko-KR' || v.lang.startsWith('ko') || v.lang.includes('ko'));
-
-    // MS Natural / Google Neural / Apple Yuna / Windows SunHi / Heami 등 고음질 자연어 보이스 우선 선택
-    const bestVoice = koreanVoices.find(v => {
-      const n = v.name.toLowerCase();
-      return n.includes('natural') || n.includes('online') || n.includes('neural') ||
-             n.includes('google') || n.includes('yuna') || n.includes('sunhi') ||
-             n.includes('heami') || n.includes('gaeun') || n.includes('seoyeon');
-    }) || koreanVoices[0];
-
+    const bestVoice = getBestKoreanVoice();
     if (bestVoice) {
       utterance.voice = bestVoice;
     }
@@ -2418,8 +2476,12 @@ export default function App() {
   const openRealDetailModal = (item) => {
     setSelectedRealItem(item);
     setTimeout(() => {
-      if (item.soundUrl) audioEngine.playItemSound(item);
-    }, 0);
+      if (item.soundUrl) {
+        audioEngine.playItemSound(item);
+      } else {
+        speakNaturalKorean(`맛있는 ${item.name}!`, { pitch: 1.02, rate: 0.94 });
+      }
+    }, 100);
   };
 
   const closeItemModal = () => {
@@ -3659,19 +3721,29 @@ export default function App() {
             </div>
 
             <div style={{ padding: '2rem', textAlign: 'center', background: selectedRealItem.bg }}>
-              <h2 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#0f172a', margin: selectedRealItem.soundUrl ? '0 0 14px 0' : '0' }}>
+              <h2 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#0f172a', margin: '0 0 14px 0' }}>
                 {selectedRealItem.icon ? `${selectedRealItem.icon} ` : ''}{selectedRealItem.name}
               </h2>
-              {selectedRealItem.soundUrl && (
-                <button onClick={() => audioEngine.playItemSound(selectedRealItem)} style={{
-                  background: selectedRealItem.color, color: '#ffffff', border: 'none',
-                  padding: '14px 28px', borderRadius: '22px', fontSize: '1.3rem', fontWeight: 900,
-                  cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,0,0,0.18)',
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                {selectedRealItem.soundUrl && (
+                  <button onClick={() => audioEngine.playItemSound(selectedRealItem)} style={{
+                    background: selectedRealItem.color, color: '#ffffff', border: 'none',
+                    padding: '14px 24px', borderRadius: '22px', fontSize: '1.2rem', fontWeight: 900,
+                    cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,0,0,0.18)',
+                    display: 'inline-flex', alignItems: 'center', gap: '10px'
+                  }}>
+                    <Volume2 size={24} /> 울음소리 다시 듣기 🔊
+                  </button>
+                )}
+                <button onClick={() => speakNaturalKorean(selectedRealItem.soundText ? `${selectedRealItem.name}! ${selectedRealItem.soundText}` : `맛있는 ${selectedRealItem.name}!`, { pitch: 1.02, rate: 0.94 })} style={{
+                  background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', color: '#ffffff', border: 'none',
+                  padding: '14px 24px', borderRadius: '22px', fontSize: '1.2rem', fontWeight: 900,
+                  cursor: 'pointer', boxShadow: '0 8px 20px rgba(99,102,241,0.25)',
                   display: 'inline-flex', alignItems: 'center', gap: '10px'
                 }}>
-                  <Volume2 size={26} /> 울음소리 다시 듣기 🔊
+                  🗣️ 다정한 구어체로 듣기
                 </button>
-              )}
+              </div>
             </div>
           </div>
         </div>
