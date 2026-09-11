@@ -1497,9 +1497,10 @@ export function formatSpokenKoreanText(text) {
     .replace(/[*#@^&_+={}\[\]<>"'`]/g, ' ')
     .replace(/["'""'']/g, '');
 
-  // 2. 문장 끝 다정한 구어체 변환 (물결표 없이 마침표/느낌표/물음표로 자연스러운 숨쉬기 호흡)
+  // 2. '배고파요' 뒤의 마침표/느낌표/물결표/쉼표 등 모든 부호를 완전 제거하고 공백 1칸만 유지
+  // (TTS 엔진이 느낌표(!)나 마침표(.)를 문장 분리로 인식하여 0.7~0.9초간 긴 묵음 텀을 만드는 현상을 100% 원천 차단)
   cleanText = cleanText
-    .replace(/배고파요[.·…]+(?=\s*)/g, '배고파요!')
+    .replace(/배고파요[!.,·…~～\s]*/g, '배고파요 ')
     .replace(/어디 있을까요\?/g, '어디에 있을까요?')
     .replace(/누구일까요\?/g, '누구일까요?')
     .replace(/맞춰볼까요\?/g, '맞춰볼까요?')
@@ -2622,8 +2623,8 @@ export default function App() {
     if (!targetAnimal || !targetFood) return;
     const subj = attachJosa(targetAnimal.name, '이/가');
     const obj = attachJosa(targetFood.name, '을/를');
-    // 🦁 '배고파요!'로 연결하여 문장 종결 하향 억양(낮은 톤) 및 긴 정적(텀) 제거, 신비 바다속과 동일하게 경쾌한 톤(1.18, 0.93)으로 즉시 연결
-    speakNaturalKorean(`배고파요! ${subj} 맛있는 ${obj} 먹고 싶대요!`, { pitch: 1.18, rate: 0.93 });
+    // 🦁 '배고파요' 뒤에 부호를 일체 넣지 않고 공백으로만 연결하여 0.8초 문장 분리 텀을 완전히 제거하고, 신비 바다속과 동일한 밝고 경쾌한 톤(pitch 1.20, rate 0.94)으로 직결
+    speakNaturalKorean(`배고파요 ${subj} 맛있는 ${obj} 먹고 싶대요!`, { pitch: 1.20, rate: 0.94 });
   };
 
   const openFeedModal = () => {
