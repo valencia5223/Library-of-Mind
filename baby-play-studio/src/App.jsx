@@ -1396,23 +1396,24 @@ function getBestKoreanVoice() {
     const name = voice.name.toLowerCase();
     let score = 0;
 
-    // AI Neural / Online 고품질 구어체 보이스 최우선 가점
+    // 나긋나긋 다정한 남성 자연어 보이스 최우선 1순위 타겟 (InJoon Natural / 인준 등)
+    if (name.includes('injoon') || name.includes('인준')) score += 300;
+    if (name.includes('male') || name.includes('남성')) score += 150;
     if (name.includes('natural')) score += 100;
     if (name.includes('online')) score += 90;
     if (name.includes('neural')) score += 90;
-    if (name.includes('sunhi')) score += 85;  // MS SunHi Natural (가장 자연스러운 한국어 여성 구어체)
-    if (name.includes('injoon')) score += 80; // MS InJoon Natural (남성 구어체)
-    if (name.includes('yuna')) score += 80;   // Apple Yuna Enhanced
-    if (name.includes('google')) score += 75; // Google Neural 한국어
+    if (name.includes('yuna')) score += 80;
+    if (name.includes('sunhi')) score += 75;
+    if (name.includes('google')) score += 75;
     if (name.includes('seoyeon')) score += 60;
     if (name.includes('gaeun')) score += 60;
     if (name.includes('multilingual')) score += 50;
 
     // 기계음/전자음 유발 구형 데스크톱/SAPI5 보이스 차단 및 강한 감점 (Heami 등)
-    if (name.includes('heami')) score -= 100;
-    if (name.includes('desktop')) score -= 80;
-    if (name.includes('sapi5')) score -= 80;
-    if (name.includes('local')) score -= 20;
+    if (name.includes('heami')) score -= 150;
+    if (name.includes('desktop')) score -= 100;
+    if (name.includes('sapi5')) score -= 100;
+    if (name.includes('local')) score -= 30;
 
     return { voice, score };
   });
