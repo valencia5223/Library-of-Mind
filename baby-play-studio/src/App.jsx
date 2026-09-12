@@ -3280,32 +3280,22 @@ function BedtimeSleepView() {
               ref={el => (bedRefs.current[animal.id] = el)}
               style={{
                 height: '100%', maxHeight: '350px',
-                background: isLightsOff ? '#1f2937' : '#ffffff',
-                borderRadius: '28px',
-                border: isTargeted
-                  ? '4px solid #facc15'
-                  : `4px solid ${animal.bedBorder}`,
-                boxShadow: isTargeted
-                  ? '0 0 35px rgba(250, 204, 21, 0.85)'
-                  : isLightsOff ? '0 12px 30px rgba(0,0,0,0.6)' : '0 10px 24px rgba(0,0,0,0.08)',
+                background: 'transparent',
+                border: 'none',
+                boxShadow: 'none',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
-                padding: '1rem 0.9rem', position: 'relative', overflow: 'hidden',
-                transform: isTargeted ? 'scale(1.03)' : 'scale(1)',
+                padding: '0.5rem 0.2rem', position: 'relative',
+                transform: isTargeted ? 'scale(1.04)' : 'scale(1)',
+                filter: isTargeted ? 'drop-shadow(0 0 25px rgba(250, 204, 21, 0.95))' : 'none',
                 transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)'
               }}
             >
-              {/* 침대 헤드보드 (따스한 프레임 캡) */}
-              <div style={{
-                position: 'absolute', top: 0, left: '16px', right: '16px', height: '12px',
-                background: animal.bedBorder, borderRadius: '0 0 12px 12px'
-              }} />
-
               {/* 하트/별 팝업 파티클 */}
               {hearts.filter(h => h.animalId === animal.id).map(h => (
                 <div
                   key={h.id}
                   style={{
-                    position: 'absolute', top: '35px', fontSize: '2rem',
+                    position: 'absolute', top: '15px', fontSize: '2rem',
                     animation: 'choirFloat 1s forwards ease-out', pointerEvents: 'none', zIndex: 30
                   }}
                 >
@@ -3313,58 +3303,41 @@ function BedtimeSleepView() {
                 </div>
               ))}
 
-              {/* 침대 상단 말풍선 & 가이드 */}
-              <div style={{
-                background: isTargeted
-                  ? '#fef08a'
-                  : isLightsOff ? '#374151' : animal.bedColor,
-                border: isTargeted ? '2px solid #ca8a04' : `2px solid ${animal.bedBorder}`,
-                borderRadius: '14px', padding: '4px 12px', fontSize: '0.85rem', fontWeight: 900,
-                color: isTargeted ? '#854d0e' : isLightsOff ? '#f8fafc' : '#78350f',
-                marginTop: '4px', textAlign: 'center', zIndex: 10
-              }}>
-                {isTargeted
-                  ? '✨ 여기에 이불을 덮어주세요!'
-                  : st.hasBlanket
-                    ? '😴 포근포근 쿨쿨... zZ'
-                    : st.yawn
-                      ? '🥱 하아암~ 이불 덮어줘요'
-                      : '👀 이불을 끌어다 덮어줘요!'}
-              </div>
-
-              {/* 🛏️ 실제 동물 침대 프레임 & 베개 & 누워있는 동물 일러스트 영역 */}
+              {/* 🛏️ 프레임 없는 오픈 침실: 구름 베개 & 누워있는 동물 일러스트 */}
               <div
                 onClick={() => handlePatAnimal(animal.id)}
                 title="톡톡 토닥여주거나, 아래 이불을 드래그해 덮어주세요!"
                 style={{
-                  width: '100%', height: '185px', borderRadius: '22px',
-                  background: isLightsOff
-                    ? 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)'
-                    : `linear-gradient(180deg, ${animal.bedColor} 0%, #ffffff 100%)`,
-                  border: isTargeted ? '3px dashed #eab308' : `3px solid ${animal.bedBorder}`,
-                  position: 'relative', overflow: 'hidden', cursor: 'pointer',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: 'inset 0 4px 14px rgba(0,0,0,0.06)'
+                  width: '100%', height: '200px',
+                  position: 'relative', cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
                 }}
               >
+                {/* 바닥의 은은하고 포근한 소프트 섀도우 (프레임 박스 대신 자연스러운 공간감) */}
+                <div style={{
+                  position: 'absolute', bottom: '10px', width: '85%', height: '36px',
+                  background: 'radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.18) 0%, transparent 75%)',
+                  borderRadius: '50%', pointerEvents: 'none', zIndex: 1
+                }} />
+
                 {/* 1. 상단 푹신한 하얀 구름 베개 (Pillow Layer) */}
                 <div style={{
-                  position: 'absolute', top: '12px', width: '82%', height: '44px',
-                  background: '#ffffff', borderRadius: '20px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1), inset 0 2px 4px rgba(255,255,255,0.8)',
-                  border: '2px solid #e2e8f0', zIndex: 2
+                  position: 'absolute', top: '16px', width: '80%', height: '48px',
+                  background: '#ffffff', borderRadius: '24px',
+                  boxShadow: '0 6px 16px rgba(0,0,0,0.1), inset 0 2px 5px rgba(255,255,255,0.9)',
+                  border: '1.5px solid rgba(226, 232, 240, 0.8)', zIndex: 2
                 }}>
                   {/* 베개 퀼팅 스티치 선 */}
                   <div style={{
-                    position: 'absolute', inset: '4px', borderRadius: '16px',
-                    border: '1.5px dashed #cbd5e1', opacity: 0.6
+                    position: 'absolute', inset: '4px', borderRadius: '20px',
+                    border: '1.5px dashed #cbd5e1', opacity: 0.55
                   }} />
                 </div>
 
-                {/* 2. 베개에 누워있는 동물 SVG 캐릭터 (Lying Animal Layer) */}
+                {/* 2. 베개에 누워있는 동물 SVG 캐릭터 (얼굴이 이불 위로 100% 쏙 보임) */}
                 <div style={{
-                  width: '88%', height: '150px', position: 'relative', zIndex: 3,
-                  marginTop: '10px'
+                  width: '92%', height: '160px', position: 'relative', zIndex: 3,
+                  marginTop: '6px'
                 }}>
                   <AnimalComp isAsleep={st.isAsleep} hasBlanket={st.hasBlanket} />
                 </div>
@@ -3374,7 +3347,7 @@ function BedtimeSleepView() {
                   <div
                     className="sleep-zz-anim"
                     style={{
-                      position: 'absolute', top: '6px', right: '14px',
+                      position: 'absolute', top: '6px', right: '18px',
                       fontSize: '1.7rem', fontWeight: 900, color: '#c084fc',
                       textShadow: '0 2px 6px rgba(0,0,0,0.3)', pointerEvents: 'none', zIndex: 25
                     }}
@@ -3383,83 +3356,70 @@ function BedtimeSleepView() {
                   </div>
                 )}
 
-                {/* 3. 🛏️ 실제 퀼팅 이불 (동물의 몸을 감싸고 얼굴만 쏙 빼꼼 나오는 턱인 애니메이션) */}
+                {/* 3. 🛏️ 동물에게 덮인 실제 퀼팅 이불 (글자 없는 순수 이불 형상, 얼굴 아래 몸통/배만 포근하게 덮임) */}
                 {st.hasBlanket && (
                   <div
+                    onClick={(e) => handleRemoveBlanket(animal.id, e)}
+                    title="이불을 누르면 바닥으로 다시 펼쳐져요!"
                     className={`${activeBlanket.blanketClass || ''} ${isSnuggling ? 'blanket-tuck-anim' : ''}`}
                     style={{
-                      position: 'absolute', bottom: '0', left: '3%', right: '3%', height: '62%',
-                      borderRadius: '8px 8px 18px 18px',
-                      boxShadow: '0 -8px 20px rgba(0,0,0,0.25), inset 0 2px 6px rgba(255,255,255,0.45)',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      zIndex: 10, overflow: 'hidden'
+                      position: 'absolute', bottom: '6px', left: '4%', right: '4%', height: '42%',
+                      borderRadius: '16px 16px 26px 26px',
+                      boxShadow: '0 -6px 18px rgba(0,0,0,0.22), inset 0 3px 6px rgba(255,255,255,0.4)',
+                      zIndex: 10, overflow: 'hidden', cursor: 'pointer'
                     }}
                   >
-                    {/* 상단 도톰한 뽀송뽀송 양털/순면 깃 (Folded Sherpa Rim) */}
+                    {/* 상단 도톰한 뽀송뽀송 양털/플란넬 접힌 깃 (글자 없는 순수 깃) */}
                     <div style={{
                       position: 'absolute', top: 0, left: 0, right: 0, height: '16px',
-                      background: 'linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%)',
-                      borderBottom: '2.5px dashed rgba(0, 0, 0, 0.15)',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        {[...Array(9)].map((_, i) => (
-                          <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: activeBlanket.blanketColor, opacity: 0.5 }} />
-                        ))}
-                      </div>
-                    </div>
+                      background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+                      borderBottom: '2px dashed rgba(148, 163, 184, 0.45)',
+                      boxShadow: '0 2px 5px rgba(0,0,0,0.08)'
+                    }} />
 
-                    {/* 이불 중앙 자수 라벨 */}
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: '6px',
-                      background: 'rgba(255,255,255,0.92)', padding: '5px 14px',
-                      borderRadius: '16px', boxShadow: '0 3px 10px rgba(0,0,0,0.18)',
-                      marginTop: '10px'
-                    }}>
-                      <span style={{ fontSize: '1.4rem' }}>{activeBlanket.blanketEmoji}</span>
-                      <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#1e293b' }}>
-                        {activeBlanket.blanketName}
-                      </span>
-                    </div>
+                    {/* 실제 패브릭 주름 및 입체 음영 */}
+                    <div className="fabric-fold-shadow" />
                   </div>
                 )}
               </div>
 
-              {/* 하단 버튼 바: 토닥이기 & 이불 걷기 */}
-              <div style={{ display: 'flex', width: '100%', gap: '8px', zIndex: 10, marginTop: '8px' }}>
+              {/* 하단 버튼 바: 토닥이기 & 이불 걷기 (틀에 박힌 프레임 없는 미니멀 스타일) */}
+              <div style={{ display: 'flex', width: '100%', gap: '8px', zIndex: 10, marginTop: '4px' }}>
                 {st.hasBlanket ? (
                   <button
                     onClick={(e) => handleRemoveBlanket(animal.id, e)}
                     style={{
-                      flex: 1, padding: '7px', borderRadius: '14px', border: 'none',
-                      background: '#f1f5f9', color: '#64748b',
-                      fontWeight: 900, fontSize: '0.82rem', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
+                      flex: 1, padding: '6px 10px', borderRadius: '16px', border: 'none',
+                      background: isLightsOff ? 'rgba(51, 65, 85, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+                      color: isLightsOff ? '#cbd5e1' : '#64748b',
+                      fontWeight: 800, fontSize: '0.78rem', cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                      backdropFilter: 'blur(6px)'
                     }}
                   >
                     이불 개기 🛏️
                   </button>
                 ) : (
                   <div style={{
-                    flex: 1, padding: '7px', borderRadius: '14px',
-                    background: isLightsOff ? '#111827' : '#f8fafc',
-                    border: `1.5px dashed ${animal.bedBorder}`,
-                    color: isLightsOff ? '#9ca3af' : '#78350f',
-                    fontSize: '0.78rem', fontWeight: 800, textAlign: 'center'
+                    flex: 1, padding: '6px 8px', borderRadius: '16px',
+                    background: isLightsOff ? 'rgba(30, 41, 59, 0.6)' : 'rgba(255, 255, 255, 0.7)',
+                    color: isLightsOff ? '#94a3b8' : '#78350f',
+                    fontSize: '0.76rem', fontWeight: 800, textAlign: 'center',
+                    backdropFilter: 'blur(6px)'
                   }}>
-                    이불을 끌어다 덮어줘요 👆
+                    이불 덮어주기 👆
                   </div>
                 )}
 
                 <button
                   onClick={() => handlePatAnimal(animal.id)}
                   style={{
-                    padding: '7px 12px', borderRadius: '14px', border: `2px solid ${animal.bedBorder}`,
-                    background: isLightsOff ? '#111827' : '#ffffff',
-                    color: isLightsOff ? '#f8fafc' : animal.bedBorder,
-                    fontWeight: 900, fontSize: '0.82rem', cursor: 'pointer'
+                    padding: '6px 12px', borderRadius: '16px', border: 'none',
+                    background: isLightsOff ? 'rgba(51, 65, 85, 0.8)' : 'rgba(255, 255, 255, 0.9)',
+                    color: isLightsOff ? '#f8fafc' : '#b45309',
+                    fontWeight: 900, fontSize: '0.78rem', cursor: 'pointer',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+                    backdropFilter: 'blur(6px)'
                   }}
                 >
                   토닥토닥 ({st.pats}/3)
@@ -3470,9 +3430,9 @@ function BedtimeSleepView() {
         })}
       </div>
 
-      {/* 🛏️ 하단: 방바닥 빈 공간에 실제 자연스럽게 촤르륵 펼쳐져 있는 솜이불들 */}
+      {/* 🛏️ 하단: 방바닥 빈 공간에 실제 자연스럽게 촤르륵 펼쳐져 있는 솜이불들 (글자 전혀 없이 오직 순수한 이불 형상만) */}
       <div style={{
-        marginTop: '1rem',
+        marginTop: '1.2rem',
         padding: '0 8px',
         display: 'flex',
         flexDirection: 'column',
@@ -3480,77 +3440,38 @@ function BedtimeSleepView() {
         position: 'relative',
         zIndex: 10
       }}>
-        {/* 바닥 위의 은은한 안내 캡슐 (틀에 박힌 박스 대신 바닥 위 자연스러운 힌트) */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '8px',
-          opacity: 0.88
-        }}>
-          <span style={{
-            fontSize: '0.86rem',
-            fontWeight: 800,
-            color: isLightsOff ? '#e2e8f0' : '#7c2d12',
-            background: isLightsOff ? 'rgba(30, 41, 59, 0.75)' : 'rgba(255, 255, 255, 0.75)',
-            backdropFilter: 'blur(8px)',
-            padding: '4px 14px',
-            borderRadius: '20px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-          }}>
-            🧸 바닥에 촤르륵 펼쳐진 포근한 솜이불을 끌어올려 동물 친구를 덮어주세요! ({Object.values(animalStates).filter(s => s.hasBlanket).length}/3)
-          </span>
-        </div>
-
-        {/* 바닥에 자연스럽게 펼쳐진 3채의 실제 솜이불 (직사각형 박스 테두리 없는 오픈 공간) */}
+        {/* 바닥에 자연스럽게 촤르륵 펼쳐진 3채의 실제 솜이불 (글자/프레임 없이 순수한 이불 형상) */}
         <div style={{
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          gap: '18px',
+          gap: '24px',
           flexWrap: 'wrap',
-          minHeight: '150px'
+          minHeight: '145px'
         }}>
           {SLEEP_ANIMAL_DATA.map((item, index) => {
             const isUsed = animalStates[item.id].hasBlanket;
             // 각 이불마다 바닥에 실제 놓여있는 것처럼 서로 다른 자연스러운 회전 각도
-            const spreadRotations = ['-2.8deg', '1.5deg', '-1.9deg'];
+            const spreadRotations = ['-3deg', '1.8deg', '-2.2deg'];
             const spreadRotation = spreadRotations[index % 3];
 
             if (isUsed) {
-              // 이불을 동물에게 덮어준 경우: 바닥에는 이불이 놓여있던 포근한 린넨 매트 실루엣만 은은하게 남음
+              // 이불을 동물에게 덮어준 경우: 바닥에는 이불이 놓여있던 포근한 바닥 매트 실루엣만 부드럽게 남음 (글자 없음)
               return (
                 <div
                   key={item.blanketId}
                   style={{
                     flex: '1 1 200px',
                     maxWidth: '280px',
-                    height: '125px',
-                    borderRadius: '34px 44px 28px 38px',
-                    border: isLightsOff ? '2px dashed rgba(148, 163, 184, 0.25)' : '2.5px dashed rgba(251, 146, 60, 0.35)',
-                    background: isLightsOff ? 'rgba(30, 41, 59, 0.25)' : 'rgba(255, 247, 237, 0.45)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '4px',
+                    height: '135px',
+                    borderRadius: '36px 48px 30px 42px',
+                    border: isLightsOff ? '2px dashed rgba(148, 163, 184, 0.2)' : '2px dashed rgba(251, 146, 60, 0.25)',
+                    background: isLightsOff ? 'rgba(30, 41, 59, 0.2)' : 'rgba(255, 247, 237, 0.35)',
                     transform: `rotate(${spreadRotation}) scale(0.96)`,
                     transition: 'all 0.3s ease',
-                    boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.04)'
+                    boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.03)'
                   }}
-                >
-                  <span style={{ fontSize: '1.6rem', filter: 'grayscale(60%)', opacity: 0.7 }}>
-                    {item.blanketEmoji}
-                  </span>
-                  <span style={{
-                    fontSize: '0.8rem',
-                    fontWeight: 800,
-                    color: isLightsOff ? '#94a3b8' : '#9a3412',
-                    opacity: 0.8
-                  }}>
-                    {item.name}에게 덮어줌 💤
-                  </span>
-                </div>
+                />
               );
             }
 
@@ -3562,139 +3483,50 @@ function BedtimeSleepView() {
                 style={{
                   flex: '1 1 200px',
                   maxWidth: '290px',
-                  height: '130px',
-                  borderRadius: index === 0 ? '38px 50px 30px 44px' : index === 1 ? '44px 34px 46px 32px' : '34px 46px 32px 48px',
+                  height: '140px',
+                  borderRadius: index === 0 ? '42px 56px 34px 48px' : index === 1 ? '48px 38px 52px 36px' : '38px 50px 36px 54px',
                   transform: `rotate(${spreadRotation})`,
                   overflow: 'hidden',
-                  padding: '12px 16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  border: '3px solid rgba(255,255,255,0.7)'
+                  position: 'relative',
+                  border: '3px solid rgba(255,255,255,0.75)'
                 }}
               >
-                {/* 1. 상단 푹신하게 접힌 밍크/플란넬 깃 (Folded Duvet Collar) */}
-                <div className="duvet-collar">
-                  <span style={{
-                    fontSize: '0.72rem',
-                    fontWeight: 900,
-                    letterSpacing: '1px',
-                    color: '#64748b',
-                    textTransform: 'uppercase'
-                  }}>
-                    • • • COZY QUILT • • •
-                  </span>
-                </div>
+                {/* 1. 상단 푹신하게 접힌 밍크/플란넬 깃 (글자 전혀 없이 순수한 도톰한 깃) */}
+                <div className="duvet-collar" />
 
-                {/* 2. 패브릭 주름 및 입체 솜 음영 오버레이 */}
+                {/* 2. 패브릭 주름 및 실제 솜이불 3D 볼륨 음영 오버레이 */}
                 <div className="fabric-fold-shadow" />
-
-                {/* 3. 이불 중앙/하단 내용: 실제 패브릭 자수 라벨 패치 */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginTop: '18px',
-                  zIndex: 2
-                }}>
-                  <div className="duvet-patch">
-                    <span style={{ fontSize: '1.2rem' }}>{item.blanketEmoji}</span>
-                    <span style={{
-                      fontSize: '0.82rem',
-                      fontWeight: 900,
-                      color: '#1e293b'
-                    }}>
-                      {item.blanketName}
-                    </span>
-                  </div>
-
-                  <div style={{
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                    borderRadius: '16px',
-                    padding: '4px 10px',
-                    fontSize: '0.76rem',
-                    fontWeight: 900,
-                    color: item.blanketBorder,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}>
-                    <span>끌어서 덮기</span>
-                    <span>👆</span>
-                  </div>
-                </div>
-
-                {/* 4. 이불 하단 설명 패치 */}
-                <div style={{
-                  zIndex: 2,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '0 4px'
-                }}>
-                  <span style={{
-                    fontSize: '0.74rem',
-                    fontWeight: 800,
-                    color: '#ffffff',
-                    textShadow: '0 1px 3px rgba(0,0,0,0.6)'
-                  }}>
-                    {item.tagText}
-                  </span>
-                  <span style={{
-                    fontSize: '0.68rem',
-                    fontWeight: 700,
-                    color: 'rgba(255,255,255,0.92)',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.5)'
-                  }}>
-                    100% 포근한 극세사 솜
-                  </span>
-                </div>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* 🎈 드래그 중인 플로팅 실제 이불 (손가락을 따라 퐁신퐁신 떠다님) */}
+      {/* 🎈 드래그 중인 플로팅 실제 이불 (글자 없는 순수 솜이불 형상으로 손가락을 따라 퐁신퐁신 떠다님) */}
       {draggingBlanket && (
         <div
           className={draggingBlanket.blanketClass || ''}
           style={{
             position: 'fixed',
-            left: `${dragPos.x - 75}px`,
-            top: `${dragPos.y - 50}px`,
-            width: '150px',
-            height: '95px',
-            border: '3.5px solid #ffffff',
-            borderRadius: '20px',
-            boxShadow: '0 22px 45px rgba(0,0,0,0.4)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
+            left: `${dragPos.x - 85}px`,
+            top: `${dragPos.y - 55}px`,
+            width: '170px',
+            height: '105px',
+            border: '3px solid rgba(255,255,255,0.9)',
+            borderRadius: '24px 34px 20px 28px',
+            boxShadow: '0 24px 50px rgba(0,0,0,0.35)',
             pointerEvents: 'none',
             zIndex: 99999,
-            transform: 'scale(1.1) rotate(-5deg)',
+            transform: 'scale(1.08) rotate(-4deg)',
             transition: 'transform 0.05s ease',
             overflow: 'hidden'
           }}
         >
           {/* 상단 깃 접힘 */}
-          <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, height: '12px',
-            background: 'rgba(255,255,255,0.9)'
-          }} />
+          <div className="duvet-collar" />
 
-          <span style={{ fontSize: '2.3rem', filter: 'drop-shadow(0 2px 5px rgba(0,0,0,0.35))' }}>
-            {draggingBlanket.blanketEmoji}
-          </span>
-          <span style={{
-            fontSize: '0.85rem', fontWeight: 900, color: '#ffffff',
-            textShadow: '0 1px 3px rgba(0,0,0,0.55)', marginTop: '2px'
-          }}>
-            {draggingBlanket.blanketName}
-          </span>
+          {/* 패브릭 주름 및 솜 볼륨 음영 */}
+          <div className="fabric-fold-shadow" />
         </div>
       )}
     </div>
