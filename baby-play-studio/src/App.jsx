@@ -2951,6 +2951,7 @@ export default function App() {
           audioEngine.playFanfare();
         }, 1000);
 
+        const praiseStartTime = Date.now();
         let hasAdvanced = false;
         const advanceToNextRound = () => {
           if (hasAdvanced) return;
@@ -2964,21 +2965,28 @@ export default function App() {
           speakFeedWish(nextRound.target, nextRound.food);
         };
 
-        // 칭찬 음성 재생 -> 음성이 끝까지 완벽하게 나온 후(onEnded) 0.9초 여운을 두고 다음 라운드로 전환
+        // 🛡️ 음성 짤림 100% 방지: 어떤 경우에도 최소 4.6초간 동물 축하 및 음성 완독 보장
+        const tryAdvanceWithMinDelay = (extraWait = 0) => {
+          const elapsed = Date.now() - praiseStartTime;
+          const waitTime = Math.max(0, 4600 - elapsed) + extraWait;
+          setTimeout(advanceToNextRound, waitTime);
+        };
+
+        // 칭찬 음성 재생 -> 음성이 끝까지 다 나오고 최소 4.6초 축하를 온전히 즐긴 후 다음 문제로 전환
         playVoiceAudio(
           `/sounds/voice/feed_praise_${randomIdx}.mp3`,
           () => {
             speakNaturalKorean(randomPraise, { pitch: 1.16, rate: 0.92 });
-            setTimeout(advanceToNextRound, 4200);
+            tryAdvanceWithMinDelay(0);
           },
           () => {
-            // MP3 음성 완독 후 0.9초간 동물들의 춤과 기쁨을 만끽하고 다음 문제로 진행
-            setTimeout(advanceToNextRound, 900);
+            // MP3 음성 완독 후에도 최소 4.6초 축하 시간을 확보한 뒤 부드럽게 다음 문제로 전환
+            tryAdvanceWithMinDelay(500);
           }
         );
 
-        // 안전 타이머: 네트워크 오류나 브라우저 예외 시에도 최대 5.2초 내 다음 라운드 진행 보장
-        setTimeout(advanceToNextRound, 5200);
+        // 안전 타이머: 최대 5.5초 내 다음 라운드 보장
+        setTimeout(advanceToNextRound, 5500);
       } else {
         // 목표 동물인데 다른 과일을 줌
         isFeedBusyRef.current = true;
