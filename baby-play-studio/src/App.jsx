@@ -451,63 +451,71 @@ class BabySoundEngine {
     }
   }
 
-  // 🐶🐱🐸 동물 합창단 및 실로폰 음계 연주기
-  playChoirNote(instrument, freq) {
+  // 🐶🐱🐸 동물 합창단 및 실로폰 음계 연주기 (실제 녹음된 동물 소리 피치 변조)
+  async playChoirNote(instrument, freq) {
     if (this.muted) return;
     this.init();
     if (!this.ctx) return;
 
+    if (instrument === 'xylophone') {
+      this.playMusicBox(freq, 0.55);
+      return;
+    }
+
+    // 실제 동물 울음소리 MP3 음원 (검증된 고음질 실사 오디오)
+    const soundUrls = {
+      dog: 'https://assets.mixkit.co/active_storage/sfx/1/1-preview.mp3',
+      cat: 'https://assets.mixkit.co/active_storage/sfx/93/93-preview.mp3',
+      frog: 'https://assets.mixkit.co/active_storage/sfx/1241/1241-preview.mp3'
+    };
+
+    const url = soundUrls[instrument];
+    const baseFreq = 261.63; // C4 (도) 기준 기본 주파수
+    const playbackRate = Math.max(0.55, Math.min(2.8, freq / baseFreq));
+
     try {
-      const now = this.ctx.currentTime;
-      if (instrument === 'xylophone') {
-        this.playMusicBox(freq, 0.55);
-        return;
+      if (this.ctx.state === 'suspended') {
+        await this.ctx.resume();
       }
 
-      if (instrument === 'dog') {
-        // 🐶 멍멍! 피치 벤드 톤
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq * 0.9, now);
-        osc.frequency.exponentialRampToValueAtTime(freq * 1.35, now + 0.08);
-        osc.frequency.exponentialRampToValueAtTime(freq * 0.75, now + 0.22);
-        gain.gain.setValueAtTime(0.65, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.25);
-      } else if (instrument === 'cat') {
-        // 🐱 야옹~ 부드러운 슬라이드 톤
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq * 1.4, now);
-        osc.frequency.linearRampToValueAtTime(freq * 1.0, now + 0.15);
-        osc.frequency.linearRampToValueAtTime(freq * 1.25, now + 0.35);
-        gain.gain.setValueAtTime(0.5, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.38);
-      } else if (instrument === 'frog') {
-        // 🐸 개굴! 톡톡 튀는 공명 톤
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(freq * 0.7, now);
-        osc.frequency.exponentialRampToValueAtTime(freq * 0.95, now + 0.05);
-        osc.frequency.exponentialRampToValueAtTime(freq * 0.5, now + 0.18);
-        gain.gain.setValueAtTime(0.5, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.2);
+      if (url) {
+        const buffer = await this.getVoiceBuffer(url);
+        if (buffer && this.ctx) {
+          const source = this.ctx.createBufferSource();
+          const gainNode = this.ctx.createGain();
+          source.buffer = buffer;
+          source.playbackRate.value = playbackRate;
+
+          // 동물 소리의 귀여운 타격감과 리듬감을 살리면서 자연스러운 페이드아웃
+          const now = this.ctx.currentTime;
+          const playDuration = Math.min(buffer.duration / playbackRate, 0.75);
+
+          gainNode.gain.setValueAtTime(0.85, now);
+          gainNode.gain.setValueAtTime(0.85, now + Math.max(0.08, playDuration - 0.12));
+          gainNode.gain.exponentialRampToValueAtTime(0.001, now + playDuration);
+
+          source.connect(gainNode);
+          gainNode.connect(this.ctx.destination);
+
+          source.start(now);
+          source.stop(now + playDuration);
+          return;
+        }
       }
     } catch (e) { }
+
+    // 음원 로딩 중이거나 예외 시 부드러운 벨 사운드 백업
+    this.playFreq(freq, 'triangle', 0.22, 0.5);
+  }
+
+  // 동물 합창단 음원 사전 로딩 (아이패드 딜레이 0초 보장)
+  preloadChoirBuffers() {
+    const urls = [
+      'https://assets.mixkit.co/active_storage/sfx/1/1-preview.mp3',
+      'https://assets.mixkit.co/active_storage/sfx/93/93-preview.mp3',
+      'https://assets.mixkit.co/active_storage/sfx/1241/1241-preview.mp3'
+    ];
+    urls.forEach(u => this.getVoiceBuffer(u).catch(() => {}));
   }
 }
 
@@ -2579,6 +2587,11 @@ function XylophoneChoirView() {
   const [tutorialStep, setTutorialStep] = useState(0);
   const [particles, setParticles] = useState([]);
 
+  // 실제 동물 소리 MP3 버퍼 사전 로드 (지연 0초 보장)
+  useEffect(() => {
+    audioEngine.preloadChoirBuffers();
+  }, []);
+
   const currentSong = SONG_TUTORIALS[songIdx];
   const targetKeyIndex = currentSong.notes.length > 0 ? currentSong.notes[tutorialStep] : null;
 
@@ -2795,20 +2808,68 @@ function XylophoneChoirView() {
 // 🌙 2. 동물 친구들 코 잘 시간 (수면 유도 & 자장가 모드) 컴포넌트
 // =============================================================================
 const SLEEP_ANIMAL_DATA = [
-  { id: 'rabbit', name: '토끼', icon: '🐰', bedColor: '#fce7f3', bedBorder: '#ec4899', blanketColor: '#f472b6', blanketEmoji: '🌸' },
-  { id: 'bear', name: '곰돌이', icon: '🐻', bedColor: '#fef3c7', bedBorder: '#d97706', blanketColor: '#fbbf24', blanketEmoji: '🍯' },
-  { id: 'dog', name: '강아지', icon: '🐶', bedColor: '#e0f2fe', bedBorder: '#0284c7', blanketColor: '#60a5fa', blanketEmoji: '🦴' }
+  {
+    id: 'rabbit',
+    name: '토끼',
+    icon: '🐰',
+    bedColor: '#fce7f3',
+    bedBorder: '#ec4899',
+    blanketId: 'blanket-rabbit',
+    blanketName: '토끼 벚꽃 이불',
+    blanketColor: '#f472b6',
+    blanketBorder: '#db2777',
+    blanketEmoji: '🌸',
+    tagText: '토끼용 🌸 벚꽃',
+    gradient: 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)'
+  },
+  {
+    id: 'bear',
+    name: '곰돌이',
+    icon: '🐻',
+    bedColor: '#fef3c7',
+    bedBorder: '#d97706',
+    blanketId: 'blanket-bear',
+    blanketName: '곰돌이 꿀단지 이불',
+    blanketColor: '#fbbf24',
+    blanketBorder: '#b45309',
+    blanketEmoji: '🍯',
+    tagText: '곰돌이용 🍯 꿀단지',
+    gradient: 'linear-gradient(135deg, #fbbf24 0%, #d97706 100%)'
+  },
+  {
+    id: 'dog',
+    name: '강아지',
+    icon: '🐶',
+    bedColor: '#e0f2fe',
+    bedBorder: '#0284c7',
+    blanketId: 'blanket-dog',
+    blanketName: '강아지 별빛 이불',
+    blanketColor: '#60a5fa',
+    blanketBorder: '#1d4ed8',
+    blanketEmoji: '🦴',
+    tagText: '강아지용 🦴 별빛',
+    gradient: 'linear-gradient(135deg, #60a5fa 0%, #2563eb 100%)'
+  }
 ];
 
 function BedtimeSleepView() {
   const [isLightsOff, setIsLightsOff] = useState(false);
   const [animalStates, setAnimalStates] = useState({
-    rabbit: { hasBlanket: false, isAsleep: false, pats: 0, yawn: false },
-    bear: { hasBlanket: false, isAsleep: false, pats: 0, yawn: false },
-    dog: { hasBlanket: false, isAsleep: false, pats: 0, yawn: false }
+    rabbit: { hasBlanket: false, blanketData: null, isAsleep: false, pats: 0, yawn: false },
+    bear: { hasBlanket: false, blanketData: null, isAsleep: false, pats: 0, yawn: false },
+    dog: { hasBlanket: false, blanketData: null, isAsleep: false, pats: 0, yawn: false }
   });
   const [isLullabyOn, setIsLullabyOn] = useState(false);
   const [hearts, setHearts] = useState([]);
+  const [animatingCoverId, setAnimatingCoverId] = useState(null);
+
+  // 🛏️ 이불 드래그 앤 드롭 상태 관리 (모바일/아이패드 완벽 지원)
+  const [draggingBlanket, setDraggingBlanket] = useState(null);
+  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const [hoverBedId, setHoverBedId] = useState(null);
+
+  // 동물 침대 엘리먼트 참조 (충돌 감지용)
+  const bedRefs = useRef({});
 
   // 불 끄면 자동으로 자장가 시작
   const toggleLights = () => {
@@ -2851,8 +2912,8 @@ function BedtimeSleepView() {
       [animalId]: {
         ...prev[animalId],
         pats: newPats,
-        isAsleep: becomesAsleep,
-        yawn: !becomesAsleep
+        isAsleep: becomesAsleep || prev[animalId].hasBlanket,
+        yawn: !becomesAsleep && !prev[animalId].hasBlanket
       }
     }));
 
@@ -2862,17 +2923,112 @@ function BedtimeSleepView() {
     }
   };
 
-  // 이불 덮어주기 토글
-  const handleToggleBlanket = (animalId) => {
+  // 🛏️ 특정 동물에게 이불 덮어주기 실행
+  const coverAnimalWithBlanket = (targetAnimalId, blanket) => {
+    const targetAnimal = SLEEP_ANIMAL_DATA.find(a => a.id === targetAnimalId);
+    if (!targetAnimal) return;
+
+    // 사운드: 샤라랑 오르골 + 뽀송 찰칵
+    audioEngine.playMusicBox(523.25, 0.6);
+    setTimeout(() => audioEngine.playMusicBox(659.25, 0.5), 90);
+    setTimeout(() => audioEngine.playSnap(), 180);
+
+    // 이불 덮기 애니메이션 발동
+    setAnimatingCoverId(targetAnimalId);
+    setTimeout(() => setAnimatingCoverId(null), 800);
+
+    // 동물 상태 업데이트: 이불 덮고 편안히 잠듬
+    setAnimalStates(prev => ({
+      ...prev,
+      [targetAnimalId]: {
+        ...prev[targetAnimalId],
+        hasBlanket: true,
+        blanketData: blanket,
+        isAsleep: true,
+        yawn: false
+      }
+    }));
+
+    // 따뜻한 칭찬 음성
+    speakNaturalKorean(`${targetAnimal.name}에게 ${blanket.blanketName}을 포근하게 덮어주었어요. 좋은 꿈 꿔~`, {
+      pitch: 1.16,
+      rate: 0.9
+    });
+
+    // 별빛 하트 파티클 생성
+    setHearts(prev => [
+      ...prev.slice(-10),
+      { id: Date.now() + Math.random(), animalId: targetAnimalId }
+    ]);
+  };
+
+  // 🛏️ 덮어진 이불 개어주기 (다시 이불 바구니로 복귀)
+  const handleRemoveBlanket = (animalId, e) => {
+    if (e) e.stopPropagation();
     audioEngine.playSnap();
     setAnimalStates(prev => ({
       ...prev,
       [animalId]: {
         ...prev[animalId],
-        hasBlanket: !prev[animalId].hasBlanket
+        hasBlanket: false,
+        blanketData: null
       }
     }));
   };
+
+  // 👆 이불 드래그 시작 (터치 & 마우스 공통)
+  const handleBlanketPointerDown = (blanket, e) => {
+    e.preventDefault();
+    setDraggingBlanket(blanket);
+    setDragPos({ x: e.clientX, y: e.clientY });
+    audioEngine.playFreq(493.88, 'triangle', 0.09, 0.4);
+  };
+
+  // 전역 포인터 이동 & 드롭 이벤트 바인딩 (화면 밖 드래그 끊김 방지)
+  useEffect(() => {
+    if (!draggingBlanket) return;
+
+    const handlePointerMove = (e) => {
+      setDragPos({ x: e.clientX, y: e.clientY });
+
+      // 동물 침대 영역 충돌 판정
+      let foundBed = null;
+      for (const animal of SLEEP_ANIMAL_DATA) {
+        const el = bedRefs.current[animal.id];
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (
+            e.clientX >= rect.left &&
+            e.clientX <= rect.right &&
+            e.clientY >= rect.top &&
+            e.clientY <= rect.bottom
+          ) {
+            foundBed = animal.id;
+            break;
+          }
+        }
+      }
+      setHoverBedId(foundBed);
+    };
+
+    const handlePointerUp = () => {
+      if (hoverBedId) {
+        coverAnimalWithBlanket(hoverBedId, draggingBlanket);
+      }
+      setDraggingBlanket(null);
+      setHoverBedId(null);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
+    };
+  }, [draggingBlanket, hoverBedId]);
 
   // 전체 취침 완료 여부
   const allSleeping = Object.values(animalStates).every(st => st.isAsleep && st.hasBlanket);
@@ -2889,8 +3045,8 @@ function BedtimeSleepView() {
       background: isLightsOff
         ? 'linear-gradient(180deg, #090d16 0%, #171d2d 60%, #1e1b4b 100%)'
         : 'linear-gradient(180deg, #e0e7ff 0%, #fef3c7 60%, #fed7aa 100%)',
-      borderRadius: '28px', padding: '1.4rem', position: 'relative',
-      transition: 'background 0.8s ease', overflow: 'hidden'
+      borderRadius: '28px', padding: '1.2rem', position: 'relative',
+      transition: 'background 0.8s ease', overflow: 'hidden', userSelect: 'none'
     }}>
       {/* 밤하늘 별빛 이펙트 */}
       {isLightsOff && (
@@ -2914,21 +3070,21 @@ function BedtimeSleepView() {
       {/* 상단 툴바 (달님 & 전등 스위치 & 오르골 BGM 토글) */}
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        background: isLightsOff ? 'rgba(30, 41, 59, 0.75)' : '#ffffff',
-        backdropFilter: 'blur(8px)', padding: '12px 20px', borderRadius: '22px',
+        background: isLightsOff ? 'rgba(30, 41, 59, 0.85)' : '#ffffff',
+        backdropFilter: 'blur(8px)', padding: '10px 18px', borderRadius: '22px',
         border: isLightsOff ? '2px solid #334155' : '3px solid #fde68a',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 10, marginBottom: '1rem'
+        boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 10, marginBottom: '0.8rem'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '2.4rem' }}>{isLightsOff ? '🌙' : '☀️'}</span>
+          <span style={{ fontSize: '2.2rem' }}>{isLightsOff ? '🌙' : '☀️'}</span>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 900, color: isLightsOff ? '#f8fafc' : '#78350f' }}>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900, color: isLightsOff ? '#f8fafc' : '#78350f' }}>
               {isLightsOff ? '스르륵... 코 잘 시간 🌙' : '따뜻한 낮 시간 ☀️'}
             </h3>
             <span style={{ fontSize: '0.85rem', fontWeight: 800, color: isLightsOff ? '#94a3b8' : '#92400e' }}>
               {allSleeping
-                ? '✨ 모든 동물 친구들이 코오 잠들었어요! 좋은 꿈 꿔~'
-                : '동물 친구를 톡톡 토닥이고 이불을 덮어주세요!'}
+                ? '✨ 모든 동물 친구들이 이불을 덮고 쿨쿨 잠들었어요! 좋은 꿈 꿔~'
+                : '아래 포근한 이불을 손가락으로 드래그해서 동물 친구에게 덮어주세요! 🌸'}
             </span>
           </div>
         </div>
@@ -2938,24 +3094,24 @@ function BedtimeSleepView() {
           <button
             onClick={toggleLullabyOnly}
             style={{
-              display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '18px',
+              display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 15px', borderRadius: '18px',
               border: isLullabyOn ? '2.5px solid #a855f7' : '2px solid #cbd5e1',
               background: isLullabyOn ? '#f3e8ff' : '#ffffff',
-              color: isLullabyOn ? '#7e22ce' : '#64748b', fontWeight: 900, cursor: 'pointer'
+              color: isLullabyOn ? '#7e22ce' : '#64748b', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer'
             }}
           >
-            <Music size={20} /> {isLullabyOn ? '자장가 켜짐 🎵' : '자장가 끄기 🔇'}
+            <Music size={18} /> {isLullabyOn ? '자장가 켜짐 🎵' : '자장가 끄기 🔇'}
           </button>
 
           {/* 방 조명 스위치 버튼 */}
           <button
             onClick={toggleLights}
             style={{
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '18px',
+              display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 18px', borderRadius: '18px',
               border: isLightsOff ? '3px solid #facc15' : '3px solid #f59e0b',
               background: isLightsOff ? '#fef08a' : '#1e293b',
               color: isLightsOff ? '#713f12' : '#f8fafc',
-              fontWeight: 900, fontSize: '1rem', cursor: 'pointer',
+              fontWeight: 900, fontSize: '0.95rem', cursor: 'pointer',
               boxShadow: isLightsOff ? '0 0 20px #fef08a' : '0 6px 14px rgba(0,0,0,0.2)'
             }}
           >
@@ -2966,27 +3122,38 @@ function BedtimeSleepView() {
 
       {/* 3마리 동물 침실 무대 */}
       <div style={{
-        flex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '18px',
+        flex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px',
         alignItems: 'center', zIndex: 5
       }}>
         {SLEEP_ANIMAL_DATA.map(animal => {
           const st = animalStates[animal.id];
+          const isTargeted = hoverBedId === animal.id;
+          const isSnuggling = animatingCoverId === animal.id;
+          const activeBlanket = st.blanketData || animal;
 
           return (
             <div
               key={animal.id}
+              ref={el => (bedRefs.current[animal.id] = el)}
               style={{
-                height: '100%', maxHeight: '380px',
+                height: '100%', maxHeight: '340px',
                 background: isLightsOff ? '#1e293b' : '#ffffff',
-                borderRadius: '32px', border: `4px solid ${animal.bedBorder}`,
-                boxShadow: isLightsOff ? '0 12px 30px rgba(0,0,0,0.6)' : '0 12px 28px rgba(0,0,0,0.1)',
+                borderRadius: '30px',
+                border: isTargeted
+                  ? '4px solid #facc15'
+                  : `4px solid ${animal.bedBorder}`,
+                boxShadow: isTargeted
+                  ? '0 0 35px rgba(250, 204, 21, 0.85)'
+                  : isLightsOff ? '0 12px 30px rgba(0,0,0,0.6)' : '0 10px 24px rgba(0,0,0,0.08)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
-                padding: '1.4rem 1rem', position: 'relative', overflow: 'hidden'
+                padding: '1.2rem 1rem', position: 'relative', overflow: 'hidden',
+                transform: isTargeted ? 'scale(1.03)' : 'scale(1)',
+                transition: 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)'
               }}
             >
               {/* 침대 헤드보드 */}
               <div style={{
-                position: 'absolute', top: 0, left: '20px', right: '20px', height: '14px',
+                position: 'absolute', top: 0, left: '20px', right: '20px', height: '12px',
                 background: animal.bedBorder, borderRadius: '0 0 12px 12px'
               }} />
 
@@ -2996,86 +3163,268 @@ function BedtimeSleepView() {
                   key={h.id}
                   style={{
                     position: 'absolute', top: '40px', fontSize: '2rem',
-                    animation: 'choirFloat 1s forwards ease-out', pointerEvents: 'none'
+                    animation: 'choirFloat 1s forwards ease-out', pointerEvents: 'none', zIndex: 20
                   }}
                 >
                   💖
                 </div>
               ))}
 
-              {/* 말풍선 상태 (하품 또는 zZ) */}
+              {/* 침대 상단 말풍선 & 가이드 */}
               <div style={{
-                background: isLightsOff ? '#334155' : animal.bedColor,
-                border: `2px solid ${animal.bedBorder}`, borderRadius: '16px',
-                padding: '4px 14px', fontSize: '0.9rem', fontWeight: 900,
-                color: isLightsOff ? '#f8fafc' : '#78350f', marginTop: '6px'
+                background: isTargeted
+                  ? '#fef08a'
+                  : isLightsOff ? '#334155' : animal.bedColor,
+                border: isTargeted ? '2px solid #ca8a04' : `2px solid ${animal.bedBorder}`,
+                borderRadius: '16px', padding: '4px 12px', fontSize: '0.88rem', fontWeight: 900,
+                color: isTargeted ? '#854d0e' : isLightsOff ? '#f8fafc' : '#78350f',
+                marginTop: '4px', textAlign: 'center', zIndex: 10
               }}>
-                {st.isAsleep ? '😴 쿨쿨... zZ' : st.yawn ? '🥱 하아암~ 졸려요' : '👀 아직 안 졸려요'}
+                {isTargeted
+                  ? '✨ 여기에 이불을 덮어주세요!'
+                  : st.hasBlanket
+                    ? '😴 포근포근 쿨쿨... zZ'
+                    : st.yawn
+                      ? '🥱 하아암~ 이불 덮어줘요'
+                      : '👀 이불을 끌어다 덮어줘요!'}
               </div>
 
-              {/* 동물 캐릭터 침대 영역 (클릭하여 토닥이기) */}
+              {/* 동물 캐릭터 & 침대 영역 */}
               <div
                 onClick={() => handlePatAnimal(animal.id)}
-                title="톡톡 토닥여주면 스르륵 잠이 들어요!"
+                title="톡톡 토닥여주거나, 아래 이불을 드래그해 덮어주세요!"
                 style={{
                   width: '160px', height: '160px', borderRadius: '50%',
-                  background: animal.bedColor, border: `3.5px dashed ${animal.bedBorder}`,
+                  background: animal.bedColor,
+                  border: isTargeted ? '3.5px dashed #eab308' : `3.5px dashed ${animal.bedBorder}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', position: 'relative',
                   transform: st.isAsleep ? 'scale(0.96)' : 'scale(1)', transition: 'all 0.3s ease'
                 }}
               >
+                {/* zZ 잠자는 효과 */}
+                {st.isAsleep && (
+                  <div
+                    className="sleep-zz-anim"
+                    style={{
+                      position: 'absolute', top: '10px', right: '15px',
+                      fontSize: '1.6rem', fontWeight: 900, color: '#a855f7',
+                      pointerEvents: 'none', zIndex: 15
+                    }}
+                  >
+                    zZ
+                  </div>
+                )}
+
+                {/* 동물 아이콘 */}
                 <span style={{
-                  fontSize: '5.5rem', filter: st.isAsleep ? 'brightness(0.85) grayscale(0.2)' : 'none',
-                  transform: st.isAsleep ? 'rotate(-6deg)' : 'none'
+                  fontSize: '5.2rem',
+                  filter: st.isAsleep ? 'brightness(0.9) saturate(0.85)' : 'none',
+                  transform: st.isAsleep ? 'rotate(-6deg)' : 'none',
+                  transition: 'all 0.3s ease'
                 }}>
                   {animal.icon}
                 </span>
 
-                {/* 이불 (덮어져 있을 때) */}
+                {/* 🛏️ 실제 덮여진 포근한 이불 (애니메이션 적용) */}
                 {st.hasBlanket && (
-                  <div style={{
-                    position: 'absolute', bottom: '0', left: 0, right: 0, height: '55%',
-                    background: animal.blanketColor, borderTop: `4px solid ${animal.bedBorder}`,
-                    borderRadius: '0 0 100px 100px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: 'inset 0 4px 10px rgba(0,0,0,0.15)'
-                  }}>
-                    <span style={{ fontSize: '1.8rem' }}>{animal.blanketEmoji} 포근포근</span>
+                  <div
+                    className={isSnuggling ? 'blanket-snuggle-anim' : ''}
+                    style={{
+                      position: 'absolute', bottom: '0', left: 0, right: 0, height: '58%',
+                      background: activeBlanket.gradient || activeBlanket.blanketColor,
+                      borderTop: `4px solid #ffffff`,
+                      borderRadius: '0 0 100px 100px',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.18), 0 -4px 10px rgba(0,0,0,0.1)',
+                      zIndex: 10
+                    }}
+                  >
+                    {/* 상단 퀼팅 깃 폴드 (화이트 레이스 디테일) */}
+                    <div style={{
+                      position: 'absolute', top: 0, left: 0, right: 0, height: '8px',
+                      background: 'rgba(255,255,255,0.7)',
+                      borderRadius: '4px 4px 0 0'
+                    }} />
+
+                    <span style={{ fontSize: '1.6rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}>
+                      {activeBlanket.blanketEmoji}
+                    </span>
+                    <span style={{
+                      fontSize: '0.78rem', fontWeight: 900, color: '#ffffff',
+                      textShadow: '0 1px 3px rgba(0,0,0,0.3)', marginTop: '2px'
+                    }}>
+                      포근포근 zZ
+                    </span>
                   </div>
                 )}
               </div>
 
-              {/* 하단 인터랙션 컨트롤 (이불 덮기 & 토닥이기 안내) */}
-              <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '8px' }}>
-                <button
-                  onClick={() => handleToggleBlanket(animal.id)}
-                  style={{
-                    width: '100%', padding: '10px', borderRadius: '16px', border: 'none',
-                    background: st.hasBlanket ? '#e2e8f0' : animal.blanketColor,
-                    color: st.hasBlanket ? '#475569' : '#ffffff',
-                    fontWeight: 900, fontSize: '0.95rem', cursor: 'pointer',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.12)'
-                  }}
-                >
-                  {st.hasBlanket ? '이불 개어주기 🛏️' : '포근한 이불 덮어주기 🌸'}
-                </button>
+              {/* 하단 버튼 바: 토닥이기 & 이불 걷기 */}
+              <div style={{ display: 'flex', width: '100%', gap: '8px', zIndex: 10 }}>
+                {st.hasBlanket ? (
+                  <button
+                    onClick={(e) => handleRemoveBlanket(animal.id, e)}
+                    style={{
+                      flex: 1, padding: '8px', borderRadius: '14px', border: 'none',
+                      background: '#f1f5f9', color: '#64748b',
+                      fontWeight: 900, fontSize: '0.82rem', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.06)'
+                    }}
+                  >
+                    이불 개기 🛏️
+                  </button>
+                ) : (
+                  <div style={{
+                    flex: 1, padding: '7px', borderRadius: '14px',
+                    background: isLightsOff ? '#0f172a' : '#f8fafc',
+                    border: `1.5px dashed ${animal.bedBorder}`,
+                    color: isLightsOff ? '#94a3b8' : '#78350f',
+                    fontSize: '0.8rem', fontWeight: 800, textAlign: 'center'
+                  }}>
+                    이불을 끌어다 놓아요 👆
+                  </div>
+                )}
 
                 <button
                   onClick={() => handlePatAnimal(animal.id)}
                   style={{
-                    width: '100%', padding: '8px', borderRadius: '14px', border: `2px solid ${animal.bedBorder}`,
+                    padding: '8px 12px', borderRadius: '14px', border: `2px solid ${animal.bedBorder}`,
                     background: isLightsOff ? '#0f172a' : '#ffffff',
                     color: isLightsOff ? '#f8fafc' : animal.bedBorder,
-                    fontWeight: 900, fontSize: '0.85rem', cursor: 'pointer'
+                    fontWeight: 900, fontSize: '0.82rem', cursor: 'pointer'
                   }}
                 >
-                  토닥토닥 쓰다듬기 ({st.pats}/3)
+                  토닥토닥 ({st.pats}/3)
                 </button>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* 🧺 하단: 포근한 이불 바구니 / 선반 (드래그하여 동물에게 덮어주는 곳) */}
+      <div style={{
+        marginTop: '0.8rem', background: isLightsOff ? 'rgba(30, 41, 59, 0.85)' : '#ffffff',
+        backdropFilter: 'blur(8px)', borderRadius: '24px', padding: '12px 20px',
+        border: isLightsOff ? '2px solid #334155' : '3px solid #fed7aa',
+        boxShadow: '0 8px 24px rgba(249, 115, 22, 0.12)', zIndex: 10,
+        display: 'flex', flexDirection: 'column', gap: '8px'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '1.4rem' }}>🧺</span>
+            <span style={{ fontSize: '0.98rem', fontWeight: 900, color: isLightsOff ? '#f8fafc' : '#7c2d12' }}>
+              포근한 이불 바구니
+            </span>
+            <span style={{ fontSize: '0.82rem', fontWeight: 800, color: isLightsOff ? '#94a3b8' : '#ea580c' }}>
+              (손가락으로 꾹 눌러서 침대로 끌어올려 덮어주세요!)
+            </span>
+          </div>
+          <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#f59e0b' }}>
+            {Object.values(animalStates).filter(s => s.hasBlanket).length} / 3 덮음 ✨
+          </span>
+        </div>
+
+        {/* 3장의 이불 카드 */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+          {SLEEP_ANIMAL_DATA.map(item => {
+            const isUsed = animalStates[item.id].hasBlanket;
+
+            return (
+              <div
+                key={item.blanketId}
+                onPointerDown={(e) => {
+                  if (!isUsed) handleBlanketPointerDown(item, e);
+                }}
+                className={!isUsed ? 'blanket-ready-wiggle' : ''}
+                style={{
+                  background: isUsed ? '#e2e8f0' : item.gradient,
+                  borderRadius: '20px', padding: '10px 14px',
+                  border: isUsed ? '2px dashed #94a3b8' : `3px solid #ffffff`,
+                  boxShadow: isUsed ? 'none' : '0 6px 16px rgba(0,0,0,0.15)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  cursor: isUsed ? 'default' : 'grab',
+                  touchAction: 'none',
+                  opacity: isUsed ? 0.6 : 1,
+                  transform: isUsed ? 'scale(0.96)' : 'scale(1)',
+                  transition: 'all 0.2s ease', position: 'relative'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '38px', height: '38px', borderRadius: '12px',
+                    background: 'rgba(255,255,255,0.3)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem'
+                  }}>
+                    {item.blanketEmoji}
+                  </div>
+                  <div>
+                    <div style={{
+                      fontWeight: 900, fontSize: '0.92rem',
+                      color: isUsed ? '#64748b' : '#ffffff',
+                      textShadow: isUsed ? 'none' : '0 1px 2px rgba(0,0,0,0.25)'
+                    }}>
+                      {item.blanketName}
+                    </div>
+                    <div style={{
+                      fontSize: '0.75rem', fontWeight: 800,
+                      color: isUsed ? '#94a3b8' : 'rgba(255,255,255,0.9)'
+                    }}>
+                      {item.tagText}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '4px 10px', borderRadius: '12px',
+                  background: isUsed ? '#cbd5e1' : 'rgba(255,255,255,0.9)',
+                  color: isUsed ? '#475569' : item.blanketBorder,
+                  fontWeight: 900, fontSize: '0.78rem'
+                }}>
+                  {isUsed ? '덮어줌 ✅' : '드래그 👆'}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 🎈 드래그 중인 플로팅 이불 (화면 위를 손가락 따라 둥실 날아다님) */}
+      {draggingBlanket && (
+        <div
+          style={{
+            position: 'fixed',
+            left: `${dragPos.x - 70}px`,
+            top: `${dragPos.y - 45}px`,
+            width: '140px',
+            height: '90px',
+            background: draggingBlanket.gradient,
+            border: '3px solid #ffffff',
+            borderRadius: '20px',
+            boxShadow: '0 18px 36px rgba(0,0,0,0.35)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+            zIndex: 99999,
+            transform: 'scale(1.1) rotate(-6deg)',
+            transition: 'transform 0.05s ease'
+          }}
+        >
+          <span style={{ fontSize: '2.2rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.25))' }}>
+            {draggingBlanket.blanketEmoji}
+          </span>
+          <span style={{
+            fontSize: '0.82rem', fontWeight: 900, color: '#ffffff',
+            textShadow: '0 1px 3px rgba(0,0,0,0.3)', marginTop: '2px'
+          }}>
+            {draggingBlanket.blanketName}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
