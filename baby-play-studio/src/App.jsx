@@ -381,6 +381,134 @@ class BabySoundEngine {
     this.playFreq(784, 'triangle', 0.09, 0.65);
     setTimeout(() => this.playFreq(1046.5, 'sine', 0.12, 0.55), 50);
   }
+
+  // 🎵 영롱한 오르골(Music Box) 벨 사운드
+  playMusicBox(freq, volume = 0.45) {
+    if (this.muted) return;
+    this.init();
+    if (!this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      // 기본음 (맑은 사인파)
+      const osc1 = this.ctx.createOscillator();
+      const gain1 = this.ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(freq, now);
+      gain1.gain.setValueAtTime(volume, now);
+      gain1.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
+      osc1.connect(gain1);
+      gain1.connect(this.ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 1.6);
+
+      // 옥타브 배음 (오르골 쇳소리 광택감)
+      const osc2 = this.ctx.createOscillator();
+      const gain2 = this.ctx.createGain();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(freq * 2, now);
+      gain2.gain.setValueAtTime(volume * 0.35, now);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+      osc2.connect(gain2);
+      gain2.connect(this.ctx.destination);
+      osc2.start(now);
+      osc2.stop(now + 0.9);
+    } catch (e) { }
+  }
+
+  // 🌙 브람스 자장가 오르골 루프 플레이어
+  startLullaby() {
+    this.stopLullaby();
+    this.init();
+    if (this.muted || !this.ctx) return;
+    this.isLullabyPlaying = true;
+
+    // 브람스 자장가 멜로디 음계 & 박자 정의 [freq, durationMs]
+    const melody = [
+      [329.63, 600], [329.63, 600], [392.00, 1100], // 미 미 솔
+      [329.63, 600], [329.63, 600], [392.00, 1100], // 미 미 솔
+      [329.63, 400], [392.00, 400], [523.25, 800], [493.88, 600], [440.00, 600], [440.00, 600], [392.00, 1200], // 미 솔 도' 시 라 라 솔
+      [293.66, 400], [329.63, 400], [349.23, 800], [293.66, 400], // 레 미 파 레
+      [293.66, 400], [349.23, 400], [493.88, 800], [440.00, 600], [392.00, 600], [493.88, 600], [523.25, 1400] // 레 파 시 라 솔 시 도'
+    ];
+
+    let noteIdx = 0;
+    const playNext = () => {
+      if (!this.isLullabyPlaying) return;
+      const [freq, dur] = melody[noteIdx];
+      this.playMusicBox(freq, 0.38);
+      noteIdx = (noteIdx + 1) % melody.length;
+      this.lullabyTimer = setTimeout(playNext, dur);
+    };
+
+    playNext();
+  }
+
+  stopLullaby() {
+    this.isLullabyPlaying = false;
+    if (this.lullabyTimer) {
+      clearTimeout(this.lullabyTimer);
+      this.lullabyTimer = null;
+    }
+  }
+
+  // 🐶🐱🐸 동물 합창단 및 실로폰 음계 연주기
+  playChoirNote(instrument, freq) {
+    if (this.muted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    try {
+      const now = this.ctx.currentTime;
+      if (instrument === 'xylophone') {
+        this.playMusicBox(freq, 0.55);
+        return;
+      }
+
+      if (instrument === 'dog') {
+        // 🐶 멍멍! 피치 벤드 톤
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq * 0.9, now);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.35, now + 0.08);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.75, now + 0.22);
+        gain.gain.setValueAtTime(0.65, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      } else if (instrument === 'cat') {
+        // 🐱 야옹~ 부드러운 슬라이드 톤
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq * 1.4, now);
+        osc.frequency.linearRampToValueAtTime(freq * 1.0, now + 0.15);
+        osc.frequency.linearRampToValueAtTime(freq * 1.25, now + 0.35);
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.38);
+      } else if (instrument === 'frog') {
+        // 🐸 개굴! 톡톡 튀는 공명 톤
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq * 0.7, now);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.95, now + 0.05);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.5, now + 0.18);
+        gain.gain.setValueAtTime(0.5, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+      }
+    } catch (e) { }
+  }
 }
 
 const audioEngine = new BabySoundEngine();
@@ -2415,6 +2543,543 @@ const PUZZLE_QUAD_VIEWBOX = [
 
 const PUZZLE_QUAD_LABELS = ['1. 왼쪽 위', '2. 오른쪽 위', '3. 왼쪽 아래', '4. 오른쪽 아래'];
 
+// =============================================================================
+// 🎹 1. 퐁퐁 실로폰 & 동물 합창단 상수 및 컴포넌트
+// =============================================================================
+const XYLOPHONE_KEYS = [
+  { id: 'c4', note: '도', solfege: 'C', freq: 261.63, color: '#ef4444', border: '#b91c1c', bg: '#fee2e2', height: '100%' },
+  { id: 'd4', note: '레', solfege: 'D', freq: 293.66, color: '#f97316', border: '#c2410c', bg: '#ffedd5', height: '94%' },
+  { id: 'e4', note: '미', solfege: 'E', freq: 329.63, color: '#eab308', border: '#a16207', bg: '#fef9c3', height: '88%' },
+  { id: 'f4', note: '파', solfege: 'F', freq: 349.23, color: '#22c55e', border: '#15803d', bg: '#dcfce7', height: '82%' },
+  { id: 'g4', note: '솔', solfege: 'G', freq: 392.00, color: '#06b6d4', border: '#0e7490', bg: '#cffafe', height: '76%' },
+  { id: 'a4', note: '라', solfege: 'A', freq: 440.00, color: '#3b82f6', border: '#1d4ed8', bg: '#dbeafe', height: '70%' },
+  { id: 'b4', note: '시', solfege: 'B', freq: 493.88, color: '#8b5cf6', border: '#6d28d9', bg: '#ede9fe', height: '64%' },
+  { id: 'c5', note: '높은도', solfege: 'C5', freq: 523.25, color: '#ec4899', border: '#be185d', bg: '#fce7f3', height: '58%' }
+];
+
+const CHOIR_MODES = [
+  { id: 'xylophone', label: '맑은 실로폰 🔔', icon: '🔔', color: '#f59e0b', sub: '영롱한 글로켄슈필' },
+  { id: 'dog', label: '멍멍이 합창단 🐶', icon: '🐶', color: '#d97706', sub: '통통 튀는 멍멍 음계' },
+  { id: 'cat', label: '야옹이 합창단 🐱', icon: '🐱', color: '#ec4899', sub: '다정한 야옹 음계' },
+  { id: 'frog', label: '개구리 합창단 🐸', icon: '🐸', color: '#16a34a', sub: '개굴개굴 뜀박질' }
+];
+
+const SONG_TUTORIALS = [
+  { id: 'free', title: '자유 연주 🎵', notes: [] },
+  { id: 'star', title: '⭐ 반짝반짝 작은별', notes: [0, 0, 4, 4, 5, 5, 4, 3, 3, 2, 2, 1, 1, 0] },
+  { id: 'airplane', title: '✈️ 비행기', notes: [2, 1, 0, 1, 2, 2, 2, 1, 1, 1, 2, 4, 4] },
+  { id: 'rabbit', title: '🐰 산토끼', notes: [4, 2, 2, 4, 2, 0, 1, 2, 1, 0] }
+];
+
+function XylophoneChoirView() {
+  const [instrument, setInstrument] = useState('xylophone');
+  const [activeKeyId, setActiveKeyId] = useState(null);
+  const [jumpAnimalIdx, setJumpAnimalIdx] = useState(null);
+  const [songIdx, setSongIdx] = useState(0);
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const [particles, setParticles] = useState([]);
+
+  const currentSong = SONG_TUTORIALS[songIdx];
+  const targetKeyIndex = currentSong.notes.length > 0 ? currentSong.notes[tutorialStep] : null;
+
+  const handleKeyPress = (key, index) => {
+    audioEngine.playChoirNote(instrument, key.freq);
+    setActiveKeyId(key.id);
+    setJumpAnimalIdx(index % 4);
+
+    // 파티클 생성
+    const symbols = ['♪', '♫', '⭐', '💖', '✨', '🌸'];
+    const newParticle = {
+      id: Date.now() + Math.random(),
+      symbol: symbols[Math.floor(Math.random() * symbols.length)],
+      color: key.color,
+      left: `${(index / 8) * 85 + 8}%`
+    };
+    setParticles(prev => [...prev.slice(-15), newParticle]);
+
+    setTimeout(() => setActiveKeyId(null), 180);
+    setTimeout(() => setJumpAnimalIdx(null), 350);
+
+    // 멜로디 튜토리얼 진행
+    if (targetKeyIndex !== null) {
+      if (index === targetKeyIndex) {
+        if (tutorialStep + 1 >= currentSong.notes.length) {
+          audioEngine.playFanfare();
+          setTutorialStep(0);
+        } else {
+          setTutorialStep(prev => prev + 1);
+        }
+      }
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '12px' }}>
+      {/* 상단 컨트롤 바 (악기 모드 & 곡 선택) */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px',
+        background: '#ffffff', padding: '12px 18px', borderRadius: '24px', border: '3px solid #fed7aa',
+        boxShadow: '0 6px 16px rgba(249, 115, 22, 0.12)'
+      }}>
+        {/* 음색 선택 탭 */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {CHOIR_MODES.map(mode => (
+            <button
+              key={mode.id}
+              onClick={() => {
+                setInstrument(mode.id);
+                audioEngine.playFreq(600, 'sine', 0.1);
+              }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '16px',
+                border: instrument === mode.id ? `3px solid ${mode.color}` : '2px solid #e2e8f0',
+                background: instrument === mode.id ? mode.color : '#f8fafc',
+                color: instrument === mode.id ? '#ffffff' : '#475569',
+                fontWeight: 900, fontSize: '0.95rem', cursor: 'pointer',
+                transform: instrument === mode.id ? 'scale(1.04)' : 'scale(1)', transition: 'all 0.15s ease'
+              }}
+            >
+              <span>{mode.icon}</span> {mode.label}
+            </button>
+          ))}
+        </div>
+
+        {/* 멜로디 가이드 곡 선택 */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#7c2d12' }}>📖 멜로디 가이드:</span>
+          {SONG_TUTORIALS.map((s, idx) => (
+            <button
+              key={s.id}
+              onClick={() => {
+                setSongIdx(idx);
+                setTutorialStep(0);
+                audioEngine.playPopSound();
+              }}
+              style={{
+                padding: '6px 12px', borderRadius: '14px',
+                border: songIdx === idx ? '2.5px solid #ea580c' : '1.5px solid #fed7aa',
+                background: songIdx === idx ? '#ffedd5' : '#ffffff',
+                color: songIdx === idx ? '#c2410c' : '#78350f',
+                fontWeight: 900, fontSize: '0.85rem', cursor: 'pointer'
+              }}
+            >
+              {s.title}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 동물 합창단 무대 */}
+      <div style={{
+        flex: 1, minHeight: '140px', maxHeight: '200px',
+        background: 'linear-gradient(180deg, #fef3c7 0%, #ffedd5 100%)',
+        borderRadius: '24px', border: '3.5px solid #fbbf24',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around',
+        padding: '10px 20px', position: 'relative', overflow: 'hidden'
+      }}>
+        {/* 파티클 애니메이션 */}
+        {particles.map(p => (
+          <div
+            key={p.id}
+            style={{
+              position: 'absolute', bottom: '20px', left: p.left,
+              fontSize: '2rem', color: p.color, pointerEvents: 'none',
+              animation: 'choirFloat 1s forwards ease-out'
+            }}
+          >
+            {p.symbol}
+          </div>
+        ))}
+
+        {/* 4마리 합창단 동물들 */}
+        {[
+          { icon: '🐶', name: '바둑이', color: '#f59e0b' },
+          { icon: '🐱', name: '나비', color: '#ec4899' },
+          { icon: '🐸', name: '개구리', color: '#16a34a' },
+          { icon: '🐻', name: '곰돌이', color: '#92400e' }
+        ].map((animal, aIdx) => {
+          const isJumping = jumpAnimalIdx === aIdx;
+          return (
+            <div
+              key={animal.name}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                transform: isJumping ? 'translateY(-28px) scale(1.18)' : 'translateY(0) scale(1)',
+                transition: 'transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)'
+              }}
+            >
+              <div style={{
+                fontSize: isJumping ? '4.8rem' : '4rem', filter: 'drop-shadow(0 8px 12px rgba(0,0,0,0.15))',
+                animation: isJumping ? 'choirSing 0.3s ease' : 'none'
+              }}>
+                {animal.icon}
+              </div>
+              <span style={{
+                background: isJumping ? animal.color : '#ffffff',
+                color: isJumping ? '#ffffff' : '#78350f',
+                padding: '2px 10px', borderRadius: '12px', fontSize: '0.85rem', fontWeight: 900,
+                border: `2px solid ${animal.color}`, marginTop: '-4px'
+              }}>
+                {animal.name}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 8음계 실로폰 건반 영역 */}
+      <div style={{
+        height: '240px', background: '#334155', borderRadius: '28px',
+        padding: '16px 20px', border: '5px solid #1e293b',
+        boxShadow: 'inset 0 6px 14px rgba(0,0,0,0.35), 0 15px 30px rgba(0,0,0,0.2)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px'
+      }}>
+        {XYLOPHONE_KEYS.map((key, kIdx) => {
+          const isActive = activeKeyId === key.id;
+          const isTarget = targetKeyIndex === kIdx;
+
+          return (
+            <button
+              key={key.id}
+              onClick={() => handleKeyPress(key, kIdx)}
+              style={{
+                flex: 1, height: key.height,
+                background: isActive
+                  ? `linear-gradient(180deg, #ffffff 0%, ${key.color} 100%)`
+                  : `linear-gradient(180deg, ${key.color} 0%, ${key.border} 100%)`,
+                borderRadius: '16px', border: `3.5px solid ${isTarget ? '#ffffff' : key.border}`,
+                boxShadow: isActive
+                  ? `0 2px 4px rgba(0,0,0,0.4), 0 0 24px ${key.color}`
+                  : `0 8px 16px rgba(0,0,0,0.35), inset 0 2px 4px rgba(255,255,255,0.4)`,
+                transform: isActive ? 'translateY(6px) scale(0.97)' : isTarget ? 'translateY(-6px) scale(1.02)' : 'none',
+                transition: 'transform 0.08s ease, box-shadow 0.08s ease',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
+                padding: '14px 4px', cursor: 'pointer', position: 'relative'
+              }}
+            >
+              {/* 상단 은색 못 */}
+              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#f8fafc', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }} />
+
+              {/* 반짝이 타겟 표시 */}
+              {isTarget && (
+                <div style={{
+                  position: 'absolute', top: '-18px', background: '#facc15', color: '#78350f',
+                  fontSize: '0.75rem', fontWeight: 900, padding: '2px 6px', borderRadius: '8px',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.25)', animation: 'bounce 0.8s infinite'
+                }}>
+                  콕! 👇
+                </div>
+              )}
+
+              {/* 건반 음계 라벨 */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <span style={{ fontSize: '1.45rem', fontWeight: 900, color: '#ffffff', textShadow: '0 2px 4px rgba(0,0,0,0.4)' }}>
+                  {key.note}
+                </span>
+                <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#ffffff', opacity: 0.85 }}>
+                  {key.solfege}
+                </span>
+              </div>
+
+              {/* 하단 은색 못 */}
+              <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#f8fafc', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }} />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// =============================================================================
+// 🌙 2. 동물 친구들 코 잘 시간 (수면 유도 & 자장가 모드) 컴포넌트
+// =============================================================================
+const SLEEP_ANIMAL_DATA = [
+  { id: 'rabbit', name: '토끼', icon: '🐰', bedColor: '#fce7f3', bedBorder: '#ec4899', blanketColor: '#f472b6', blanketEmoji: '🌸' },
+  { id: 'bear', name: '곰돌이', icon: '🐻', bedColor: '#fef3c7', bedBorder: '#d97706', blanketColor: '#fbbf24', blanketEmoji: '🍯' },
+  { id: 'dog', name: '강아지', icon: '🐶', bedColor: '#e0f2fe', bedBorder: '#0284c7', blanketColor: '#60a5fa', blanketEmoji: '🦴' }
+];
+
+function BedtimeSleepView() {
+  const [isLightsOff, setIsLightsOff] = useState(false);
+  const [animalStates, setAnimalStates] = useState({
+    rabbit: { hasBlanket: false, isAsleep: false, pats: 0, yawn: false },
+    bear: { hasBlanket: false, isAsleep: false, pats: 0, yawn: false },
+    dog: { hasBlanket: false, isAsleep: false, pats: 0, yawn: false }
+  });
+  const [isLullabyOn, setIsLullabyOn] = useState(false);
+  const [hearts, setHearts] = useState([]);
+
+  // 불 끄면 자동으로 자장가 시작
+  const toggleLights = () => {
+    const nextState = !isLightsOff;
+    setIsLightsOff(nextState);
+    if (nextState) {
+      audioEngine.startLullaby();
+      setIsLullabyOn(true);
+      speakNaturalKorean('모두 불을 끄고 코 잘 시간이에요. 잘 자렴, 좋은 꿈 꿔~', { pitch: 1.12, rate: 0.88 });
+    } else {
+      audioEngine.stopLullaby();
+      setIsLullabyOn(false);
+      audioEngine.playFreq(700, 'triangle', 0.15);
+    }
+  };
+
+  const toggleLullabyOnly = () => {
+    if (isLullabyOn) {
+      audioEngine.stopLullaby();
+      setIsLullabyOn(false);
+    } else {
+      audioEngine.startLullaby();
+      setIsLullabyOn(true);
+    }
+  };
+
+  // 동물 토닥이기
+  const handlePatAnimal = (animalId) => {
+    const st = animalStates[animalId];
+    const newPats = st.pats + 1;
+    const becomesAsleep = newPats >= 3;
+
+    audioEngine.playMusicBox(440 + Math.random() * 200, 0.4);
+
+    // 하트 파티클
+    setHearts(prev => [...prev.slice(-10), { id: Date.now() + Math.random(), animalId }]);
+
+    setAnimalStates(prev => ({
+      ...prev,
+      [animalId]: {
+        ...prev[animalId],
+        pats: newPats,
+        isAsleep: becomesAsleep,
+        yawn: !becomesAsleep
+      }
+    }));
+
+    if (becomesAsleep) {
+      const animal = SLEEP_ANIMAL_DATA.find(a => a.id === animalId);
+      speakNaturalKorean(`${animal.name}가 스르륵 잠들었어요. 쿨쿨~`, { pitch: 1.15, rate: 0.88 });
+    }
+  };
+
+  // 이불 덮어주기 토글
+  const handleToggleBlanket = (animalId) => {
+    audioEngine.playSnap();
+    setAnimalStates(prev => ({
+      ...prev,
+      [animalId]: {
+        ...prev[animalId],
+        hasBlanket: !prev[animalId].hasBlanket
+      }
+    }));
+  };
+
+  // 전체 취침 완료 여부
+  const allSleeping = Object.values(animalStates).every(st => st.isAsleep && st.hasBlanket);
+
+  useEffect(() => {
+    return () => {
+      audioEngine.stopLullaby();
+    };
+  }, []);
+
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', height: '100%',
+      background: isLightsOff
+        ? 'linear-gradient(180deg, #090d16 0%, #171d2d 60%, #1e1b4b 100%)'
+        : 'linear-gradient(180deg, #e0e7ff 0%, #fef3c7 60%, #fed7aa 100%)',
+      borderRadius: '28px', padding: '1.4rem', position: 'relative',
+      transition: 'background 0.8s ease', overflow: 'hidden'
+    }}>
+      {/* 밤하늘 별빛 이펙트 */}
+      {isLightsOff && (
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                top: `${(i * 17) % 85}%`, left: `${(i * 23) % 95}%`,
+                fontSize: i % 2 === 0 ? '1rem' : '1.4rem', color: '#fef08a',
+                animation: `twinkle ${(i % 3) + 1.5}s infinite ease-in-out`
+              }}
+            >
+              ★
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 상단 툴바 (달님 & 전등 스위치 & 오르골 BGM 토글) */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        background: isLightsOff ? 'rgba(30, 41, 59, 0.75)' : '#ffffff',
+        backdropFilter: 'blur(8px)', padding: '12px 20px', borderRadius: '22px',
+        border: isLightsOff ? '2px solid #334155' : '3px solid #fde68a',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.15)', zIndex: 10, marginBottom: '1rem'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '2.4rem' }}>{isLightsOff ? '🌙' : '☀️'}</span>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.35rem', fontWeight: 900, color: isLightsOff ? '#f8fafc' : '#78350f' }}>
+              {isLightsOff ? '스르륵... 코 잘 시간 🌙' : '따뜻한 낮 시간 ☀️'}
+            </h3>
+            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: isLightsOff ? '#94a3b8' : '#92400e' }}>
+              {allSleeping
+                ? '✨ 모든 동물 친구들이 코오 잠들었어요! 좋은 꿈 꿔~'
+                : '동물 친구를 톡톡 토닥이고 이불을 덮어주세요!'}
+            </span>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* 오르골 자장가 토글 */}
+          <button
+            onClick={toggleLullabyOnly}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', borderRadius: '18px',
+              border: isLullabyOn ? '2.5px solid #a855f7' : '2px solid #cbd5e1',
+              background: isLullabyOn ? '#f3e8ff' : '#ffffff',
+              color: isLullabyOn ? '#7e22ce' : '#64748b', fontWeight: 900, cursor: 'pointer'
+            }}
+          >
+            <Music size={20} /> {isLullabyOn ? '자장가 켜짐 🎵' : '자장가 끄기 🔇'}
+          </button>
+
+          {/* 방 조명 스위치 버튼 */}
+          <button
+            onClick={toggleLights}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', borderRadius: '18px',
+              border: isLightsOff ? '3px solid #facc15' : '3px solid #f59e0b',
+              background: isLightsOff ? '#fef08a' : '#1e293b',
+              color: isLightsOff ? '#713f12' : '#f8fafc',
+              fontWeight: 900, fontSize: '1rem', cursor: 'pointer',
+              boxShadow: isLightsOff ? '0 0 20px #fef08a' : '0 6px 14px rgba(0,0,0,0.2)'
+            }}
+          >
+            {isLightsOff ? '💡 방 불 켜기' : '🌙 방 불 끄기 (자장가)'}
+          </button>
+        </div>
+      </div>
+
+      {/* 3마리 동물 침실 무대 */}
+      <div style={{
+        flex: 1, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '18px',
+        alignItems: 'center', zIndex: 5
+      }}>
+        {SLEEP_ANIMAL_DATA.map(animal => {
+          const st = animalStates[animal.id];
+
+          return (
+            <div
+              key={animal.id}
+              style={{
+                height: '100%', maxHeight: '380px',
+                background: isLightsOff ? '#1e293b' : '#ffffff',
+                borderRadius: '32px', border: `4px solid ${animal.bedBorder}`,
+                boxShadow: isLightsOff ? '0 12px 30px rgba(0,0,0,0.6)' : '0 12px 28px rgba(0,0,0,0.1)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
+                padding: '1.4rem 1rem', position: 'relative', overflow: 'hidden'
+              }}
+            >
+              {/* 침대 헤드보드 */}
+              <div style={{
+                position: 'absolute', top: 0, left: '20px', right: '20px', height: '14px',
+                background: animal.bedBorder, borderRadius: '0 0 12px 12px'
+              }} />
+
+              {/* 하트/별 팝업 파티클 */}
+              {hearts.filter(h => h.animalId === animal.id).map(h => (
+                <div
+                  key={h.id}
+                  style={{
+                    position: 'absolute', top: '40px', fontSize: '2rem',
+                    animation: 'choirFloat 1s forwards ease-out', pointerEvents: 'none'
+                  }}
+                >
+                  💖
+                </div>
+              ))}
+
+              {/* 말풍선 상태 (하품 또는 zZ) */}
+              <div style={{
+                background: isLightsOff ? '#334155' : animal.bedColor,
+                border: `2px solid ${animal.bedBorder}`, borderRadius: '16px',
+                padding: '4px 14px', fontSize: '0.9rem', fontWeight: 900,
+                color: isLightsOff ? '#f8fafc' : '#78350f', marginTop: '6px'
+              }}>
+                {st.isAsleep ? '😴 쿨쿨... zZ' : st.yawn ? '🥱 하아암~ 졸려요' : '👀 아직 안 졸려요'}
+              </div>
+
+              {/* 동물 캐릭터 침대 영역 (클릭하여 토닥이기) */}
+              <div
+                onClick={() => handlePatAnimal(animal.id)}
+                title="톡톡 토닥여주면 스르륵 잠이 들어요!"
+                style={{
+                  width: '160px', height: '160px', borderRadius: '50%',
+                  background: animal.bedColor, border: `3.5px dashed ${animal.bedBorder}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', position: 'relative',
+                  transform: st.isAsleep ? 'scale(0.96)' : 'scale(1)', transition: 'all 0.3s ease'
+                }}
+              >
+                <span style={{
+                  fontSize: '5.5rem', filter: st.isAsleep ? 'brightness(0.85) grayscale(0.2)' : 'none',
+                  transform: st.isAsleep ? 'rotate(-6deg)' : 'none'
+                }}>
+                  {animal.icon}
+                </span>
+
+                {/* 이불 (덮어져 있을 때) */}
+                {st.hasBlanket && (
+                  <div style={{
+                    position: 'absolute', bottom: '0', left: 0, right: 0, height: '55%',
+                    background: animal.blanketColor, borderTop: `4px solid ${animal.bedBorder}`,
+                    borderRadius: '0 0 100px 100px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: 'inset 0 4px 10px rgba(0,0,0,0.15)'
+                  }}>
+                    <span style={{ fontSize: '1.8rem' }}>{animal.blanketEmoji} 포근포근</span>
+                  </div>
+                )}
+              </div>
+
+              {/* 하단 인터랙션 컨트롤 (이불 덮기 & 토닥이기 안내) */}
+              <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '8px' }}>
+                <button
+                  onClick={() => handleToggleBlanket(animal.id)}
+                  style={{
+                    width: '100%', padding: '10px', borderRadius: '16px', border: 'none',
+                    background: st.hasBlanket ? '#e2e8f0' : animal.blanketColor,
+                    color: st.hasBlanket ? '#475569' : '#ffffff',
+                    fontWeight: 900, fontSize: '0.95rem', cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.12)'
+                  }}
+                >
+                  {st.hasBlanket ? '이불 개어주기 🛏️' : '포근한 이불 덮어주기 🌸'}
+                </button>
+
+                <button
+                  onClick={() => handlePatAnimal(animal.id)}
+                  style={{
+                    width: '100%', padding: '8px', borderRadius: '14px', border: `2px solid ${animal.bedBorder}`,
+                    background: isLightsOff ? '#0f172a' : '#ffffff',
+                    color: isLightsOff ? '#f8fafc' : animal.bedBorder,
+                    fontWeight: 900, fontSize: '0.85rem', cursor: 'pointer'
+                  }}
+                >
+                  토닥토닥 쓰다듬기 ({st.pats}/3)
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('animal');
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -3169,22 +3834,25 @@ export default function App() {
         boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.25)',
         overflow: 'hidden', display: 'flex', flexDirection: 'column'
       }}>
-        {/* 탭 네비게이션 (6종 테마 컬러) */}
+        {/* 탭 네비게이션 (8종 테마 컬러) */}
         <nav style={{
-          display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px',
-          padding: '12px 14px', background: '#fff1f2', borderBottom: '3.5px solid #fca5a5'
+          display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '6px',
+          padding: '10px 12px', background: '#fff1f2', borderBottom: '3.5px solid #fca5a5'
         }}>
           {[
             { id: 'animal', label: '📸 생생 동물', sub: '울음소리 탐험', color: '#ef4444' },
+            { id: 'xylophone', label: '🎹 퐁퐁 실로폰', sub: '동물 합창단', color: '#f59e0b' },
+            { id: 'sleep', label: '🌙 코 잘 시간', sub: '오르골 자장가', color: '#6366f1' },
             { id: 'fruit', label: '🍎 싱싱 과일/채소', sub: '고화질 실사 관찰', color: '#10b981' },
             { id: 'ocean', label: '🌊 신비 바다속', sub: '뽀글 생물 탐험', color: '#0284c7' },
             { id: 'puzzle', label: '🧩 아기 퍼즐', sub: '4조각 맞추기', color: '#8b5cf6' },
             { id: 'paint', label: '🎨 무지개 물감', sub: '터치 감각 미술', color: '#3b82f6' },
-            { id: 'song', label: '🎵 동요 재생', sub: `한국 동요 (${LOCAL_NURSERY_SONGS.length}곡)`, color: '#f97316' }
+            { id: 'song', label: '🎵 동요 재생', sub: `한국 동요 (${LOCAL_NURSERY_SONGS.length}곡)`, color: '#ec4899' }
           ].map(tab => {
             const isActive = activeTab === tab.id;
             return (
               <button key={tab.id} onClick={() => {
+                if (tab.id !== 'sleep') audioEngine.stopLullaby();
                 if (tab.id === 'animal') setAnimalItems(shuffleArray(REAL_ANIMALS));
                 if (tab.id === 'fruit') setFruitItems(shuffleArray(REAL_FRUITS));
                 if (tab.id === 'ocean') speakOceanMission(oceanTarget);
@@ -3197,16 +3865,16 @@ export default function App() {
                 setActiveTab(tab.id);
                 audioEngine.playFreq(520, 'sine', 0.15);
               }} style={{
-                padding: '12px 6px', borderRadius: '20px',
-                border: isActive ? `4px solid ${tab.color}` : '2px solid #fed7aa',
+                padding: '10px 4px', borderRadius: '18px',
+                border: isActive ? `3.5px solid ${tab.color}` : '2px solid #fed7aa',
                 background: isActive ? tab.color : '#ffffff',
                 color: isActive ? '#ffffff' : '#475569', fontWeight: 900, cursor: 'pointer',
-                boxShadow: isActive ? '0 10px 22px rgba(0,0,0,0.18)' : 'none',
-                transform: isActive ? 'scale(1.03)' : 'scale(1)', transition: 'all 0.15s ease',
+                boxShadow: isActive ? '0 8px 18px rgba(0,0,0,0.16)' : 'none',
+                transform: isActive ? 'scale(1.02)' : 'scale(1)', transition: 'all 0.15s ease',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
               }}>
-                <span style={{ fontSize: '1.18rem', lineHeight: 1.2 }}>{tab.label}</span>
-                <span style={{ fontSize: '0.78rem', opacity: isActive ? 0.95 : 0.7, fontWeight: 800, marginTop: '2px' }}>{tab.sub}</span>
+                <span style={{ fontSize: '1.05rem', lineHeight: 1.2 }}>{tab.label}</span>
+                <span style={{ fontSize: '0.72rem', opacity: isActive ? 0.95 : 0.7, fontWeight: 800, marginTop: '2px' }}>{tab.sub}</span>
               </button>
             );
           })}
@@ -3214,6 +3882,12 @@ export default function App() {
 
         {/* 캔버스 영역 */}
         <div style={{ flex: 1, padding: activeTab === 'paint' ? '1rem 1.8rem' : '1.8rem', position: 'relative', background: '#fafafa', overflowY: activeTab === 'paint' ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+
+          {/* ===== 모듈: 🎹 퐁퐁 실로폰 & 동물 합창단 ===== */}
+          {activeTab === 'xylophone' && <XylophoneChoirView />}
+
+          {/* ===== 모듈: 🌙 동물 친구들 코 잘 시간 (수면 유도) ===== */}
+          {activeTab === 'sleep' && <BedtimeSleepView />}
 
           {/* ===== 모듈 1: 20종 동물 실사 ===== */}
           {activeTab === 'animal' && (
