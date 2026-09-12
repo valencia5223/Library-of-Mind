@@ -84,6 +84,17 @@ class BabySoundEngine {
     }
   }
 
+  // 📱 iOS Safari AudioContext가 suspended 상태일 때 확실히 resume 완료 후 반환
+  async ensureAudioContext() {
+    this.init();
+    if (this.ctx && this.ctx.state === 'suspended') {
+      try {
+        await this.ctx.resume();
+      } catch (e) { }
+    }
+    return this.ctx;
+  }
+
   // 앱 진입 시 모든 동물 울음소리를 백그라운드에서 사전 프리로드 및 메모리 캐싱 (딜레이 0초 달성)
   preloadItemSounds(items) {
     items.forEach(item => {
@@ -207,18 +218,22 @@ class BabySoundEngine {
     if (this.voiceBufferCache.has(url)) {
       return this.voiceBufferCache.get(url);
     }
+    const fullUrl = (typeof window !== 'undefined' && url.startsWith('/') && !url.startsWith('//'))
+      ? (window.location.origin + url)
+      : url;
+    if (this.voiceBufferCache.has(fullUrl)) {
+      return this.voiceBufferCache.get(fullUrl);
+    }
     this.init();
     if (!this.ctx) return null;
     try {
-      const fullUrl = (typeof window !== 'undefined' && url.startsWith('/') && !url.startsWith('//'))
-        ? (window.location.origin + url)
-        : url;
       const resp = await fetch(fullUrl, { cache: 'force-cache' });
       if (!resp.ok) return null;
       const arrayBuffer = await resp.arrayBuffer();
       const audioBuffer = await this.decodeAudio(arrayBuffer);
       if (audioBuffer) {
         this.voiceBufferCache.set(url, audioBuffer);
+        this.voiceBufferCache.set(fullUrl, audioBuffer);
         return audioBuffer;
       }
       return null;
@@ -227,9 +242,8 @@ class BabySoundEngine {
     }
   }
 
-  // 🎙️ 아이패드 Safari 100% 호환 음성 재생 엔진
-  // 핵심: 사용자 터치 제스처 내에서 new Audio(url).play()를 즉시 호출 (가장 신뢰할 수 있는 방법)
-  playVoice(url, fallbackFn = null, onEnded = null) {
+  // 🎙️ 아이패드 Safari 100% 호환 음성 재생 엔진 (터치 제스처 + setTimeout 비동기 타이머 완벽 대응)
+  async playVoice(url, fallbackFn = null, onEnded = null) {
     if (this.muted) return;
     this.stopVoice();
     this.init();
@@ -239,7 +253,15 @@ class BabySoundEngine {
       ? (window.location.origin + url)
       : url;
 
-    // 터치 제스처 내에서 즉시 new Audio 생성 + play() (아이패드 Safari에서 가장 확실한 방법)
+    // 1️⃣ 사전 캐싱된 Web Audio 버퍼가 있으면 즉시 Web Audio BufferSource로 재생
+    // Web Audio BufferSource는 setTimeout/비동기 타이머 안에서도 iOS Safari 제스처 제약 없이 100% 즉시 재생됨!
+    const cachedBuffer = this.voiceBufferCache.get(url) || this.voiceBufferCache.get(fullUrl);
+    if (cachedBuffer && this.ctx) {
+      this._playBufferDirect(cachedBuffer, token, onEnded);
+      return;
+    }
+
+    // 2️⃣ 사용자 터치 스택에서는 HTML5 Audio.play() 시도 (0초 최적 반응)
     try {
       const audio = new Audio(fullUrl);
       audio.preload = 'auto';
@@ -253,10 +275,15 @@ class BabySoundEngine {
         }
       };
 
-      audio.onerror = () => {
+      audio.onerror = async () => {
         if (this.voicePlayToken === token) {
           this.currentVoiceAudio = null;
-          if (fallbackFn) fallbackFn();
+          const buf = await this.getVoiceBuffer(url);
+          if (buf && this.voicePlayToken === token) {
+            this._playBufferDirect(buf, token, onEnded);
+          } else if (fallbackFn) {
+            fallbackFn();
+          }
         }
       };
 
@@ -264,16 +291,55 @@ class BabySoundEngine {
       if (playPromise !== undefined) {
         playPromise.then(() => {
           this.isAudioUnlocked = true;
-        }).catch(() => {
-          // play() 거절 시 TTS fallback
-          if (this.voicePlayToken === token && fallbackFn) {
-            fallbackFn();
+          this.getVoiceBuffer(url).catch(() => {});
+        }).catch(async () => {
+          // 📱 iOS Safari가 비동기 타이머(setTimeout) 내 new Audio.play()를 차단(NotAllowedError)한 경우:
+          // 이미 언락되어 있는 Web Audio Context 버퍼로 즉시 우회 재생! (아이패드 2번째 문제 이후 100% 음성 출력 보장)
+          if (this.voicePlayToken === token) {
+            this.currentVoiceAudio = null;
+            const buf = await this.getVoiceBuffer(url);
+            if (buf && this.voicePlayToken === token) {
+              this._playBufferDirect(buf, token, onEnded);
+            } else if (fallbackFn) {
+              fallbackFn();
+            }
           }
         });
       }
     } catch (e) {
-      if (fallbackFn) fallbackFn();
+      const buf = await this.getVoiceBuffer(url);
+      if (buf && this.voicePlayToken === token) {
+        this._playBufferDirect(buf, token, onEnded);
+      } else if (fallbackFn) {
+        fallbackFn();
+      }
     }
+  }
+
+  // Web Audio 버퍼 직접 재생 헬퍼 (비동기 타이머/setTimeout에서도 아이패드에서 100% 재생됨)
+  _playBufferDirect(buffer, token, onEnded = null) {
+    if (!this.ctx || this.voicePlayToken !== token) return;
+    try {
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
+      const source = this.ctx.createBufferSource();
+      const gainNode = this.ctx.createGain();
+      gainNode.gain.value = 1.0;
+      source.buffer = buffer;
+      source.connect(gainNode);
+      gainNode.connect(this.ctx.destination);
+
+      source.onended = () => {
+        if (this.voicePlayToken === token) {
+          this.currentVoiceSource = null;
+          if (onEnded) onEnded();
+        }
+      };
+
+      this.currentVoiceSource = source;
+      source.start(0);
+    } catch (e) { }
   }
 
   stopAllSounds() {
@@ -293,21 +359,70 @@ class BabySoundEngine {
     this.init();
     if (!this.ctx) return;
     try {
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
+      const now = (this.ctx.currentTime || 0) + 0.005;
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = type;
-      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-      gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(gainVal, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
       osc.connect(gain);
       gain.connect(this.ctx.destination);
-      osc.start();
-      osc.stop(this.ctx.currentTime + duration);
+      osc.start(now);
+      osc.stop(now + duration + 0.02);
     } catch (e) { }
   }
 
-  playXylophone(freq = 523.25) {
-    this.playFreq(freq, 'triangle', 0.45, 0.6);
+  // 🔔 맑고 청명한 실로폰/글로켄슈필 사운드 (펀더멘털 사인파 + 말렛 타격 배음 + 고음 은방울 배음)
+  async playXylophone(freq = 523.25, volume = 0.7) {
+    if (this.muted) return;
+    await this.ensureAudioContext();
+    if (!this.ctx) return;
+    try {
+      const now = (this.ctx.currentTime || 0) + 0.005;
+
+      // 1. 기본음 (맑고 영롱한 실로폰 울림)
+      const osc1 = this.ctx.createOscillator();
+      const gain1 = this.ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(freq, now);
+      gain1.gain.setValueAtTime(0.001, now);
+      gain1.gain.linearRampToValueAtTime(volume * 0.75, now + 0.006);
+      gain1.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+      osc1.connect(gain1);
+      gain1.connect(this.ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 1.25);
+
+      // 2. 말렛 타격 배음 (실로폰 채로 건반을 통 쳤을 때 나는 맑은 목재/금속 타격감)
+      const osc2 = this.ctx.createOscillator();
+      const gain2 = this.ctx.createGain();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(freq * 2, now);
+      gain2.gain.setValueAtTime(0.001, now);
+      gain2.gain.linearRampToValueAtTime(volume * 0.45, now + 0.003);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+      osc2.connect(gain2);
+      gain2.connect(this.ctx.destination);
+      osc2.start(now);
+      osc2.stop(now + 0.32);
+
+      // 3. 반짝이는 은방울 배음 (3배 고음 배음)
+      const osc3 = this.ctx.createOscillator();
+      const gain3 = this.ctx.createGain();
+      osc3.type = 'sine';
+      osc3.frequency.setValueAtTime(freq * 3, now);
+      gain3.gain.setValueAtTime(0.001, now);
+      gain3.gain.linearRampToValueAtTime(volume * 0.25, now + 0.002);
+      gain3.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+      osc3.connect(gain3);
+      gain3.connect(this.ctx.destination);
+      osc3.start(now);
+      osc3.stop(now + 0.2);
+    } catch (e) { }
   }
 
   playPopSound() {
@@ -350,12 +465,12 @@ class BabySoundEngine {
   }
 
   // 🎵 영롱하고 부드러운 오르골(Music Box) 벨 사운드 (클릭/툭 끊김 노이즈 0%)
-  playMusicBox(freq, volume = 0.36, duration = 2.4) {
+  async playMusicBox(freq, volume = 0.36, duration = 2.4) {
     if (this.muted) return;
-    this.init();
+    await this.ensureAudioContext();
     if (!this.ctx) return;
     try {
-      const now = this.ctx.currentTime;
+      const now = (this.ctx.currentTime || 0) + 0.005;
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'lowpass';
@@ -607,11 +722,11 @@ class BabySoundEngine {
   // 🐶🐱🐸 동물 합창단 및 실로폰 음계 연주기 (실제 녹음된 동물 소리 피치 변조)
   async playChoirNote(instrument, freq) {
     if (this.muted) return;
-    this.init();
+    await this.ensureAudioContext();
     if (!this.ctx) return;
 
     if (instrument === 'xylophone') {
-      this.playMusicBox(freq, 0.55);
+      await this.playXylophone(freq, 0.85);
       return;
     }
 
@@ -627,10 +742,6 @@ class BabySoundEngine {
     const playbackRate = Math.max(0.6, Math.min(2.6, freq / baseFreq));
 
     try {
-      if (this.ctx.state === 'suspended') {
-        await this.ctx.resume();
-      }
-
       if (url) {
         const buffer = await this.getVoiceBuffer(url);
         if (buffer && this.ctx) {
@@ -640,7 +751,7 @@ class BabySoundEngine {
           source.playbackRate.value = playbackRate;
 
           // 실제 동물 소리의 귀여운 타격감과 리듬감을 살리면서 자연스러운 재생
-          const now = this.ctx.currentTime;
+          const now = (this.ctx.currentTime || 0) + 0.005;
           const playDuration = Math.min(buffer.duration / playbackRate, 0.9);
 
           gainNode.gain.setValueAtTime(0.9, now);
@@ -2753,6 +2864,7 @@ function XylophoneChoirView() {
   const targetKeyIndex = currentSong.notes.length > 0 ? currentSong.notes[tutorialStep] : null;
 
   const handleKeyPress = (key, index) => {
+    audioEngine.init();
     audioEngine.playChoirNote(instrument, key.freq);
     setActiveKeyId(key.id);
     setJumpAnimalIdx(index % 4);
@@ -2796,7 +2908,13 @@ function XylophoneChoirView() {
           {CHOIR_MODES.map(mode => (
             <button
               key={mode.id}
+              onPointerDown={() => {
+                audioEngine.init();
+                setInstrument(mode.id);
+                audioEngine.playFreq(600, 'sine', 0.1);
+              }}
               onClick={() => {
+                audioEngine.init();
                 setInstrument(mode.id);
                 audioEngine.playFreq(600, 'sine', 0.1);
               }}
@@ -2820,7 +2938,14 @@ function XylophoneChoirView() {
           {SONG_TUTORIALS.map((s, idx) => (
             <button
               key={s.id}
+              onPointerDown={() => {
+                audioEngine.init();
+                setSongIdx(idx);
+                setTutorialStep(0);
+                audioEngine.playPopSound();
+              }}
               onClick={() => {
+                audioEngine.init();
                 setSongIdx(idx);
                 setTutorialStep(0);
                 audioEngine.playPopSound();
@@ -2911,6 +3036,10 @@ function XylophoneChoirView() {
           return (
             <button
               key={key.id}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                handleKeyPress(key, kIdx);
+              }}
               onClick={() => handleKeyPress(key, kIdx)}
               style={{
                 flex: 1, height: key.height,
@@ -4244,7 +4373,10 @@ export default function App() {
 
         // 🚀 다음 라운드 동물/과일 사전 선정 및 음성 백그라운드 프리로드 (정답 맞춘 터치 순간 캐싱)
         const upcomingRound = pickFeedRound();
-        audioEngine.getVoiceBuffer(`/sounds/voice/feed_${upcomingRound.target.id}_${upcomingRound.food.id}.mp3`);
+        audioEngine.getVoiceBuffer(`/sounds/voice/feed_${upcomingRound.target.id}_${upcomingRound.food.id}.mp3`).catch(() => {});
+        upcomingRound.threeAnimals.forEach(a => {
+          audioEngine.getVoiceBuffer(`/sounds/voice/feed_${a.id}_${upcomingRound.food.id}.mp3`).catch(() => {});
+        });
 
         // 🗣️ 동물이 직접 소감 표현 (인준 고음질 MP3 우선 재생)
         const praisePhrases = [
