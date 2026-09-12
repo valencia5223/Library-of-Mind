@@ -227,7 +227,8 @@ class BabySoundEngine {
     }
   }
 
-  // 🎙️ 아이패드/iOS WebKit에서도 딜레이 없이 100% 즉시 소리가 나오는 하이브리드 음성 엔진
+  // 🎙️ 아이패드 Safari 100% 호환 음성 재생 엔진
+  // 핵심: 사용자 터치 제스처 내에서 new Audio(url).play()를 즉시 호출 (가장 신뢰할 수 있는 방법)
   playVoice(url, fallbackFn = null, onEnded = null) {
     if (this.muted) return;
     this.stopVoice();
@@ -238,107 +239,36 @@ class BabySoundEngine {
       ? (window.location.origin + url)
       : url;
 
-    // Web Audio 버퍼 재생 공통 헬퍼 (iOS Safari 100% 호환)
-    const playBuffer = (buffer) => {
-      if (this.voicePlayToken !== token || !this.ctx || !buffer) return false;
-      try {
-        if (this.ctx.state === 'suspended') {
-          this.ctx.resume().catch(() => {});
-        }
-        const source = this.ctx.createBufferSource();
-        const gainNode = this.ctx.createGain();
-        gainNode.gain.value = 1.0;
-        source.buffer = buffer;
-        source.connect(gainNode);
-        gainNode.connect(this.ctx.destination);
-        this.currentVoiceSource = source;
-
-        source.onended = () => {
-          if (this.voicePlayToken === token) {
-            this.currentVoiceSource = null;
-            if (onEnded) onEnded();
-          }
-        };
-
-        source.start(0);
-        return true;
-      } catch (e) {
-        return false;
-      }
-    };
-
-    // 1순위: 캐시된 Web Audio 버퍼가 있으면 0초 즉시 재생
-    if (this.ctx && this.voiceBufferCache.has(url)) {
-      const buffer = this.voiceBufferCache.get(url);
-      if (playBuffer(buffer)) return;
-    }
-
-    // 2순위: 사전 언락된 sharedVoiceAudio HTML5 Audio 싱글톤으로 즉시 재생
-    // (iOS Safari에서 init() 시 이미 .play() 해둔 Audio 엘리먼트는 src 변경 후에도 재생 가능)
-    if (this.sharedVoiceAudio) {
-      try {
-        const audio = this.sharedVoiceAudio;
-        this.currentVoiceAudio = audio;
-        audio.onended = () => {
-          if (this.voicePlayToken === token) {
-            this.currentVoiceAudio = null;
-            if (onEnded) onEnded();
-          }
-        };
-        audio.src = fullUrl;
-        audio.currentTime = 0;
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise.then(() => {
-            this.isAudioUnlocked = true;
-            // 다음 호출을 위해 백그라운드 Web Audio 버퍼 캐싱
-            this.getVoiceBuffer(url).catch(() => {});
-          }).catch(() => {
-            // sharedVoiceAudio도 실패 시 Web Audio 비동기 버퍼 시도
-            this._playVoiceWebAudioFallback(url, token, fallbackFn, onEnded, playBuffer);
-          });
-          return;
-        }
-      } catch (e) { /* sharedVoiceAudio 실패, 아래 fallback으로 */ }
-    }
-
-    // 3순위: Web Audio 비동기 버퍼 fetch & decode
-    this._playVoiceWebAudioFallback(url, token, fallbackFn, onEnded, playBuffer);
-  }
-
-  // playVoice 내부 fallback: Web Audio 버퍼 비동기 fetch 또는 new Audio
-  _playVoiceWebAudioFallback(url, token, fallbackFn, onEnded, playBuffer) {
-    const fullUrl = (typeof window !== 'undefined' && url.startsWith('/') && !url.startsWith('//'))
-      ? (window.location.origin + url)
-      : url;
-
-    if (this.ctx) {
-      this.getVoiceBuffer(url).then(buffer => {
-        if (this.voicePlayToken === token && buffer) {
-          if (!playBuffer(buffer) && fallbackFn) fallbackFn();
-        } else if (this.voicePlayToken === token && fallbackFn) {
-          fallbackFn();
-        }
-      }).catch(() => {
-        if (this.voicePlayToken === token && fallbackFn) fallbackFn();
-      });
-      return;
-    }
-
-    // 최후의 수단: 새 Audio 엘리먼트
+    // 터치 제스처 내에서 즉시 new Audio 생성 + play() (아이패드 Safari에서 가장 확실한 방법)
     try {
       const audio = new Audio(fullUrl);
+      audio.preload = 'auto';
+      audio.volume = 1.0;
       this.currentVoiceAudio = audio;
+
       audio.onended = () => {
         if (this.voicePlayToken === token) {
           this.currentVoiceAudio = null;
           if (onEnded) onEnded();
         }
       };
-      const p = audio.play();
-      if (p !== undefined) {
-        p.catch(() => {
-          if (this.voicePlayToken === token && fallbackFn) fallbackFn();
+
+      audio.onerror = () => {
+        if (this.voicePlayToken === token) {
+          this.currentVoiceAudio = null;
+          if (fallbackFn) fallbackFn();
+        }
+      };
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          this.isAudioUnlocked = true;
+        }).catch(() => {
+          // play() 거절 시 TTS fallback
+          if (this.voicePlayToken === token && fallbackFn) {
+            fallbackFn();
+          }
         });
       }
     } catch (e) {
@@ -355,6 +285,7 @@ class BabySoundEngine {
       this.currentAudio = null;
     }
     this.stopVoice();
+    this.stopLullaby();
   }
 
   playFreq(freq, type = 'sine', duration = 0.25, gainVal = 0.4) {
@@ -426,14 +357,12 @@ class BabySoundEngine {
     try {
       const now = this.ctx.currentTime;
 
-      // 1. 따뜻한 오르골 챔버 필터
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'lowpass';
       filter.frequency.setValueAtTime(1600, now);
       filter.Q.setValueAtTime(1.0, now);
       filter.connect(this.ctx.destination);
 
-      // 2. 기본 맑은 사인파 벨 (35ms 부드러운 어택)
       const osc1 = this.ctx.createOscillator();
       const gain1 = this.ctx.createGain();
       osc1.type = 'sine';
@@ -446,7 +375,6 @@ class BabySoundEngine {
       osc1.start(now);
       osc1.stop(now + duration + 0.05);
 
-      // 3. 은은한 옥타브 배음
       const osc2 = this.ctx.createOscillator();
       const gain2 = this.ctx.createGain();
       osc2.type = 'sine';
@@ -461,36 +389,51 @@ class BabySoundEngine {
     } catch (e) { }
   }
 
-  // 🌙 브람스 자장가: OfflineAudioContext로 전체 멜로디를 사전 렌더링한 단일 AudioBuffer 무한 루프
-  // → 실시간 오실레이터/타이머 없이 하나의 연속 오디오 스트림이므로 아이패드에서도 절대 끊기지 않음
+  // ═══════════════════════════════════════════════════════════════════════
+  // 🌙 브람스 자장가: 순수 JavaScript PCM 합성 → WAV Blob → HTML5 Audio 루프
+  //    Web Audio BufferSource/OfflineAudioContext를 일절 사용하지 않음.
+  //    HTML5 <audio> 태그의 loop 재생은 아이패드 Safari에서 가장 안정적.
+  // ═══════════════════════════════════════════════════════════════════════
   startLullaby() {
     this.stopLullaby();
     this.init();
-    if (this.muted || !this.ctx) return;
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume().catch(() => {});
-    }
+    if (this.muted) return;
     this.isLullabyPlaying = true;
 
-    // 이미 렌더링된 버퍼가 있으면 즉시 재생
-    if (this._lullabyBuffer) {
-      this._startLullabyPlayback();
+    // 이미 생성된 오디오가 있으면 즉시 재생
+    if (this._lullabyAudio) {
+      try {
+        this._lullabyAudio.currentTime = 0;
+        this._lullabyAudio.play().catch(() => {});
+      } catch (e) { }
       return;
     }
 
-    // 최초 1회: 전체 자장가를 오프라인에서 렌더링 (~20ms 소요)
-    this._renderLullabyOffline().then(() => {
-      if (this.isLullabyPlaying) {
-        this._startLullabyPlayback();
-      }
-    }).catch(() => {});
+    // 최초 1회: 순수 JavaScript로 PCM 파형 합성 → WAV Blob 생성
+    try {
+      const wavBuffer = this._generateLullabyWav();
+      const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+      const blobUrl = URL.createObjectURL(blob);
+
+      const audio = new Audio(blobUrl);
+      audio.loop = true;
+      audio.volume = 0.85;
+
+      audio.play().then(() => {
+        this._lullabyAudio = audio;
+        this._lullabyBlobUrl = blobUrl;
+      }).catch(() => {
+        // HTML5 Audio 실패 시 fallback 없음 (조용히 실패)
+        URL.revokeObjectURL(blobUrl);
+      });
+    } catch (e) { }
   }
 
-  // 브람스 자장가 전체를 OfflineAudioContext로 사전 렌더링
-  async _renderLullabyOffline() {
-    const sampleRate = this.ctx.sampleRate;
+  // 브람스 자장가 전체를 순수 JavaScript 사인파 합성으로 PCM 파형 생성 → WAV 파일로 패킹
+  _generateLullabyWav() {
+    const sampleRate = 44100;
 
-    // 자장가 악보: freq(Hz), dur(초), bass 배열
+    // 자장가 악보: f=주파수(Hz), d=박자(초), b=베이스 배열
     const score = [
       { f: 329.63, d: 0.75, b: [130.81] },
       { f: 329.63, d: 0.75, b: [] },
@@ -518,96 +461,128 @@ class BabySoundEngine {
       { f: 523.25, d: 2.20, b: [130.81, 261.63] }
     ];
 
-    // 전체 멜로디 길이 계산
+    // 전체 길이 계산
     let totalMelodyDur = 0;
     score.forEach(n => totalMelodyDur += n.d);
-    // 마지막 음의 잔향을 위해 3.5초 추가
-    const totalDur = totalMelodyDur + 3.5;
-    const totalSamples = Math.ceil(sampleRate * totalDur);
+    const totalDur = totalMelodyDur + 3.5; // 마지막 잔향
+    const numSamples = Math.ceil(sampleRate * totalDur);
+    const samples = new Float32Array(numSamples);
 
-    const offline = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(2, totalSamples, sampleRate);
+    const TWO_PI = 2 * Math.PI;
 
-    // 마스터 따뜻한 로우패스 필터
-    const masterFilter = offline.createBiquadFilter();
-    masterFilter.type = 'lowpass';
-    masterFilter.frequency.value = 1800;
-    masterFilter.Q.value = 0.7;
-    masterFilter.connect(offline.destination);
-
-    let t = 0;
+    // 각 음의 사인파 + 옥타브 배음 + 베이스 합성
+    let noteStart = 0;
     score.forEach(note => {
-      const bellDur = 2.6; // 각 벨음 지속시간
+      const startIdx = Math.floor(noteStart * sampleRate);
+      const bellDur = 2.6;
+      const bellSamples = Math.floor(bellDur * sampleRate);
 
-      // 멜로디 벨 사인파
-      const osc = offline.createOscillator();
-      const g = offline.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(note.f, t);
-      g.gain.setValueAtTime(0.00001, t);
-      g.gain.linearRampToValueAtTime(0.30, t + 0.04);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + bellDur);
-      osc.connect(g);
-      g.connect(masterFilter);
-      osc.start(t);
-      osc.stop(t + bellDur + 0.05);
+      // 멜로디 벨 + 옥타브 배음
+      for (let i = 0; i < bellSamples; i++) {
+        const idx = startIdx + i;
+        if (idx >= numSamples) break;
+        const elapsed = i / sampleRate;
 
-      // 옥타브 배음 광택
-      const osc2 = offline.createOscillator();
-      const g2 = offline.createGain();
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(note.f * 2, t);
-      g2.gain.setValueAtTime(0.00001, t);
-      g2.gain.linearRampToValueAtTime(0.065, t + 0.03);
-      g2.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
-      osc2.connect(g2);
-      g2.connect(masterFilter);
-      osc2.start(t);
-      osc2.stop(t + 1.45);
+        // 엔벨로프: 40ms 부드러운 어택 + 지수 감쇠
+        let env;
+        if (elapsed < 0.04) {
+          env = elapsed / 0.04;
+        } else {
+          env = Math.exp(-(elapsed - 0.04) * 1.8);
+        }
+
+        // 기본 사인파
+        const phase = TWO_PI * note.f * idx / sampleRate;
+        samples[idx] += Math.sin(phase) * 0.28 * env;
+
+        // 옥타브 배음 (짧은 감쇠)
+        if (elapsed < 1.5) {
+          let hEnv;
+          if (elapsed < 0.03) {
+            hEnv = elapsed / 0.03;
+          } else {
+            hEnv = Math.exp(-(elapsed - 0.03) * 3.0);
+          }
+          samples[idx] += Math.sin(phase * 2) * 0.06 * hEnv;
+        }
+      }
 
       // 베이스 화음
       if (note.b && note.b.length > 0) {
         note.b.forEach((bf, bi) => {
-          const bo = offline.createOscillator();
-          const bg = offline.createGain();
-          const bStart = t + bi * 0.12;
-          bo.type = 'sine';
-          bo.frequency.setValueAtTime(bf, bStart);
-          bg.gain.setValueAtTime(0.00001, bStart);
-          bg.gain.linearRampToValueAtTime(0.14, bStart + 0.04);
-          bg.gain.exponentialRampToValueAtTime(0.0001, bStart + 3.0);
-          bo.connect(bg);
-          bg.connect(masterFilter);
-          bo.start(bStart);
-          bo.stop(bStart + 3.05);
+          const bStartIdx = Math.floor((noteStart + bi * 0.12) * sampleRate);
+          const bassDur = 3.0;
+          const bassSamples = Math.floor(bassDur * sampleRate);
+          for (let i = 0; i < bassSamples; i++) {
+            const idx = bStartIdx + i;
+            if (idx >= numSamples) break;
+            const elapsed = i / sampleRate;
+            let env;
+            if (elapsed < 0.04) {
+              env = elapsed / 0.04;
+            } else {
+              env = Math.exp(-(elapsed - 0.04) * 1.5);
+            }
+            const phase = TWO_PI * bf * idx / sampleRate;
+            samples[idx] += Math.sin(phase) * 0.12 * env;
+          }
         });
       }
 
-      t += note.d;
+      noteStart += note.d;
     });
 
-    this._lullabyBuffer = await offline.startRendering();
+    // 간단한 로우패스 (3-sample 이동 평균) → 따뜻하고 부드러운 톤
+    const smooth = new Float32Array(numSamples);
+    for (let i = 1; i < numSamples - 1; i++) {
+      smooth[i] = (samples[i - 1] + samples[i] * 2 + samples[i + 1]) / 4;
+    }
+    smooth[0] = samples[0];
+    smooth[numSamples - 1] = samples[numSamples - 1];
+
+    // Float32 → 16-bit PCM WAV 변환
+    return this._samplesToWav(smooth, sampleRate);
   }
 
-  // 사전 렌더링된 자장가 버퍼를 무한 루프 재생
-  _startLullabyPlayback() {
-    if (!this.ctx || !this._lullabyBuffer || !this.isLullabyPlaying) return;
-    try {
-      if (this.ctx.state === 'suspended') {
-        this.ctx.resume().catch(() => {});
+  // Float32 PCM 샘플 → WAV 파일 ArrayBuffer 변환
+  _samplesToWav(samples, sampleRate) {
+    const numSamples = samples.length;
+    const bytesPerSample = 2;
+    const dataSize = numSamples * bytesPerSample;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(buffer);
+
+    const writeStr = (offset, str) => {
+      for (let i = 0; i < str.length; i++) {
+        view.setUint8(offset + i, str.charCodeAt(i));
       }
-      const source = this.ctx.createBufferSource();
-      source.buffer = this._lullabyBuffer;
-      source.loop = true;
+    };
 
-      const gain = this.ctx.createGain();
-      gain.gain.value = 0.9;
-      source.connect(gain);
-      gain.connect(this.ctx.destination);
+    // WAV 헤더
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeStr(8, 'WAVE');
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);  // PCM
+    view.setUint16(22, 1, true);  // Mono
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * bytesPerSample, true);
+    view.setUint16(32, bytesPerSample, true);
+    view.setUint16(34, 16, true); // 16-bit
+    writeStr(36, 'data');
+    view.setUint32(40, dataSize, true);
 
-      source.start(0);
-      this._lullabySource = source;
-      this._lullabyGain = gain;
-    } catch (e) { }
+    // PCM 데이터 쓰기
+    let offset = 44;
+    for (let i = 0; i < numSamples; i++) {
+      let s = Math.max(-1, Math.min(1, samples[i]));
+      s = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      view.setInt16(offset, s | 0, true);
+      offset += 2;
+    }
+
+    return buffer;
   }
 
   stopLullaby() {
@@ -621,6 +596,12 @@ class BabySoundEngine {
       this._lullabySource = null;
     }
     this._lullabyGain = null;
+    if (this._lullabyAudio) {
+      try {
+        this._lullabyAudio.pause();
+        this._lullabyAudio.currentTime = 0;
+      } catch (e) { }
+    }
   }
 
   // 🐶🐱🐸 동물 합창단 및 실로폰 음계 연주기 (실제 녹음된 동물 소리 피치 변조)
