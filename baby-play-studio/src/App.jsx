@@ -67,6 +67,43 @@ class BabySoundEngine {
         osc.start();
         osc.stop(this.ctx.currentTime + 0.002);
       } catch (e) { }
+
+      // 🎶 오르골 전용 마스터 리버브/딜레이 이펙트 버스 구축 (잔향이 감싸 끊김 원천 방지)
+      if (!this.musicBoxBus) {
+        try {
+          const delayNode = this.ctx.createDelay(1.0);
+          delayNode.delayTime.value = 0.36; // 360ms 딜레이
+          const feedbackGain = this.ctx.createGain();
+          feedbackGain.gain.value = 0.32; // 32% 잔향 피드백
+          const delayFilter = this.ctx.createBiquadFilter();
+          delayFilter.type = 'lowpass';
+          delayFilter.frequency.value = 1400; // 따뜻한 잔향 필터링
+
+          // 딜레이 루프: delay -> filter -> feedback -> delay
+          delayNode.connect(delayFilter);
+          delayFilter.connect(feedbackGain);
+          feedbackGain.connect(delayNode);
+
+          // 메인 출력 연결 (드라이 80% + 잔향 35%)
+          const wetGain = this.ctx.createGain();
+          wetGain.gain.value = 0.35;
+          delayFilter.connect(wetGain);
+          wetGain.connect(this.ctx.destination);
+
+          const dryGain = this.ctx.createGain();
+          dryGain.gain.value = 0.82;
+          dryGain.connect(this.ctx.destination);
+
+          // 버스 입력단
+          const inputNode = this.ctx.createGain();
+          inputNode.connect(dryGain);
+          inputNode.connect(delayNode);
+
+          this.musicBoxBus = inputNode;
+        } catch (e) {
+          this.musicBoxBus = this.ctx.destination;
+        }
+      }
     }
 
     // 📱 iOS Safari 제스처 언락 (사용자 터치 시 1회 무음 활성화)
@@ -227,8 +264,8 @@ class BabySoundEngine {
     }
   }
 
-  // 🎙️ 아이패드/iOS WebKit 비동기 타이머에서도 절대 여성 음성(TTS)으로 튕기지 않는 완벽한 MP3 재생 엔진
-  async playVoice(url, fallbackFn = null, onEnded = null) {
+  // 🎙️ 아이패드/iOS WebKit에서도 딜레이 없이 100% 즉시 소리가 나오는 하이브리드 음성 엔진
+  playVoice(url, fallbackFn = null, onEnded = null) {
     if (this.muted) return;
     this.stopVoice();
     this.init();
@@ -238,74 +275,60 @@ class BabySoundEngine {
       ? (window.location.origin + url)
       : url;
 
-    // 1순위: Web Audio API 버퍼 재생 (iOS Safari 비동기 100% 허용)
-    if (this.ctx) {
+    // Web Audio 버퍼 재생 공통 헬퍼 (iOS Safari 100% 호환)
+    const playBuffer = (buffer) => {
+      if (this.voicePlayToken !== token || !this.ctx || !buffer) return false;
       try {
         if (this.ctx.state === 'suspended') {
-          await this.ctx.resume();
+          this.ctx.resume().catch(() => {});
         }
-        const buffer = await this.getVoiceBuffer(url);
-        if (this.voicePlayToken !== token) return;
+        const source = this.ctx.createBufferSource();
+        const gainNode = this.ctx.createGain();
+        gainNode.gain.value = 1.0;
+        source.buffer = buffer;
+        source.connect(gainNode);
+        gainNode.connect(this.ctx.destination);
+        this.currentVoiceSource = source;
 
-        if (buffer) {
-          const source = this.ctx.createBufferSource();
-          source.buffer = buffer;
-          source.connect(this.ctx.destination);
-          this.currentVoiceSource = source;
-
-          source.onended = () => {
-            if (this.voicePlayToken === token) {
-              this.currentVoiceSource = null;
-              if (onEnded) onEnded();
-            }
-          };
-
-          source.start(0);
-          return;
-        }
-      } catch (e) {
-        console.warn('Web Audio buffer error, fallback:', e);
-      }
-    }
-
-    if (this.voicePlayToken !== token) return;
-
-    // 2순위: 사용자 터치로 사전 언락된 전역 sharedVoiceAudio 재생 (아이패드 비동기 타이머 지원)
-    if (this.sharedVoiceAudio) {
-      try {
-        const audio = this.sharedVoiceAudio;
-        this.currentVoiceAudio = audio;
-        audio.onended = () => {
+        source.onended = () => {
           if (this.voicePlayToken === token) {
-            this.currentVoiceAudio = null;
+            this.currentVoiceSource = null;
             if (onEnded) onEnded();
           }
         };
-        audio.src = fullUrl;
-        audio.currentTime = 0;
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise.then(() => {
-            this.isAudioUnlocked = true;
-          }).catch(() => {
-            this.tryNewAudioElement(fullUrl, token, fallbackFn, onEnded);
-          });
-          return;
-        }
-        return;
+
+        source.start(0);
+        return true;
       } catch (e) {
-        this.tryNewAudioElement(fullUrl, token, fallbackFn, onEnded);
-        return;
+        console.warn('Web Audio buffer start error:', e);
+        return false;
       }
+    };
+
+    // 1순위: 캐시된 Web Audio 버퍼가 있으면 0초 즉시 재생 (가장 지연 없고 확실함)
+    if (this.ctx && this.voiceBufferCache.has(url)) {
+      const buffer = this.voiceBufferCache.get(url);
+      if (playBuffer(buffer)) return;
     }
 
-    // 3순위: 신규 Audio 엘리먼트 fallback
-    this.tryNewAudioElement(fullUrl, token, fallbackFn, onEnded);
-  }
+    // 2순위: 캐시에 아직 없는 경우, Web Audio로 즉각 fetch & decode하여 재생
+    // (iOS Safari는 AudioContext가 언락되어 있으면 setTimeout이나 비동기 콜백에서도 100% 소리가 남)
+    if (this.ctx) {
+      this.getVoiceBuffer(url).then(buffer => {
+        if (this.voicePlayToken === token && buffer) {
+          playBuffer(buffer);
+        } else if (this.voicePlayToken === token && !buffer) {
+          if (fallbackFn) fallbackFn();
+        }
+      }).catch(() => {
+        if (this.voicePlayToken === token && fallbackFn) fallbackFn();
+      });
+      return;
+    }
 
-  tryNewAudioElement(url, token, fallbackFn, onEnded) {
+    // 3순위: AudioContext가 없는 환경 fallback
     try {
-      const audio = new Audio(url);
+      const audio = new Audio(fullUrl);
       this.currentVoiceAudio = audio;
       audio.onended = () => {
         if (this.voicePlayToken === token) {
@@ -313,16 +336,14 @@ class BabySoundEngine {
           if (onEnded) onEnded();
         }
       };
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(err => {
-          if (this.voicePlayToken === token && fallbackFn) {
-            fallbackFn();
-          }
+      const p = audio.play();
+      if (p !== undefined) {
+        p.catch(() => {
+          if (this.voicePlayToken === token && fallbackFn) fallbackFn();
         });
       }
     } catch (e) {
-      if (this.voicePlayToken === token && fallbackFn) fallbackFn();
+      if (fallbackFn) fallbackFn();
     }
   }
 
@@ -399,79 +420,127 @@ class BabySoundEngine {
   }
 
   // 🎵 영롱하고 부드러운 오르골(Music Box) 벨 사운드 (클릭/툭 끊김 노이즈 0%)
-  playMusicBox(freq, volume = 0.36, duration = 2.2) {
+  playMusicBox(freq, volume = 0.36, duration = 2.4, targetTime = null) {
     if (this.muted) return;
     this.init();
     if (!this.ctx) return;
     try {
-      const now = this.ctx.currentTime;
+      const startTime = targetTime !== null ? Math.max(targetTime, this.ctx.currentTime) : this.ctx.currentTime;
+      const bus = this.musicBoxBus || this.ctx.destination;
 
-      // 1. 따뜻한 오르골 챔버 필터 (BiquadFilter - 귀에 거슬리는 고주파 팝/클릭음 흡수)
+      // 1. 따뜻한 오르골 챔버 필터 (BiquadFilter - 고주파 팝/클릭음 흡수)
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(1500, now);
-      filter.Q.setValueAtTime(1.2, now);
-      filter.connect(this.ctx.destination);
+      filter.frequency.setValueAtTime(1600, startTime);
+      filter.Q.setValueAtTime(1.0, startTime);
+      filter.connect(bus);
 
-      // 2. 기본 맑은 사인파 벨 (30ms 부드러운 어택 -> '툭' 클릭음 100% 방지)
+      // 2. 기본 맑은 사인파 벨 (35ms 부드러운 어택 -> '툭' 클릭음 100% 방지)
       const osc1 = this.ctx.createOscillator();
       const gain1 = this.ctx.createGain();
       osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(freq, now);
+      osc1.frequency.setValueAtTime(freq, startTime);
 
-      gain1.gain.setValueAtTime(0.00001, now);
-      gain1.gain.linearRampToValueAtTime(volume, now + 0.03);
-      gain1.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+      gain1.gain.setValueAtTime(0.00001, startTime);
+      gain1.gain.linearRampToValueAtTime(volume, startTime + 0.035);
+      gain1.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
 
       osc1.connect(gain1);
       gain1.connect(filter);
-      osc1.start(now);
-      osc1.stop(now + duration + 0.05);
+      osc1.start(startTime);
+      osc1.stop(startTime + duration + 0.05);
 
       // 3. 은은한 옥타브 배음 (천상의 맑은 오르골 광택 하모닉스)
       const osc2 = this.ctx.createOscillator();
       const gain2 = this.ctx.createGain();
       osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(freq * 2, now);
+      osc2.frequency.setValueAtTime(freq * 2, startTime);
 
-      gain2.gain.setValueAtTime(0.00001, now);
-      gain2.gain.linearRampToValueAtTime(volume * 0.25, now + 0.025);
-      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+      gain2.gain.setValueAtTime(0.00001, startTime);
+      gain2.gain.linearRampToValueAtTime(volume * 0.22, startTime + 0.03);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, startTime + 1.4);
 
       osc2.connect(gain2);
       gain2.connect(filter);
-      osc2.start(now);
-      osc2.stop(now + 1.25);
+      osc2.start(startTime);
+      osc2.stop(startTime + 1.45);
     } catch (e) { }
   }
 
-  // 🌙 브람스 자장가 오르골 루프 플레이어 (음계 간 끊김 없는 감미로운 레가토 연주)
+  // 🌙 브람스 자장가 오르골 루프 플레이어 (Web Audio 정밀 클록 스케줄링으로 끊김 없는 환상적인 레가토 연주)
   startLullaby() {
     this.stopLullaby();
     this.init();
     if (this.muted || !this.ctx) return;
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
     this.isLullabyPlaying = true;
 
-    // 브람스 자장가 멜로디 음계 & 박자 [freq, durationMs]
-    const melody = [
-      [329.63, 650], [329.63, 650], [392.00, 1250], // 미 미 솔
-      [329.63, 650], [329.63, 650], [392.00, 1250], // 미 미 솔
-      [329.63, 450], [392.00, 450], [523.25, 850], [493.88, 650], [440.00, 650], [440.00, 650], [392.00, 1300], // 미 솔 도' 시 라 라 솔
-      [293.66, 450], [329.63, 450], [349.23, 850], [293.66, 450], // 레 미 파 레
-      [293.66, 450], [349.23, 450], [493.88, 850], [440.00, 650], [392.00, 650], [493.88, 650], [523.25, 1600] // 레 파 시 라 솔 시 도'
+    // 브람스 자장가 악보: [멜로디 주파수, 박자(초), [베이스 반주 주파수 배열]]
+    // 멜로디와 함께 옥타브 아래 따뜻한 베이스 화음이 아르페지오로 감싸 안아주어 뚝뚝 끊기지 않고 포근하게 이어집니다.
+    const score = [
+      // 마디 1: 미-미-솔
+      { freq: 329.63, dur: 0.75, bass: [130.81, 196.00] }, // 미, 베이스 도-솔
+      { freq: 329.63, dur: 0.75, bass: [] },                // 미
+      { freq: 392.00, dur: 1.5, bass: [261.63, 329.63] },  // 솔, 베이스 도-미
+      // 마디 2: 미-미-솔
+      { freq: 329.63, dur: 0.75, bass: [130.81, 196.00] }, // 미
+      { freq: 329.63, dur: 0.75, bass: [] },                // 미
+      { freq: 392.00, dur: 1.5, bass: [261.63, 329.63] },  // 솔
+      // 마디 3: 미-솔-도'-시-라-라-솔
+      { freq: 329.63, dur: 0.55, bass: [130.81] },          // 미
+      { freq: 392.00, dur: 0.55, bass: [196.00] },          // 솔
+      { freq: 523.25, dur: 0.95, bass: [261.63, 392.00] }, // 도'
+      { freq: 493.88, dur: 0.75, bass: [] },                // 시
+      { freq: 440.00, dur: 0.75, bass: [174.61, 220.00] }, // 라, 파-라 베이스
+      { freq: 440.00, dur: 0.75, bass: [] },                // 라
+      { freq: 392.00, dur: 1.5, bass: [196.00, 246.94] },  // 솔, 솔-시 베이스
+      // 마디 4: 레-미-파-레
+      { freq: 293.66, dur: 0.55, bass: [146.83] },          // 레
+      { freq: 329.63, dur: 0.55, bass: [196.00] },          // 미
+      { freq: 349.23, dur: 0.95, bass: [220.00] },          // 파
+      { freq: 293.66, dur: 0.55, bass: [146.83] },          // 레
+      // 마디 5: 레-파-시-라-솔-시-도'
+      { freq: 293.66, dur: 0.55, bass: [146.83] },          // 레
+      { freq: 349.23, dur: 0.55, bass: [196.00] },          // 파
+      { freq: 493.88, dur: 0.95, bass: [246.94] },          // 시
+      { freq: 440.00, dur: 0.75, bass: [220.00] },          // 라
+      { freq: 392.00, dur: 0.75, bass: [196.00] },          // 솔
+      { freq: 493.88, dur: 0.75, bass: [246.94] },          // 시
+      { freq: 523.25, dur: 2.2, bass: [130.81, 261.63] }   // 도', 따뜻한 피날레
     ];
 
     let noteIdx = 0;
-    const playNext = () => {
-      if (!this.isLullabyPlaying) return;
-      const [freq, dur] = melody[noteIdx];
-      // 2.2초 동안 은은한 잔향으로 울려 퍼져 다음 음과 아름답게 블렌딩됨 (Legato)
-      this.playMusicBox(freq, 0.32, 2.2);
-      noteIdx = (noteIdx + 1) % melody.length;
-      this.lullabyTimer = setTimeout(playNext, dur);
+    // 다음 음표가 연주될 Web Audio 절대 시간 (초)
+    let nextNoteTime = this.ctx.currentTime + 0.05;
+
+    const scheduleNotes = () => {
+      if (!this.isLullabyPlaying || !this.ctx) return;
+
+      // 앞으로 1.6초 이내에 연주되어야 할 음들을 Web Audio 하드웨어 클록에 사전 예약
+      // (JS 타이머 지터에 영향받지 않는 절대 불변의 오차 0% 스케줄링)
+      while (nextNoteTime < this.ctx.currentTime + 1.6) {
+        const item = score[noteIdx];
+        // 멜로디 음 (2.6초 동안 길게 딜레이 리버브와 블렌딩)
+        this.playMusicBox(item.freq, 0.30, 2.6, nextNoteTime);
+
+        // 베이스 화음 아르페지오 (풍성하고 따뜻한 배경음)
+        if (item.bass && item.bass.length > 0) {
+          item.bass.forEach((bFreq, bIdx) => {
+            this.playMusicBox(bFreq, 0.16, 3.0, nextNoteTime + bIdx * 0.14);
+          });
+        }
+
+        nextNoteTime += item.dur;
+        noteIdx = (noteIdx + 1) % score.length;
+      }
+
+      // 120ms마다 룩어헤드 검사 (스케줄링 예약 지속 유지)
+      this.lullabyTimer = setTimeout(scheduleNotes, 120);
     };
 
-    playNext();
+    scheduleNotes();
   }
 
   stopLullaby() {
@@ -3055,9 +3124,9 @@ function BedtimeSleepView() {
     const nextState = !isLightsOff;
     setIsLightsOff(nextState);
     if (nextState) {
+      // 🌙 불을 끄면 평화로운 오르골 자장가만이 방 전체에 울려 퍼집니다 (TTS 충돌 방지)
       audioEngine.startLullaby();
       setIsLullabyOn(true);
-      speakNaturalKorean('모두 불을 끄고 코 잘 시간이에요. 잘 자렴, 좋은 꿈 꿔~', { pitch: 1.12, rate: 0.88 });
     } else {
       audioEngine.stopLullaby();
       setIsLullabyOn(false);
@@ -3606,6 +3675,7 @@ export default function App() {
   const handleStartDragFood = (e, food) => {
     // 먹는 중이거나 피드백 중일 때 드래그 차단 (PROTECT)
     if (isFeedBusyRef.current) return;
+    audioEngine.init();
     e.preventDefault();
     draggingFoodRef.current = food;
     setDraggingFood(food);
@@ -3917,6 +3987,30 @@ export default function App() {
         img.src = item.img;
       }
     });
+
+    // 🦁 과일먹이기 핵심 음원 앱 시작 시 사전 버퍼 캐싱 (아이패드 0초 즉시 사운드 출력 보장)
+    [0, 1, 2].forEach(idx => {
+      audioEngine.getVoiceBuffer(`/sounds/voice/feed_praise_${idx}.mp3`).catch(() => {});
+    });
+    audioEngine.getVoiceBuffer('/sounds/voice/feed_reject_wrong_food.mp3').catch(() => {});
+    audioEngine.getVoiceBuffer('/sounds/voice/feed_reject_wrong_animal.mp3').catch(() => {});
+    if (feedRound?.target && feedRound?.food) {
+      audioEngine.getVoiceBuffer(`/sounds/voice/feed_${feedRound.target.id}_${feedRound.food.id}.mp3`).catch(() => {});
+    }
+
+    // 📱 iOS Safari 전역 제스처 언락 (화면 아무 곳이나 탭하면 Web Audio 즉시 활성화)
+    const handleGlobalUnlock = () => {
+      audioEngine.init();
+    };
+    window.addEventListener('touchstart', handleGlobalUnlock, { passive: true });
+    window.addEventListener('pointerdown', handleGlobalUnlock, { passive: true });
+    window.addEventListener('click', handleGlobalUnlock, { passive: true });
+
+    return () => {
+      window.removeEventListener('touchstart', handleGlobalUnlock);
+      window.removeEventListener('pointerdown', handleGlobalUnlock);
+      window.removeEventListener('click', handleGlobalUnlock);
+    };
   }, []);
 
   // 동요 탭 변경 시 오디오 정지 및 재생 처리
@@ -4053,7 +4147,7 @@ export default function App() {
   const openFeedModal = () => {
     audioEngine.init();
     // 📱 iOS Safari 터치 제스처 스택에서 즉각 오디오 활성화 (0초 효과음)
-    audioEngine.playFreq(659.25, 'triangle', 0.08, 0.4);
+    audioEngine.playFreq(784, 'triangle', 0.12, 0.5);
 
     const round = pickFeedRound();
     setFeedRound(round);
@@ -4063,9 +4157,16 @@ export default function App() {
     isFeedBusyRef.current = false;
     setIsFeedModalOpen(true);
 
-    // 칭찬 음성 3종 사전 버퍼 캐싱
+    // 칭찬 & 거절 음성 사전 버퍼 캐싱
     [0, 1, 2].forEach(idx => {
       audioEngine.getVoiceBuffer(`/sounds/voice/feed_praise_${idx}.mp3`).catch(() => {});
+    });
+    audioEngine.getVoiceBuffer('/sounds/voice/feed_reject_wrong_food.mp3').catch(() => {});
+    audioEngine.getVoiceBuffer('/sounds/voice/feed_reject_wrong_animal.mp3').catch(() => {});
+
+    // 3마리 동물 x 원하는 과일 음원 사전 버퍼 캐싱
+    round.threeAnimals.forEach(a => {
+      audioEngine.getVoiceBuffer(`/sounds/voice/feed_${a.id}_${round.food.id}.mp3`).catch(() => {});
     });
 
     // 목표 동물 음성 즉시 재생 (버퍼 준비 및 fallback 자동 보장)
@@ -4349,7 +4450,16 @@ export default function App() {
               <button key={tab.id} onClick={() => {
                 if (tab.id !== 'sleep') audioEngine.stopLullaby();
                 if (tab.id === 'animal') setAnimalItems(shuffleArray(REAL_ANIMALS));
-                if (tab.id === 'fruit') setFruitItems(shuffleArray(REAL_FRUITS));
+                if (tab.id === 'fruit') {
+                  setFruitItems(shuffleArray(REAL_FRUITS));
+                  // 🍎 과일 탭 진입 시 과일먹이기 핵심 음원 사전 프리로드
+                  [0, 1, 2].forEach(idx => audioEngine.getVoiceBuffer(`/sounds/voice/feed_praise_${idx}.mp3`).catch(() => {}));
+                  audioEngine.getVoiceBuffer('/sounds/voice/feed_reject_wrong_food.mp3').catch(() => {});
+                  audioEngine.getVoiceBuffer('/sounds/voice/feed_reject_wrong_animal.mp3').catch(() => {});
+                  if (feedRound?.target && feedRound?.food) {
+                    audioEngine.getVoiceBuffer(`/sounds/voice/feed_${feedRound.target.id}_${feedRound.food.id}.mp3`).catch(() => {});
+                  }
+                }
                 if (tab.id === 'ocean') speakOceanMission(oceanTarget);
                 if (tab.id === 'puzzle' && !puzzleCompleted) {
                   const obj = attachJosa(puzzleTheme.name, '을/를');
