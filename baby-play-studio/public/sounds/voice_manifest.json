@@ -1,0 +1,1442 @@
+﻿[
+    {
+        "file":  "feed_praise_0.mp3",
+        "text":  "냠냠! 정말 맛있어요! 고마워요!",
+        "pitch":  "+6%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_praise_1.mp3",
+        "text":  "와아! 최고예요! 냠냠 맛있어요!",
+        "pitch":  "+6%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_praise_2.mp3",
+        "text":  "냠냠 꿀꺽! 달콤하고 맛있어요! 배가 든든해요!",
+        "pitch":  "+6%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_reject_wrong_food.mp3",
+        "text":  "으응, 이거 말고 다른 거 먹고 싶대요.",
+        "pitch":  "+4%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_reject_wrong_animal.mp3",
+        "text":  "나는 아니에요. 친구에게 주세요!",
+        "pitch":  "+4%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "ocean_mission_fish.mp3",
+        "text":  "신비한 바다속에서 물고기는 어디 있을까요?",
+        "pitch":  "+5%",
+        "rate":  "-2%"
+    },
+    {
+        "file":  "ocean_mission_octopus.mp3",
+        "text":  "신비한 바다속에서 문어는 어디 있을까요?",
+        "pitch":  "+5%",
+        "rate":  "-2%"
+    },
+    {
+        "file":  "ocean_mission_crab.mp3",
+        "text":  "신비한 바다속에서 꽃게는 어디 있을까요?",
+        "pitch":  "+5%",
+        "rate":  "-2%"
+    },
+    {
+        "file":  "ocean_mission_jellyfish.mp3",
+        "text":  "신비한 바다속에서 해파리는 어디 있을까요?",
+        "pitch":  "+5%",
+        "rate":  "-2%"
+    },
+    {
+        "file":  "ocean_mission_turtle.mp3",
+        "text":  "신비한 바다속에서 거북이는 어디 있을까요?",
+        "pitch":  "+5%",
+        "rate":  "-2%"
+    },
+    {
+        "file":  "ocean_mission_whale.mp3",
+        "text":  "신비한 바다속에서 고래는 어디 있을까요?",
+        "pitch":  "+5%",
+        "rate":  "-2%"
+    },
+    {
+        "file":  "ocean_mission_shark.mp3",
+        "text":  "신비한 바다속에서 상어는 어디 있을까요?",
+        "pitch":  "+5%",
+        "rate":  "-2%"
+    },
+    {
+        "file":  "ocean_mission_starfish.mp3",
+        "text":  "신비한 바다속에서 불가사리는 어디 있을까요?",
+        "pitch":  "+5%",
+        "rate":  "-2%"
+    },
+    {
+        "file":  "ocean_found_fish.mp3",
+        "text":  "찾았다! 물고기를 찾았어요! 정말 최고예요~",
+        "pitch":  "+6%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "ocean_found_octopus.mp3",
+        "text":  "찾았다! 문어를 찾았어요! 정말 최고예요~",
+        "pitch":  "+6%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "ocean_found_crab.mp3",
+        "text":  "찾았다! 꽃게를 찾았어요! 정말 최고예요~",
+        "pitch":  "+6%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "ocean_found_jellyfish.mp3",
+        "text":  "찾았다! 해파리를 찾았어요! 정말 최고예요~",
+        "pitch":  "+6%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "ocean_found_turtle.mp3",
+        "text":  "찾았다! 거북이를 찾았어요! 정말 최고예요~",
+        "pitch":  "+6%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "ocean_found_whale.mp3",
+        "text":  "찾았다! 고래를 찾았어요! 정말 최고예요~",
+        "pitch":  "+6%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "ocean_found_shark.mp3",
+        "text":  "찾았다! 상어를 찾았어요! 정말 최고예요~",
+        "pitch":  "+6%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "ocean_found_starfish.mp3",
+        "text":  "찾았다! 불가사리를 찾았어요! 정말 최고예요~",
+        "pitch":  "+6%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "puzzle_start_lion.mp3",
+        "text":  "우리 사자 퍼즐을 맞춰볼까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "puzzle_start_elephant.mp3",
+        "text":  "우리 코끼리 퍼즐을 맞춰볼까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "puzzle_start_giraffe.mp3",
+        "text":  "우리 기린 퍼즐을 맞춰볼까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "puzzle_start_panda.mp3",
+        "text":  "우리 판다 퍼즐을 맞춰볼까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "puzzle_done_lion.mp3",
+        "text":  "와아! 멋진 사자 퍼즐을 완성했어요! 참 잘했어요~",
+        "pitch":  "+6%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "puzzle_done_elephant.mp3",
+        "text":  "와아! 멋진 코끼리 퍼즐을 완성했어요! 참 잘했어요~",
+        "pitch":  "+6%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "puzzle_done_giraffe.mp3",
+        "text":  "와아! 멋진 기린 퍼즐을 완성했어요! 참 잘했어요~",
+        "pitch":  "+6%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "puzzle_done_panda.mp3",
+        "text":  "와아! 멋진 판다 퍼즐을 완성했어요! 참 잘했어요~",
+        "pitch":  "+6%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "puzzle_wrong.mp3",
+        "text":  "여기가 아니에요~ 제자리에 쏙 맞춰보세요!",
+        "pitch":  "+4%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_dog.mp3",
+        "text":  "강아지는 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_cat.mp3",
+        "text":  "고양이는 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_lion.mp3",
+        "text":  "사자는 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_cow.mp3",
+        "text":  "소는 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_duck.mp3",
+        "text":  "오리는 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_monkey.mp3",
+        "text":  "원숭이는 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_horse.mp3",
+        "text":  "말은 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_pig.mp3",
+        "text":  "돼지는 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_sheep.mp3",
+        "text":  "양은 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_chicken.mp3",
+        "text":  "닭은 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_elephant.mp3",
+        "text":  "코끼리는 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_tiger.mp3",
+        "text":  "호랑이는 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_bear.mp3",
+        "text":  "곰은 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_rabbit.mp3",
+        "text":  "토끼는 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_panda.mp3",
+        "text":  "판다는 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_frog.mp3",
+        "text":  "개구리는 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_owl.mp3",
+        "text":  "부엉이는 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_fox.mp3",
+        "text":  "여우는 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_dolphin.mp3",
+        "text":  "돌고래는 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "quiz_penguin.mp3",
+        "text":  "펭귄은 누구일까요?",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_apple.mp3",
+        "text":  "배고파요, 토끼가 맛있는 사과를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_banana.mp3",
+        "text":  "배고파요, 토끼가 맛있는 바나나를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_grape.mp3",
+        "text":  "배고파요, 토끼가 맛있는 포도를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_watermelon.mp3",
+        "text":  "배고파요, 토끼가 맛있는 수박을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_strawberry.mp3",
+        "text":  "배고파요, 토끼가 맛있는 딸기를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_tangerine.mp3",
+        "text":  "배고파요, 토끼가 맛있는 귤을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_peach.mp3",
+        "text":  "배고파요, 토끼가 맛있는 복숭아를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_pineapple.mp3",
+        "text":  "배고파요, 토끼가 맛있는 파인애플을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_melon.mp3",
+        "text":  "배고파요, 토끼가 맛있는 멜론을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_cherry.mp3",
+        "text":  "배고파요, 토끼가 맛있는 체리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_blueberry.mp3",
+        "text":  "배고파요, 토끼가 맛있는 블루베리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_carrot.mp3",
+        "text":  "배고파요, 토끼가 맛있는 당근을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_broccoli.mp3",
+        "text":  "배고파요, 토끼가 맛있는 브로콜리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_corn.mp3",
+        "text":  "배고파요, 토끼가 맛있는 옥수수를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_sweet_potato.mp3",
+        "text":  "배고파요, 토끼가 맛있는 고구마를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_potato.mp3",
+        "text":  "배고파요, 토끼가 맛있는 감자를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_tomato.mp3",
+        "text":  "배고파요, 토끼가 맛있는 토마토를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_cucumber.mp3",
+        "text":  "배고파요, 토끼가 맛있는 오이를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_rabbit_eggplant.mp3",
+        "text":  "배고파요, 토끼가 맛있는 가지를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_apple.mp3",
+        "text":  "배고파요, 개구리가 맛있는 사과를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_banana.mp3",
+        "text":  "배고파요, 개구리가 맛있는 바나나를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_grape.mp3",
+        "text":  "배고파요, 개구리가 맛있는 포도를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_watermelon.mp3",
+        "text":  "배고파요, 개구리가 맛있는 수박을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_strawberry.mp3",
+        "text":  "배고파요, 개구리가 맛있는 딸기를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_tangerine.mp3",
+        "text":  "배고파요, 개구리가 맛있는 귤을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_peach.mp3",
+        "text":  "배고파요, 개구리가 맛있는 복숭아를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_pineapple.mp3",
+        "text":  "배고파요, 개구리가 맛있는 파인애플을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_melon.mp3",
+        "text":  "배고파요, 개구리가 맛있는 멜론을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_cherry.mp3",
+        "text":  "배고파요, 개구리가 맛있는 체리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_blueberry.mp3",
+        "text":  "배고파요, 개구리가 맛있는 블루베리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_carrot.mp3",
+        "text":  "배고파요, 개구리가 맛있는 당근을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_broccoli.mp3",
+        "text":  "배고파요, 개구리가 맛있는 브로콜리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_corn.mp3",
+        "text":  "배고파요, 개구리가 맛있는 옥수수를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_sweet_potato.mp3",
+        "text":  "배고파요, 개구리가 맛있는 고구마를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_potato.mp3",
+        "text":  "배고파요, 개구리가 맛있는 감자를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_tomato.mp3",
+        "text":  "배고파요, 개구리가 맛있는 토마토를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_cucumber.mp3",
+        "text":  "배고파요, 개구리가 맛있는 오이를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_frog_eggplant.mp3",
+        "text":  "배고파요, 개구리가 맛있는 가지를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_apple.mp3",
+        "text":  "배고파요, 고양이가 맛있는 사과를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_banana.mp3",
+        "text":  "배고파요, 고양이가 맛있는 바나나를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_grape.mp3",
+        "text":  "배고파요, 고양이가 맛있는 포도를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_watermelon.mp3",
+        "text":  "배고파요, 고양이가 맛있는 수박을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_strawberry.mp3",
+        "text":  "배고파요, 고양이가 맛있는 딸기를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_tangerine.mp3",
+        "text":  "배고파요, 고양이가 맛있는 귤을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_peach.mp3",
+        "text":  "배고파요, 고양이가 맛있는 복숭아를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_pineapple.mp3",
+        "text":  "배고파요, 고양이가 맛있는 파인애플을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_melon.mp3",
+        "text":  "배고파요, 고양이가 맛있는 멜론을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_cherry.mp3",
+        "text":  "배고파요, 고양이가 맛있는 체리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_blueberry.mp3",
+        "text":  "배고파요, 고양이가 맛있는 블루베리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_carrot.mp3",
+        "text":  "배고파요, 고양이가 맛있는 당근을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_broccoli.mp3",
+        "text":  "배고파요, 고양이가 맛있는 브로콜리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_corn.mp3",
+        "text":  "배고파요, 고양이가 맛있는 옥수수를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_sweet_potato.mp3",
+        "text":  "배고파요, 고양이가 맛있는 고구마를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_potato.mp3",
+        "text":  "배고파요, 고양이가 맛있는 감자를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_tomato.mp3",
+        "text":  "배고파요, 고양이가 맛있는 토마토를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_cucumber.mp3",
+        "text":  "배고파요, 고양이가 맛있는 오이를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_cat_eggplant.mp3",
+        "text":  "배고파요, 고양이가 맛있는 가지를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_apple.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 사과를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_banana.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 바나나를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_grape.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 포도를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_watermelon.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 수박을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_strawberry.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 딸기를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_tangerine.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 귤을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_peach.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 복숭아를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_pineapple.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 파인애플을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_melon.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 멜론을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_cherry.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 체리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_blueberry.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 블루베리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_carrot.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 당근을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_broccoli.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 브로콜리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_corn.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 옥수수를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_sweet_potato.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 고구마를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_potato.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 감자를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_tomato.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 토마토를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_cucumber.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 오이를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_monkey_eggplant.mp3",
+        "text":  "배고파요, 원숭이가 맛있는 가지를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_apple.mp3",
+        "text":  "배고파요, 강아지가 맛있는 사과를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_banana.mp3",
+        "text":  "배고파요, 강아지가 맛있는 바나나를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_grape.mp3",
+        "text":  "배고파요, 강아지가 맛있는 포도를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_watermelon.mp3",
+        "text":  "배고파요, 강아지가 맛있는 수박을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_strawberry.mp3",
+        "text":  "배고파요, 강아지가 맛있는 딸기를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_tangerine.mp3",
+        "text":  "배고파요, 강아지가 맛있는 귤을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_peach.mp3",
+        "text":  "배고파요, 강아지가 맛있는 복숭아를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_pineapple.mp3",
+        "text":  "배고파요, 강아지가 맛있는 파인애플을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_melon.mp3",
+        "text":  "배고파요, 강아지가 맛있는 멜론을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_cherry.mp3",
+        "text":  "배고파요, 강아지가 맛있는 체리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_blueberry.mp3",
+        "text":  "배고파요, 강아지가 맛있는 블루베리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_carrot.mp3",
+        "text":  "배고파요, 강아지가 맛있는 당근을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_broccoli.mp3",
+        "text":  "배고파요, 강아지가 맛있는 브로콜리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_corn.mp3",
+        "text":  "배고파요, 강아지가 맛있는 옥수수를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_sweet_potato.mp3",
+        "text":  "배고파요, 강아지가 맛있는 고구마를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_potato.mp3",
+        "text":  "배고파요, 강아지가 맛있는 감자를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_tomato.mp3",
+        "text":  "배고파요, 강아지가 맛있는 토마토를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_cucumber.mp3",
+        "text":  "배고파요, 강아지가 맛있는 오이를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_dog_eggplant.mp3",
+        "text":  "배고파요, 강아지가 맛있는 가지를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_apple.mp3",
+        "text":  "배고파요, 사자가 맛있는 사과를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_banana.mp3",
+        "text":  "배고파요, 사자가 맛있는 바나나를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_grape.mp3",
+        "text":  "배고파요, 사자가 맛있는 포도를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_watermelon.mp3",
+        "text":  "배고파요, 사자가 맛있는 수박을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_strawberry.mp3",
+        "text":  "배고파요, 사자가 맛있는 딸기를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_tangerine.mp3",
+        "text":  "배고파요, 사자가 맛있는 귤을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_peach.mp3",
+        "text":  "배고파요, 사자가 맛있는 복숭아를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_pineapple.mp3",
+        "text":  "배고파요, 사자가 맛있는 파인애플을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_melon.mp3",
+        "text":  "배고파요, 사자가 맛있는 멜론을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_cherry.mp3",
+        "text":  "배고파요, 사자가 맛있는 체리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_blueberry.mp3",
+        "text":  "배고파요, 사자가 맛있는 블루베리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_carrot.mp3",
+        "text":  "배고파요, 사자가 맛있는 당근을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_broccoli.mp3",
+        "text":  "배고파요, 사자가 맛있는 브로콜리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_corn.mp3",
+        "text":  "배고파요, 사자가 맛있는 옥수수를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_sweet_potato.mp3",
+        "text":  "배고파요, 사자가 맛있는 고구마를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_potato.mp3",
+        "text":  "배고파요, 사자가 맛있는 감자를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_tomato.mp3",
+        "text":  "배고파요, 사자가 맛있는 토마토를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_cucumber.mp3",
+        "text":  "배고파요, 사자가 맛있는 오이를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_lion_eggplant.mp3",
+        "text":  "배고파요, 사자가 맛있는 가지를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_apple.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 사과를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_banana.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 바나나를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_grape.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 포도를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_watermelon.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 수박을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_strawberry.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 딸기를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_tangerine.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 귤을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_peach.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 복숭아를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_pineapple.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 파인애플을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_melon.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 멜론을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_cherry.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 체리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_blueberry.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 블루베리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_carrot.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 당근을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_broccoli.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 브로콜리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_corn.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 옥수수를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_sweet_potato.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 고구마를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_potato.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 감자를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_tomato.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 토마토를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_cucumber.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 오이를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_elephant_eggplant.mp3",
+        "text":  "배고파요, 코끼리가 맛있는 가지를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_apple.mp3",
+        "text":  "배고파요, 판다가 맛있는 사과를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_banana.mp3",
+        "text":  "배고파요, 판다가 맛있는 바나나를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_grape.mp3",
+        "text":  "배고파요, 판다가 맛있는 포도를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_watermelon.mp3",
+        "text":  "배고파요, 판다가 맛있는 수박을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_strawberry.mp3",
+        "text":  "배고파요, 판다가 맛있는 딸기를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_tangerine.mp3",
+        "text":  "배고파요, 판다가 맛있는 귤을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_peach.mp3",
+        "text":  "배고파요, 판다가 맛있는 복숭아를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_pineapple.mp3",
+        "text":  "배고파요, 판다가 맛있는 파인애플을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_melon.mp3",
+        "text":  "배고파요, 판다가 맛있는 멜론을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_cherry.mp3",
+        "text":  "배고파요, 판다가 맛있는 체리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_blueberry.mp3",
+        "text":  "배고파요, 판다가 맛있는 블루베리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_carrot.mp3",
+        "text":  "배고파요, 판다가 맛있는 당근을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_broccoli.mp3",
+        "text":  "배고파요, 판다가 맛있는 브로콜리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_corn.mp3",
+        "text":  "배고파요, 판다가 맛있는 옥수수를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_sweet_potato.mp3",
+        "text":  "배고파요, 판다가 맛있는 고구마를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_potato.mp3",
+        "text":  "배고파요, 판다가 맛있는 감자를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_tomato.mp3",
+        "text":  "배고파요, 판다가 맛있는 토마토를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_cucumber.mp3",
+        "text":  "배고파요, 판다가 맛있는 오이를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_panda_eggplant.mp3",
+        "text":  "배고파요, 판다가 맛있는 가지를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_apple.mp3",
+        "text":  "배고파요, 돼지가 맛있는 사과를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_banana.mp3",
+        "text":  "배고파요, 돼지가 맛있는 바나나를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_grape.mp3",
+        "text":  "배고파요, 돼지가 맛있는 포도를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_watermelon.mp3",
+        "text":  "배고파요, 돼지가 맛있는 수박을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_strawberry.mp3",
+        "text":  "배고파요, 돼지가 맛있는 딸기를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_tangerine.mp3",
+        "text":  "배고파요, 돼지가 맛있는 귤을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_peach.mp3",
+        "text":  "배고파요, 돼지가 맛있는 복숭아를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_pineapple.mp3",
+        "text":  "배고파요, 돼지가 맛있는 파인애플을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_melon.mp3",
+        "text":  "배고파요, 돼지가 맛있는 멜론을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_cherry.mp3",
+        "text":  "배고파요, 돼지가 맛있는 체리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_blueberry.mp3",
+        "text":  "배고파요, 돼지가 맛있는 블루베리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_carrot.mp3",
+        "text":  "배고파요, 돼지가 맛있는 당근을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_broccoli.mp3",
+        "text":  "배고파요, 돼지가 맛있는 브로콜리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_corn.mp3",
+        "text":  "배고파요, 돼지가 맛있는 옥수수를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_sweet_potato.mp3",
+        "text":  "배고파요, 돼지가 맛있는 고구마를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_potato.mp3",
+        "text":  "배고파요, 돼지가 맛있는 감자를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_tomato.mp3",
+        "text":  "배고파요, 돼지가 맛있는 토마토를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_cucumber.mp3",
+        "text":  "배고파요, 돼지가 맛있는 오이를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_pig_eggplant.mp3",
+        "text":  "배고파요, 돼지가 맛있는 가지를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_apple.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 사과를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_banana.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 바나나를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_grape.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 포도를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_watermelon.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 수박을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_strawberry.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 딸기를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_tangerine.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 귤을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_peach.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 복숭아를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_pineapple.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 파인애플을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_melon.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 멜론을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_cherry.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 체리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_blueberry.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 블루베리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_carrot.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 당근을 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_broccoli.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 브로콜리를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_corn.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 옥수수를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_sweet_potato.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 고구마를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_potato.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 감자를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_tomato.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 토마토를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_cucumber.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 오이를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    },
+    {
+        "file":  "feed_bear_eggplant.mp3",
+        "text":  "배고파요, 곰돌이가 맛있는 가지를 먹고 싶대요!",
+        "pitch":  "+5%",
+        "rate":  "0%"
+    }
+]
