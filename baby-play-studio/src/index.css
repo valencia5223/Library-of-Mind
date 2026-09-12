@@ -365,4 +365,47 @@ button:active {
   animation: sleepZzFloat 2.2s infinite ease-out;
 }
 
+/* 💤 실제 누워있는 동물의 새근새근 숨쉬기 모션 */
+@keyframes gentleBreathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.025) translateY(-2px);
+  }
+}
+
+.animal-breathing {
+  animation: gentleBreathe 3.4s ease-in-out infinite;
+}
+
+/* 🛏️ 실제 퀼팅 이불 다이아몬드 패브릭 패턴 */
+.quilt-fabric-pink {
+  background-color: #f472b6;
+  background-image:
+    radial-gradient(#fbcfe8 15%, transparent 16%),
+    radial-gradient(#ec4899 15%, transparent 16%);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+}
+
+.quilt-fabric-yellow {
+  background-color: #fbbf24;
+  background-image:
+    radial-gradient(#fef08a 15%, transparent 16%),
+    radial-gradient(#d97706 15%, transparent 16%);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+}
+
+.quilt-fabric-blue {
+  background-color: #60a5fa;
+  background-image:
+    radial-gradient(#bfdbfe 15%, transparent 16%),
+    radial-gradient(#2563eb 15%, transparent 16%);
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+}
+
+
 
