@@ -53,8 +53,20 @@ class BabySoundEngine {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) this.ctx = new AudioCtx();
     }
-    if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume();
+    if (this.ctx) {
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+      // 📱 iOS Safari 오디오 하드웨어 즉시 활성화 더미 노트 (0.001초 무음 버퍼)
+      try {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        gain.gain.value = 0.0001;
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.002);
+      } catch (e) { }
     }
 
     // 📱 iOS Safari 제스처 언락 (사용자 터치 시 1회 무음 활성화)
@@ -251,12 +263,14 @@ class BabySoundEngine {
           source.start(0);
           return;
         }
-      } catch (e) { }
+      } catch (e) {
+        console.warn('Web Audio buffer error, fallback:', e);
+      }
     }
 
     if (this.voicePlayToken !== token) return;
 
-    // 2순위: 사용자 터치로 사전 언락된 전역 sharedVoiceAudio 재생 (아이패드 비동기 타이머 100% 재생 성공)
+    // 2순위: 사용자 터치로 사전 언락된 전역 sharedVoiceAudio 재생 (아이패드 비동기 타이머 지원)
     if (this.sharedVoiceAudio) {
       try {
         const audio = this.sharedVoiceAudio;
@@ -274,13 +288,15 @@ class BabySoundEngine {
           playPromise.then(() => {
             this.isAudioUnlocked = true;
           }).catch(() => {
-            // sharedVoiceAudio가 차단되었을 때만 3순위 신규 Audio 시도
             this.tryNewAudioElement(fullUrl, token, fallbackFn, onEnded);
           });
           return;
         }
         return;
-      } catch (e) { }
+      } catch (e) {
+        this.tryNewAudioElement(fullUrl, token, fallbackFn, onEnded);
+        return;
+      }
     }
 
     // 3순위: 신규 Audio 엘리먼트 fallback
@@ -382,60 +398,75 @@ class BabySoundEngine {
     setTimeout(() => this.playFreq(1046.5, 'sine', 0.12, 0.55), 50);
   }
 
-  // 🎵 영롱한 오르골(Music Box) 벨 사운드
-  playMusicBox(freq, volume = 0.45) {
+  // 🎵 영롱하고 부드러운 오르골(Music Box) 벨 사운드 (클릭/툭 끊김 노이즈 0%)
+  playMusicBox(freq, volume = 0.36, duration = 2.2) {
     if (this.muted) return;
     this.init();
     if (!this.ctx) return;
     try {
       const now = this.ctx.currentTime;
-      // 기본음 (맑은 사인파)
+
+      // 1. 따뜻한 오르골 챔버 필터 (BiquadFilter - 귀에 거슬리는 고주파 팝/클릭음 흡수)
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(1500, now);
+      filter.Q.setValueAtTime(1.2, now);
+      filter.connect(this.ctx.destination);
+
+      // 2. 기본 맑은 사인파 벨 (30ms 부드러운 어택 -> '툭' 클릭음 100% 방지)
       const osc1 = this.ctx.createOscillator();
       const gain1 = this.ctx.createGain();
       osc1.type = 'sine';
       osc1.frequency.setValueAtTime(freq, now);
-      gain1.gain.setValueAtTime(volume, now);
-      gain1.gain.exponentialRampToValueAtTime(0.0001, now + 1.6);
-      osc1.connect(gain1);
-      gain1.connect(this.ctx.destination);
-      osc1.start(now);
-      osc1.stop(now + 1.6);
 
-      // 옥타브 배음 (오르골 쇳소리 광택감)
+      gain1.gain.setValueAtTime(0.00001, now);
+      gain1.gain.linearRampToValueAtTime(volume, now + 0.03);
+      gain1.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+      osc1.connect(gain1);
+      gain1.connect(filter);
+      osc1.start(now);
+      osc1.stop(now + duration + 0.05);
+
+      // 3. 은은한 옥타브 배음 (천상의 맑은 오르골 광택 하모닉스)
       const osc2 = this.ctx.createOscillator();
       const gain2 = this.ctx.createGain();
-      osc2.type = 'triangle';
+      osc2.type = 'sine';
       osc2.frequency.setValueAtTime(freq * 2, now);
-      gain2.gain.setValueAtTime(volume * 0.35, now);
-      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+
+      gain2.gain.setValueAtTime(0.00001, now);
+      gain2.gain.linearRampToValueAtTime(volume * 0.25, now + 0.025);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+
       osc2.connect(gain2);
-      gain2.connect(this.ctx.destination);
+      gain2.connect(filter);
       osc2.start(now);
-      osc2.stop(now + 0.9);
+      osc2.stop(now + 1.25);
     } catch (e) { }
   }
 
-  // 🌙 브람스 자장가 오르골 루프 플레이어
+  // 🌙 브람스 자장가 오르골 루프 플레이어 (음계 간 끊김 없는 감미로운 레가토 연주)
   startLullaby() {
     this.stopLullaby();
     this.init();
     if (this.muted || !this.ctx) return;
     this.isLullabyPlaying = true;
 
-    // 브람스 자장가 멜로디 음계 & 박자 정의 [freq, durationMs]
+    // 브람스 자장가 멜로디 음계 & 박자 [freq, durationMs]
     const melody = [
-      [329.63, 600], [329.63, 600], [392.00, 1100], // 미 미 솔
-      [329.63, 600], [329.63, 600], [392.00, 1100], // 미 미 솔
-      [329.63, 400], [392.00, 400], [523.25, 800], [493.88, 600], [440.00, 600], [440.00, 600], [392.00, 1200], // 미 솔 도' 시 라 라 솔
-      [293.66, 400], [329.63, 400], [349.23, 800], [293.66, 400], // 레 미 파 레
-      [293.66, 400], [349.23, 400], [493.88, 800], [440.00, 600], [392.00, 600], [493.88, 600], [523.25, 1400] // 레 파 시 라 솔 시 도'
+      [329.63, 650], [329.63, 650], [392.00, 1250], // 미 미 솔
+      [329.63, 650], [329.63, 650], [392.00, 1250], // 미 미 솔
+      [329.63, 450], [392.00, 450], [523.25, 850], [493.88, 650], [440.00, 650], [440.00, 650], [392.00, 1300], // 미 솔 도' 시 라 라 솔
+      [293.66, 450], [329.63, 450], [349.23, 850], [293.66, 450], // 레 미 파 레
+      [293.66, 450], [349.23, 450], [493.88, 850], [440.00, 650], [392.00, 650], [493.88, 650], [523.25, 1600] // 레 파 시 라 솔 시 도'
     ];
 
     let noteIdx = 0;
     const playNext = () => {
       if (!this.isLullabyPlaying) return;
       const [freq, dur] = melody[noteIdx];
-      this.playMusicBox(freq, 0.38);
+      // 2.2초 동안 은은한 잔향으로 울려 퍼져 다음 음과 아름답게 블렌딩됨 (Legato)
+      this.playMusicBox(freq, 0.32, 2.2);
       noteIdx = (noteIdx + 1) % melody.length;
       this.lullabyTimer = setTimeout(playNext, dur);
     };
@@ -3187,8 +3218,9 @@ function BedtimeSleepView() {
       background: isLightsOff
         ? 'linear-gradient(180deg, #070a12 0%, #111827 50%, #1e1b4b 100%)'
         : 'linear-gradient(180deg, #e0e7ff 0%, #fef3c7 60%, #fed7aa 100%)',
-      borderRadius: '28px', padding: '1.2rem', position: 'relative',
-      transition: 'background 0.8s ease', overflow: 'hidden', userSelect: 'none'
+      borderRadius: '24px', padding: '0.7rem 1rem', position: 'relative',
+      transition: 'background 0.8s ease', overflow: 'hidden', userSelect: 'none',
+      touchAction: 'none'
     }}>
       {/* 밤하늘 별빛 이펙트 */}
       {isLightsOff && (
@@ -3432,11 +3464,11 @@ function BedtimeSleepView() {
 
       {/* 🛏️ 하단: 방바닥 빈 공간에 실제 자연스럽게 촤르륵 펼쳐져 있는 솜이불들 (글자 전혀 없이 오직 순수한 이불 형상만) */}
       <div style={{
-        marginTop: '1.2rem',
+        marginTop: '0.6rem',
         padding: '0 8px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '12px',
+        gap: '8px',
         position: 'relative',
         zIndex: 10
       }}>
@@ -3445,9 +3477,9 @@ function BedtimeSleepView() {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          gap: '24px',
+          gap: '20px',
           flexWrap: 'wrap',
-          minHeight: '145px'
+          minHeight: '120px'
         }}>
           {SLEEP_ANIMAL_DATA.map((item, index) => {
             const isUsed = animalStates[item.id].hasBlanket;
@@ -4020,10 +4052,9 @@ export default function App() {
 
   const openFeedModal = () => {
     audioEngine.init();
-    // 칭찬 음성 3종 사전 버퍼 캐싱 (정답 시 0초 즉시 반응 보장)
-    [0, 1, 2].forEach(idx => {
-      audioEngine.getVoiceBuffer(`/sounds/voice/feed_praise_${idx}.mp3`);
-    });
+    // 📱 iOS Safari 터치 제스처 스택에서 즉각 오디오 활성화 (0초 효과음)
+    audioEngine.playFreq(659.25, 'triangle', 0.08, 0.4);
+
     const round = pickFeedRound();
     setFeedRound(round);
     setAnimalMoods({});
@@ -4031,6 +4062,13 @@ export default function App() {
     setRejectedFood(null);
     isFeedBusyRef.current = false;
     setIsFeedModalOpen(true);
+
+    // 칭찬 음성 3종 사전 버퍼 캐싱
+    [0, 1, 2].forEach(idx => {
+      audioEngine.getVoiceBuffer(`/sounds/voice/feed_praise_${idx}.mp3`).catch(() => {});
+    });
+
+    // 목표 동물 음성 즉시 재생 (버퍼 준비 및 fallback 자동 보장)
     speakFeedWish(round.target, round.food);
   };
 
@@ -4226,71 +4264,75 @@ export default function App() {
     currentStrokeRef.current = null;
   };
 
+  const isScrollableTab = ['animal', 'fruit', 'song'].includes(activeTab);
+
   return (
     <div style={{
-      width: '100vw', height: '100vh',
+      width: '100%', height: '100%', height: '100dvh',
+      position: 'fixed', inset: 0,
       background: 'linear-gradient(135deg, #fffbebf8 0%, #fef3c7 40%, #d1fae5 100%)',
-      padding: isIpadFrame ? '1.5rem 1rem' : '1rem',
+      padding: isIpadFrame ? '8px 12px' : '4px 8px',
       display: 'flex', flexDirection: 'column', alignItems: 'center', userSelect: 'none',
-      overflow: 'hidden'
+      overflow: 'hidden', overscrollBehavior: 'none', touchAction: 'none'
     }}>
-      {/* 짱구 스타일 헤더 */}
+      {/* 짱구 스타일 헤더 (12.9인치 규격에 딱 맞는 컴팩트 레이아웃) */}
       <header style={{
-        width: '100%', maxWidth: '1366px', background: '#ffffff', borderRadius: '24px',
-        padding: '1rem 1.8rem', boxShadow: '0 12px 28px -6px rgba(239, 68, 68, 0.22)',
-        border: '4px solid #ef4444', display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', marginBottom: '1rem'
+        width: '100%', maxWidth: '1366px', background: '#ffffff', borderRadius: '20px',
+        padding: '0.6rem 1.4rem', boxShadow: '0 8px 20px -4px rgba(239, 68, 68, 0.18)',
+        border: '3.5px solid #ef4444', display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', marginBottom: '0.5rem', flexShrink: 0
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{
-            background: '#fff1f2', border: '3px solid #f87171',
-            padding: '6px 12px', borderRadius: '22px', display: 'flex', alignItems: 'center', gap: '10px',
-            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.15)'
+            background: '#fff1f2', border: '2.5px solid #f87171',
+            padding: '4px 10px', borderRadius: '18px', display: 'flex', alignItems: 'center', gap: '8px',
+            boxShadow: '0 4px 10px rgba(239, 68, 68, 0.12)'
           }}>
-            <img src="/shinchan_sticker.png" alt="짱구" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+            <img src="/shinchan_sticker.png" alt="짱구" style={{ width: '42px', height: '42px', objectFit: 'contain' }} />
           </div>
           <div>
-            <h1 style={{ fontSize: '1.85rem', fontWeight: 900, color: '#dc2626', margin: 0, letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 900, color: '#dc2626', margin: 0, letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               유나의 짱구 발달 놀이터 🖍️
             </h1>
-            <span style={{ fontSize: '0.82rem', fontWeight: 900, color: '#047857', background: '#d1fae5', padding: '2px 10px', borderRadius: '12px', display: 'inline-block', marginTop: '2px' }}>
+            <span style={{ fontSize: '0.78rem', fontWeight: 900, color: '#047857', background: '#d1fae5', padding: '1px 8px', borderRadius: '10px', display: 'inline-block', marginTop: '1px' }}>
               ✨ 짱구와 함께하는 신나는 놀이 세상!
             </span>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button onClick={() => setIsIpadFrame(!isIpadFrame)} style={{
-            display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '16px',
+            display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '14px',
             border: isIpadFrame ? '2.5px solid #0284c7' : '2px solid #cbd5e1',
             background: isIpadFrame ? '#e0f2fe' : '#ffffff',
-            color: isIpadFrame ? '#0369a1' : '#475569', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer'
+            color: isIpadFrame ? '#0369a1' : '#475569', fontWeight: 900, fontSize: '0.88rem', cursor: 'pointer'
           }}>
-            <Smartphone size={18} /> {isIpadFrame ? 'iPad 12.9" 규격뷰' : '전체화면'}
+            <Smartphone size={17} /> {isIpadFrame ? 'iPad 12.9" 규격뷰' : '전체화면'}
           </button>
           <button onClick={() => setSoundEnabled(!soundEnabled)} style={{
-            display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '16px',
+            display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '14px',
             border: soundEnabled ? '2.5px solid #10b981' : '2px solid #cbd5e1',
             background: soundEnabled ? '#d1fae5' : '#f1f5f9',
-            color: soundEnabled ? '#047857' : '#64748b', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer'
+            color: soundEnabled ? '#047857' : '#64748b', fontWeight: 900, fontSize: '0.88rem', cursor: 'pointer'
           }}>
-            {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+            {soundEnabled ? <Volume2 size={17} /> : <VolumeX size={17} />}
             {soundEnabled ? '소리 켜짐 🔊' : '음소거 🔇'}
           </button>
         </div>
       </header>
 
-      {/* 메인 */}
+      {/* 메인 뷰포트 (12.9인치 화면에 1px 오차 없이 완전 고정) */}
       <main style={{
         width: '100%', maxWidth: isIpadFrame ? '1366px' : '100%',
-        flex: 1, minHeight: 0, background: '#ffffff', borderRadius: '32px',
-        border: isIpadFrame ? '6px solid #ef4444' : '2px solid #e2e8f0',
-        boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.25)',
+        flex: 1, minHeight: 0, background: '#ffffff', borderRadius: '26px',
+        border: isIpadFrame ? '5px solid #ef4444' : '2px solid #e2e8f0',
+        boxShadow: '0 16px 36px -8px rgba(239, 68, 68, 0.22)',
         overflow: 'hidden', display: 'flex', flexDirection: 'column'
       }}>
         {/* 탭 네비게이션 (8종 테마 컬러) */}
         <nav style={{
           display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '6px',
-          padding: '10px 12px', background: '#fff1f2', borderBottom: '3.5px solid #fca5a5'
+          padding: '8px 10px', background: '#fff1f2', borderBottom: '3px solid #fca5a5',
+          flexShrink: 0
         }}>
           {[
             { id: 'animal', label: '📸 생생 동물', sub: '울음소리 탐험', color: '#ef4444' },
@@ -4318,23 +4360,35 @@ export default function App() {
                 setActiveTab(tab.id);
                 audioEngine.playFreq(520, 'sine', 0.15);
               }} style={{
-                padding: '10px 4px', borderRadius: '18px',
-                border: isActive ? `3.5px solid ${tab.color}` : '2px solid #fed7aa',
+                padding: '8px 3px', borderRadius: '16px',
+                border: isActive ? `3px solid ${tab.color}` : '2px solid #fed7aa',
                 background: isActive ? tab.color : '#ffffff',
                 color: isActive ? '#ffffff' : '#475569', fontWeight: 900, cursor: 'pointer',
-                boxShadow: isActive ? '0 8px 18px rgba(0,0,0,0.16)' : 'none',
+                boxShadow: isActive ? '0 6px 14px rgba(0,0,0,0.15)' : 'none',
                 transform: isActive ? 'scale(1.02)' : 'scale(1)', transition: 'all 0.15s ease',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
               }}>
-                <span style={{ fontSize: '1.05rem', lineHeight: 1.2 }}>{tab.label}</span>
-                <span style={{ fontSize: '0.72rem', opacity: isActive ? 0.95 : 0.7, fontWeight: 800, marginTop: '2px' }}>{tab.sub}</span>
+                <span style={{ fontSize: '0.98rem', lineHeight: 1.2 }}>{tab.label}</span>
+                <span style={{ fontSize: '0.7rem', opacity: isActive ? 0.95 : 0.7, fontWeight: 800, marginTop: '2px' }}>{tab.sub}</span>
               </button>
             );
           })}
         </nav>
 
-        {/* 캔버스 영역 */}
-        <div style={{ flex: 1, padding: activeTab === 'paint' ? '1rem 1.8rem' : '1.8rem', position: 'relative', background: '#fafafa', overflowY: activeTab === 'paint' ? 'hidden' : 'auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        {/* 캔버스 영역 (스크롤 메뉴와 비스크롤 고정 메뉴 분기) */}
+        <div style={{
+          flex: 1,
+          padding: activeTab === 'paint' ? '0.6rem 1rem' : activeTab === 'sleep' ? '0.6rem 1rem' : activeTab === 'xylophone' ? '0.8rem 1.2rem' : '1.2rem 1.6rem',
+          position: 'relative',
+          background: '#fafafa',
+          overflowY: isScrollableTab ? 'auto' : 'hidden',
+          overscrollBehaviorY: isScrollableTab ? 'contain' : 'none',
+          touchAction: isScrollableTab ? 'pan-y' : 'none',
+          WebkitOverflowScrolling: 'touch',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0
+        }}>
 
           {/* ===== 모듈: 🎹 퐁퐁 실로폰 & 동물 합창단 ===== */}
           {activeTab === 'xylophone' && <XylophoneChoirView />}
