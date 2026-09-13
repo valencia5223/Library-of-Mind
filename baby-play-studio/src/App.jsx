@@ -57,16 +57,18 @@ class BabySoundEngine {
       if (this.ctx.state === 'suspended') {
         this.ctx.resume();
       }
-      // 📱 iOS Safari 오디오 하드웨어 즉시 활성화 더미 노트 (0.001초 무음 버퍼)
-      try {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        gain.gain.value = 0.0001;
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start();
-        osc.stop(this.ctx.currentTime + 0.002);
-      } catch (e) { }
+      // 📱 iOS Safari 오디오 하드웨어 즉시 활성화 및 상시 유지 노드 (백그라운드 비동기 타이머에서도 오디오 완벽 재생 보장)
+      if (!this._keepAliveNode) {
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          gain.gain.value = 0.00001; // virtually silent
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(0);
+          this._keepAliveNode = osc;
+        } catch (e) { }
+      }
     }
 
     // 📱 iOS Safari 제스처 언락 (사용자 터치 시 1회 무음 활성화)
@@ -177,9 +179,6 @@ class BabySoundEngine {
       } catch (e) { }
       this.currentVoiceAudio = null;
     }
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      try { window.speechSynthesis.cancel(); } catch (e) { }
-    }
   }
 
   // 🎙️ Safari / iOS WebKit 호환 decodeAudioData 헬퍼 (Promise + Callback + 1.5s 타임아웃 안전가드)
@@ -265,68 +264,49 @@ class BabySoundEngine {
       : url;
 
     // 1️⃣ 사전 캐싱된 Web Audio 버퍼가 있으면 즉시 Web Audio BufferSource로 재생
-    // Web Audio BufferSource는 setTimeout/비동기 타이머 안에서도 iOS Safari 제스처 제약 없이 100% 즉시 재생됨!
+    // Web Audio BufferSource는 keep-alive 노드 덕분에 setTimeout/비동기 타이머 안에서도 iOS Safari 제스처 제약 없이 100% 즉시 재생됨!
     const cachedBuffer = this.voiceBufferCache.get(url) || this.voiceBufferCache.get(fullUrl);
     if (cachedBuffer && this.ctx) {
       this._playBufferDirect(cachedBuffer, token, onEnded);
       return;
     }
 
-    // 2️⃣ 제스처 시 언락된 싱글톤 sharedVoiceAudio 우선 재사용 (아이패드 비동기 타이머 허용)
-    const audio = this.sharedVoiceAudio || new Audio();
-    this.currentVoiceAudio = audio;
-
-    let endedHandled = false;
-    const handleEnd = () => {
-      if (endedHandled) return;
-      endedHandled = true;
-      if (this.voicePlayToken === token) {
-        this.currentVoiceAudio = null;
-        if (onEnded) onEnded();
+    // 2️⃣ 아직 캐시되지 않았으면 Web Audio API로 즉시 비동기 디코딩 및 재생
+    try {
+      const buf = await this.getVoiceBuffer(url);
+      if (buf && this.voicePlayToken === token) {
+        this._playBufferDirect(buf, token, onEnded);
+        return;
       }
-    };
+    } catch (e) { }
 
-    audio.onended = handleEnd;
-    audio.onerror = async () => {
-      if (this.voicePlayToken === token) {
-        this.currentVoiceAudio = null;
-        const buf = await this.getVoiceBuffer(url);
-        if (buf && this.voicePlayToken === token) {
-          this._playBufferDirect(buf, token, onEnded);
-        } else if (fallbackFn) {
+    // 3️⃣ 백업으로 HTML5 Audio 시도
+    try {
+      const audio = new Audio(fullUrl);
+      this.currentVoiceAudio = audio;
+      audio.onended = () => {
+        if (this.voicePlayToken === token) {
+          this.currentVoiceAudio = null;
+          if (onEnded) onEnded();
+        }
+      };
+      audio.onerror = () => {
+        if (this.voicePlayToken === token && fallbackFn) {
+          this.currentVoiceAudio = null;
           fallbackFn();
         }
-      }
-    };
-
-    try {
-      audio.src = fullUrl;
-      audio.currentTime = 0;
-      audio.volume = 1.0;
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          this.isAudioUnlocked = true;
-          this.getVoiceBuffer(url).catch(() => {});
-        }).catch(async () => {
-          // 📱 iOS Safari가 비동기 타이머(setTimeout) 내 HTML5 play()를 차단(NotAllowedError)한 경우:
-          // 이미 언락되어 있는 Web Audio Context 버퍼 또는 TTS로 즉시 우회 재생!
-          if (this.voicePlayToken === token) {
+      };
+      const p = audio.play();
+      if (p !== undefined) {
+        p.catch(() => {
+          if (this.voicePlayToken === token && fallbackFn) {
             this.currentVoiceAudio = null;
-            const buf = await this.getVoiceBuffer(url);
-            if (buf && this.voicePlayToken === token) {
-              this._playBufferDirect(buf, token, onEnded);
-            } else if (fallbackFn) {
-              fallbackFn();
-            }
+            fallbackFn();
           }
         });
       }
     } catch (e) {
-      const buf = await this.getVoiceBuffer(url);
-      if (buf && this.voicePlayToken === token) {
-        this._playBufferDirect(buf, token, onEnded);
-      } else if (fallbackFn) {
+      if (fallbackFn && this.voicePlayToken === token) {
         fallbackFn();
       }
     }
@@ -2486,22 +2466,24 @@ export function speakNaturalKorean(text, { pitch = 1.16, rate = 0.92, priority =
     const utterance = new SpeechSynthesisUtterance(spokenText);
     utterance.lang = 'ko-KR';
 
+    const isIOS = typeof navigator !== 'undefined' && (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    );
+
     const { voice: bestVoice, isMale } = getKoreanVoiceInfo();
-    if (bestVoice) {
+    // 📱 iOS Safari에서는 특정 voice 객체(미다운로드 Siri 등) 지정 시 발화가 드롭되므로 voice 미지정(기본 한국어 사용)
+    if (!isIOS && bestVoice) {
       utterance.voice = bestVoice;
     }
 
     // 🎧 기기 및 보이스 환경별 피치(Pitch) 지능형 자동 보정:
-    // 1) 남성 보이스(PC InJoon, 봉진, Siri 남성 등): 기본 음역대가 낮으므로 1.14~1.16이 다정하고 밝은 삼촌/아빠 톤으로 완벽함.
-    // 2) 여성 보이스(아이패드/iOS 기본 Yuna 등): 기본 음역대가 높아 피치 1.16을 곱하면 고음으로 째지므로,
-    //    피치를 0.83~0.85로 낮춰 편안하고 차분한 중저음 톤으로 자동 변환합니다.
     let finalPitch = pitch;
     let finalRate = rate;
 
-    if (!isMale) {
-      // 여성 보이스일 경우: 고음 째짐을 차단하고 따뜻하고 차분한 동화 구연가/중저음 톤으로 매핑
-      finalPitch = Math.max(0.78, Math.min(0.90, pitch * 0.72));
-      finalRate = Math.min(rate, 0.93);
+    if (isIOS || !isMale) {
+      finalPitch = Math.max(0.80, Math.min(0.92, pitch * 0.74));
+      finalRate = Math.min(rate, 0.92);
     }
 
     utterance.pitch = finalPitch;
@@ -2526,15 +2508,15 @@ export function speakNaturalKorean(text, { pitch = 1.16, rate = 0.92, priority =
       window.speechSynthesis.resume();
     } catch (e) { }
 
-    if (priority && (window.speechSynthesis.speaking || window.speechSynthesis.pending)) {
+    if (priority && window.speechSynthesis.speaking) {
       window.speechSynthesis.cancel();
-      // iOS WebKit에서는 cancel() 직후 바로 speak()를 부르면 큐 락이 걸리므로 40ms 텀 후 speak
+      // iOS WebKit에서는 cancel() 직후 바로 speak()를 부르면 큐 락이 걸리므로 50ms 텀 후 speak
       setTimeout(() => {
         try {
           window.speechSynthesis.resume();
           window.speechSynthesis.speak(utterance);
         } catch (e) { }
-      }, 40);
+      }, 50);
     } else {
       window.speechSynthesis.speak(utterance);
     }
@@ -3786,7 +3768,7 @@ function XylophoneChoirView() {
                     key={i}
                     style={{
                       width: '4px', height: `${h}px`, borderRadius: '2px',
-                      background: isDrumBeatOn
+                      background: isGrooveOn
                         ? (i % 2 === 0 ? '#10b981' : '#f59e0b')
                         : '#475569',
                       transition: 'all 0.1s ease'
@@ -3796,9 +3778,9 @@ function XylophoneChoirView() {
               </div>
               <span style={{
                 fontSize: '0.74rem', fontWeight: 900,
-                color: isDrumBeatOn ? '#4ade80' : '#94a3b8'
+                color: isGrooveOn ? '#4ade80' : '#94a3b8'
               }}>
-                {isDrumBeatOn ? '🔥 BEAT PLAYING' : 'READY'}
+                {isGrooveOn ? '🔥 BEAT PLAYING' : 'READY'}
               </span>
             </div>
 
@@ -4276,31 +4258,37 @@ function BedtimeSleepView() {
   useEffect(() => {
     if (!draggingBlanket) return;
 
-    const handlePointerMove = (e) => {
-      setDragPos({ x: e.clientX, y: e.clientY });
-
-      let foundBed = null;
+    const getBedAtPos = (clientX, clientY) => {
       for (const animal of SLEEP_ANIMAL_DATA) {
         const el = bedRefs.current[animal.id];
         if (el) {
           const rect = el.getBoundingClientRect();
+          // 아기 손가락 터치 오차 감안 45px 패딩 여유
           if (
-            e.clientX >= rect.left &&
-            e.clientX <= rect.right &&
-            e.clientY >= rect.top &&
-            e.clientY <= rect.bottom
+            clientX >= rect.left - 45 &&
+            clientX <= rect.right + 45 &&
+            clientY >= rect.top - 45 &&
+            clientY <= rect.bottom + 45
           ) {
-            foundBed = animal.id;
-            break;
+            return animal.id;
           }
         }
       }
+      return null;
+    };
+
+    const handlePointerMove = (e) => {
+      setDragPos({ x: e.clientX, y: e.clientY });
+      const foundBed = getBedAtPos(e.clientX, e.clientY);
       setHoverBedId(foundBed);
     };
 
-    const handlePointerUp = () => {
-      if (hoverBedId) {
-        coverAnimalWithBlanket(hoverBedId, draggingBlanket);
+    const handlePointerUp = (e) => {
+      const cx = e ? e.clientX : dragPos.x;
+      const cy = e ? e.clientY : dragPos.y;
+      const targetBed = getBedAtPos(cx, cy) || hoverBedId;
+      if (targetBed && draggingBlanket) {
+        coverAnimalWithBlanket(targetBed, draggingBlanket);
       }
       setDraggingBlanket(null);
       setHoverBedId(null);
@@ -4315,7 +4303,7 @@ function BedtimeSleepView() {
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('pointercancel', handlePointerUp);
     };
-  }, [draggingBlanket, hoverBedId]);
+  }, [draggingBlanket, hoverBedId, dragPos]);
 
   const allSleeping = Object.values(animalStates).every(st => st.isAsleep && st.hasBlanket);
 
@@ -4624,6 +4612,7 @@ function BedtimeSleepView() {
               <div
                 key={item.blanketId}
                 onPointerDown={(e) => handleBlanketPointerDown(item, e)}
+                onClick={() => coverAnimalWithBlanket(item.id, item)}
                 className={`blanket-floor-spread ${item.blanketClass || ''}`}
                 style={{
                   flex: '1 1 200px',
