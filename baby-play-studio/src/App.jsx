@@ -57,18 +57,6 @@ class BabySoundEngine {
       if (this.ctx.state === 'suspended') {
         this.ctx.resume();
       }
-      // 📱 iOS Safari 오디오 하드웨어 즉시 활성화 및 상시 유지 노드 (백그라운드 비동기 타이머에서도 오디오 완벽 재생 보장)
-      if (!this._keepAliveNode) {
-        try {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
-          gain.gain.value = 0.00001; // virtually silent
-          osc.connect(gain);
-          gain.connect(this.ctx.destination);
-          osc.start(0);
-          this._keepAliveNode = osc;
-        } catch (e) { }
-      }
     }
 
     // 📱 iOS Safari 제스처 언락 (사용자 터치 시 1회 무음 활성화)
@@ -1099,17 +1087,13 @@ class BabySoundEngine {
 
 const audioEngine = new BabySoundEngine();
 
-// 📱 iOS Safari / 아이패드 첫 사용자 제스처 시 Web Audio API 및 SpeechSynthesis 즉시 언락
+// 📱 iOS Safari / 아이패드 첫 사용자 제스처 시 Web Audio API 즉시 언락
 if (typeof window !== 'undefined') {
   const unlockAudioContext = () => {
     audioEngine.init();
-    // 📱 iOS Safari SpeechSynthesis 언락 (터치 제스처 컨텍스트에서 무음 발화로 WebKit TTS 세션 영구 활성화)
     if ('speechSynthesis' in window) {
       try {
-        const dummy = new SpeechSynthesisUtterance(' ');
-        dummy.volume = 0.01;
-        dummy.rate = 10;
-        window.speechSynthesis.speak(dummy);
+        window.speechSynthesis.resume();
       } catch (e) { }
     }
     ['touchstart', 'touchend', 'pointerdown', 'click'].forEach(evt => {
@@ -2545,6 +2529,18 @@ export function speakNaturalKorean(text, { pitch = 1.16, rate = 0.92, priority =
 // ═════════════════════════════════════════════════════════════════════════════
 export function playVoiceAudio(audioSrc, fallbackFn = null, onEnded = null) {
   if (typeof window === 'undefined') return;
+  const isIOS = typeof navigator !== 'undefined' && (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+
+  // 📱 아이패드/iOS 환경: MP3 비동기 로딩 및 WebKit 미디어 재생 정책 충돌을 원천 방지하고,
+  // 예전에 오류 없이 100% 깔끔하게 작동하던 순수 한국어 읽어주기(TTS)로 즉시 직결 재생!
+  if (isIOS) {
+    if (fallbackFn) fallbackFn();
+    return;
+  }
+
   try {
     if (audioEngine && typeof audioEngine.playVoice === 'function') {
       audioEngine.playVoice(audioSrc, fallbackFn, onEnded);
@@ -3001,6 +2997,7 @@ const BABY_PUZZLES = [
   { id: 'cat', name: '고양이', icon: '🐱', label: '🐱 고양이 얼굴', color: '#ec4899', bg: '#fdf2f8', desc: '초롱초롱 야옹이 고양이' },
   { id: 'lion', name: '사자', icon: '🦁', label: '🦁 사자 얼굴', color: '#d97706', bg: '#fefce8', desc: '멋진 갈기털 밀림의 왕 사자' },
   { id: 'rabbit', name: '토끼', icon: '🐰', label: '🐰 토끼 얼굴', color: '#f43f5e', bg: '#fff1f2', desc: '쫑긋한 분홍 귀 깡충 토끼' },
+  { id: 'pig', name: '돼지', icon: '🐷', label: '🐷 돼지 얼굴', color: '#f43f5e', bg: '#ffe4e6', desc: '동글동글 꿀꿀 분홍 돼지' },
   { id: 'bear', name: '곰돌이', icon: '🐻', label: '🐻 곰돌이 얼굴', color: '#b45309', bg: '#fef3c7', desc: '포근한 꿀단지 아기 곰돌이' },
   { id: 'panda', name: '판다', icon: '🐼', label: '🐼 판다 얼굴', color: '#0f172a', bg: '#f8fafc', desc: '귀여운 눈 패치 흑백 판다' },
   { id: 'frog', name: '개구리', icon: '🐸', label: '🐸 개구리 얼굴', color: '#16a34a', bg: '#f0fdf4', desc: '초롱초롱 왕눈이 개구리' },
@@ -3136,6 +3133,36 @@ function PuzzleArtworkG({ id }) {
         <path d="M 75 175 Q 150 240 225 175" stroke="#065f46" strokeWidth="6" strokeLinecap="round" fill="none" />
         <circle cx="75" cy="175" r="18" fill="#fca5a5" />
         <circle cx="225" cy="175" r="18" fill="#fca5a5" />
+      </g>
+    );
+  }
+  if (id === 'pig') {
+    return (
+      <g>
+        {/* 양쪽 쫑긋 접힌 분홍 돼지 귀 */}
+        <polygon points="55,100 40,30 110,65" fill="#fda4af" stroke="#e11d48" strokeWidth="5" strokeLinejoin="round" />
+        <polygon points="60,90 52,45 100,70" fill="#f43f5e" />
+        <polygon points="245,100 260,30 190,65" fill="#fda4af" stroke="#e11d48" strokeWidth="5" strokeLinejoin="round" />
+        <polygon points="240,90 248,45 200,70" fill="#f43f5e" />
+
+        {/* 복스럽고 포동포동한 분홍 얼굴 */}
+        <circle cx="150" cy="165" r="120" fill="#ffe4e6" stroke="#e11d48" strokeWidth="6" />
+
+        {/* 반짝이는 초롱초롱 눈망울 */}
+        <circle cx="105" cy="135" r="12" fill="#881337" /><circle cx="108" cy="132" r="4.5" fill="#ffffff" />
+        <circle cx="195" cy="135" r="12" fill="#881337" /><circle cx="198" cy="132" r="4.5" fill="#ffffff" />
+
+        {/* 볼터치 */}
+        <circle cx="75" cy="175" r="16" fill="#f43f5e" opacity="0.6" />
+        <circle cx="225" cy="175" r="16" fill="#f43f5e" opacity="0.6" />
+
+        {/* 🌟 얼굴 중심의 큼직하고 귀여운 타원형 돼지코 & 콧구멍 2개 */}
+        <ellipse cx="150" cy="180" rx="44" ry="30" fill="#fda4af" stroke="#e11d48" strokeWidth="4.5" />
+        <ellipse cx="134" cy="180" rx="9" ry="12" fill="#881337" />
+        <ellipse cx="166" cy="180" rx="9" ry="12" fill="#881337" />
+
+        {/* 방긋 웃는 귀여운 입 */}
+        <path d="M 132 222 Q 150 236 168 222" stroke="#881337" strokeWidth="4.5" strokeLinecap="round" fill="none" />
       </g>
     );
   }
