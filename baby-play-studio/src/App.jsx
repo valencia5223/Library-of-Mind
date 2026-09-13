@@ -1099,10 +1099,19 @@ class BabySoundEngine {
 
 const audioEngine = new BabySoundEngine();
 
-// 📱 iOS Safari / 아이패드 첫 사용자 제스처 시 Web Audio API AudioContext 즉시 언락
+// 📱 iOS Safari / 아이패드 첫 사용자 제스처 시 Web Audio API 및 SpeechSynthesis 즉시 언락
 if (typeof window !== 'undefined') {
   const unlockAudioContext = () => {
     audioEngine.init();
+    // 📱 iOS Safari SpeechSynthesis 언락 (터치 제스처 컨텍스트에서 무음 발화로 WebKit TTS 세션 영구 활성화)
+    if ('speechSynthesis' in window) {
+      try {
+        const dummy = new SpeechSynthesisUtterance(' ');
+        dummy.volume = 0.01;
+        dummy.rate = 10;
+        window.speechSynthesis.speak(dummy);
+      } catch (e) { }
+    }
     ['touchstart', 'touchend', 'pointerdown', 'click'].forEach(evt => {
       window.removeEventListener(evt, unlockAudioContext, true);
     });
@@ -2508,9 +2517,15 @@ export function speakNaturalKorean(text, { pitch = 1.16, rate = 0.92, priority =
       window.speechSynthesis.resume();
     } catch (e) { }
 
-    if (priority && window.speechSynthesis.speaking) {
+    if (isIOS) {
+      // 📱 iOS Safari에서는 cancel() 호출 시 WebKit 오디오 큐 락 및 후속 발화 영구 침묵 버그 발생
+      // cancel()을 부르지 않고 resume() 후 직접 speak() 호출해야 누락 없이 연속 발화됨
+      try {
+        window.speechSynthesis.resume();
+        window.speechSynthesis.speak(utterance);
+      } catch (e) { }
+    } else if (priority && window.speechSynthesis.speaking) {
       window.speechSynthesis.cancel();
-      // iOS WebKit에서는 cancel() 직후 바로 speak()를 부르면 큐 락이 걸리므로 50ms 텀 후 speak
       setTimeout(() => {
         try {
           window.speechSynthesis.resume();
@@ -6491,7 +6506,7 @@ export default function App() {
             padding: '2.2rem', border: '6px solid #ef4444',
             boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.3)', position: 'relative'
           }}>
-            <button onClick={() => { setIsQuizModalOpen(false); audioEngine.stopAllSounds(); if ('speechSynthesis' in window) window.speechSynthesis.cancel(); }} style={{
+            <button onClick={() => { setIsQuizModalOpen(false); audioEngine.stopAllSounds(); }} style={{
               position: 'absolute', top: '20px', right: '20px', background: '#f1f5f9', color: '#475569',
               border: 'none', borderRadius: '50%', width: '44px', height: '44px',
               display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
