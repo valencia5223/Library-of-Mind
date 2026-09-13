@@ -4878,7 +4878,9 @@ export default function App() {
       Object.entries(puzzleSlotRefs.current).forEach(([idxStr, el]) => {
         if (el) {
           const rect = el.getBoundingClientRect();
-          if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+          // 아기 손가락 터치 오차 감안 25px 여유 패딩
+          const pad = 25;
+          if (x >= rect.left - pad && x <= rect.right + pad && y >= rect.top - pad && y <= rect.bottom + pad) {
             currentOverSlot = parseInt(idxStr, 10);
           }
         }
@@ -4896,7 +4898,9 @@ export default function App() {
       Object.entries(puzzleSlotRefs.current).forEach(([idxStr, el]) => {
         if (el) {
           const rect = el.getBoundingClientRect();
-          if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+          // 아기 손가락 터치 오차 감안 25px 여유 패딩
+          const pad = 25;
+          if (x >= rect.left - pad && x <= rect.right + pad && y >= rect.top - pad && y <= rect.bottom + pad) {
             currentOverSlot = parseInt(idxStr, 10);
           }
         }
@@ -4905,6 +4909,7 @@ export default function App() {
       if (currentOverSlot === quadIdx) {
         // 올바른 사각형 슬롯에 드롭 성공!
         handleSnapPiece(quadIdx);
+      } else if (currentOverSlot !== null) {
         // 다른 사각형 슬롯에 잘못 놓음
         audioEngine.playFreq(220, 'sawtooth', 0.2);
         playVoiceAudio('/sounds/voice/puzzle_wrong.mp3', () => {
