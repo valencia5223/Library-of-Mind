@@ -182,21 +182,32 @@ class BabySoundEngine {
     }
   }
 
-  // 🎙️ Safari / iOS WebKit 호환 decodeAudioData 헬퍼 (Promise + Callback 듀얼 지원)
+  // 🎙️ Safari / iOS WebKit 호환 decodeAudioData 헬퍼 (Promise + Callback + 1.5s 타임아웃 안전가드)
   async decodeAudio(arrayBuffer) {
+    await this.ensureAudioContext();
     if (!this.ctx) return null;
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       let isSettled = false;
+      // 📱 iOS Safari AudioContext suspended 상태 시 decodeAudioData 무한 프리징 방지용 안전 타이머
+      const timer = setTimeout(() => {
+        if (!isSettled) {
+          isSettled = true;
+          resolve(null);
+        }
+      }, 1500);
+
       const onSuccess = (decoded) => {
         if (!isSettled) {
           isSettled = true;
+          clearTimeout(timer);
           resolve(decoded);
         }
       };
-      const onError = (err) => {
+      const onError = () => {
         if (!isSettled) {
           isSettled = true;
-          reject(err);
+          clearTimeout(timer);
+          resolve(null);
         }
       };
 
@@ -208,7 +219,7 @@ class BabySoundEngine {
           res.then(onSuccess).catch(onError);
         }
       } catch (err) {
-        onError(err);
+        onError();
       }
     });
   }
@@ -224,7 +235,7 @@ class BabySoundEngine {
     if (this.voiceBufferCache.has(fullUrl)) {
       return this.voiceBufferCache.get(fullUrl);
     }
-    this.init();
+    await this.ensureAudioContext();
     if (!this.ctx) return null;
     try {
       const resp = await fetch(fullUrl, { cache: 'force-cache' });
@@ -261,40 +272,45 @@ class BabySoundEngine {
       return;
     }
 
-    // 2️⃣ 사용자 터치 스택에서는 HTML5 Audio.play() 시도 (0초 최적 반응)
+    // 2️⃣ 제스처 시 언락된 싱글톤 sharedVoiceAudio 우선 재사용 (아이패드 비동기 타이머 허용)
+    const audio = this.sharedVoiceAudio || new Audio();
+    this.currentVoiceAudio = audio;
+
+    let endedHandled = false;
+    const handleEnd = () => {
+      if (endedHandled) return;
+      endedHandled = true;
+      if (this.voicePlayToken === token) {
+        this.currentVoiceAudio = null;
+        if (onEnded) onEnded();
+      }
+    };
+
+    audio.onended = handleEnd;
+    audio.onerror = async () => {
+      if (this.voicePlayToken === token) {
+        this.currentVoiceAudio = null;
+        const buf = await this.getVoiceBuffer(url);
+        if (buf && this.voicePlayToken === token) {
+          this._playBufferDirect(buf, token, onEnded);
+        } else if (fallbackFn) {
+          fallbackFn();
+        }
+      }
+    };
+
     try {
-      const audio = new Audio(fullUrl);
-      audio.preload = 'auto';
+      audio.src = fullUrl;
+      audio.currentTime = 0;
       audio.volume = 1.0;
-      this.currentVoiceAudio = audio;
-
-      audio.onended = () => {
-        if (this.voicePlayToken === token) {
-          this.currentVoiceAudio = null;
-          if (onEnded) onEnded();
-        }
-      };
-
-      audio.onerror = async () => {
-        if (this.voicePlayToken === token) {
-          this.currentVoiceAudio = null;
-          const buf = await this.getVoiceBuffer(url);
-          if (buf && this.voicePlayToken === token) {
-            this._playBufferDirect(buf, token, onEnded);
-          } else if (fallbackFn) {
-            fallbackFn();
-          }
-        }
-      };
-
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.then(() => {
           this.isAudioUnlocked = true;
           this.getVoiceBuffer(url).catch(() => {});
         }).catch(async () => {
-          // 📱 iOS Safari가 비동기 타이머(setTimeout) 내 new Audio.play()를 차단(NotAllowedError)한 경우:
-          // 이미 언락되어 있는 Web Audio Context 버퍼로 즉시 우회 재생! (아이패드 2번째 문제 이후 100% 음성 출력 보장)
+          // 📱 iOS Safari가 비동기 타이머(setTimeout) 내 HTML5 play()를 차단(NotAllowedError)한 경우:
+          // 이미 언락되어 있는 Web Audio Context 버퍼 또는 TTS로 즉시 우회 재생!
           if (this.voicePlayToken === token) {
             this.currentVoiceAudio = null;
             const buf = await this.getVoiceBuffer(url);
@@ -2455,14 +2471,15 @@ export function formatSpokenKoreanText(text) {
   return cleanText;
 }
 
+// 📱 iOS Safari WebKit GC(가비지 컬렉터)로 인한 발화 중단 방지용 전역 배열
+if (typeof window !== 'undefined') {
+  window._activeUtterances = window._activeUtterances || [];
+}
+
 export function speakNaturalKorean(text, { pitch = 1.16, rate = 0.92, priority = true } = {}) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
   try {
-    if (priority) {
-      window.speechSynthesis.cancel();
-    }
-
     const spokenText = formatSpokenKoreanText(text);
     if (!spokenText) return;
 
@@ -2490,7 +2507,37 @@ export function speakNaturalKorean(text, { pitch = 1.16, rate = 0.92, priority =
     utterance.pitch = finalPitch;
     utterance.rate = finalRate;
 
-    window.speechSynthesis.speak(utterance);
+    // 📱 iOS WebKit GC 버그 방지: 발화 완료될 때까지 전역 배열에 유지
+    const cleanup = () => {
+      if (typeof window !== 'undefined' && window._activeUtterances) {
+        const idx = window._activeUtterances.indexOf(utterance);
+        if (idx > -1) window._activeUtterances.splice(idx, 1);
+      }
+    };
+    utterance.onend = cleanup;
+    utterance.onerror = cleanup;
+
+    if (typeof window !== 'undefined' && window._activeUtterances) {
+      window._activeUtterances.push(utterance);
+    }
+
+    // 📱 iOS Safari 백그라운드 전환 후 복귀 시 일시정지 상태 자동 해제
+    try {
+      window.speechSynthesis.resume();
+    } catch (e) { }
+
+    if (priority && (window.speechSynthesis.speaking || window.speechSynthesis.pending)) {
+      window.speechSynthesis.cancel();
+      // iOS WebKit에서는 cancel() 직후 바로 speak()를 부르면 큐 락이 걸리므로 40ms 텀 후 speak
+      setTimeout(() => {
+        try {
+          window.speechSynthesis.resume();
+          window.speechSynthesis.speak(utterance);
+        } catch (e) { }
+      }, 40);
+    } else {
+      window.speechSynthesis.speak(utterance);
+    }
   } catch (err) {
     console.warn('TTS playback error:', err);
   }
@@ -2507,19 +2554,7 @@ export function playVoiceAudio(audioSrc, fallbackFn = null, onEnded = null) {
       return;
     }
 
-    // fallback
-    if ('speechSynthesis' in window) {
-      try { window.speechSynthesis.cancel(); } catch (e) { }
-    }
-    const audio = new Audio(audioSrc);
-    audio.onended = () => { if (onEnded) onEnded(); };
-    const playPromise = audio.play();
-    if (playPromise !== undefined) {
-      playPromise.catch(err => {
-        console.warn('Voice MP3 playback fallback to TTS:', err);
-        if (fallbackFn) fallbackFn();
-      });
-    }
+    if (fallbackFn) fallbackFn();
   } catch (err) {
     if (fallbackFn) fallbackFn();
   }
@@ -3443,381 +3478,410 @@ function XylophoneChoirView() {
       </div>
 
       {/* 4. 🥁 신나는 드럼 세트 & 드럼 위에 우뚝 솟은 심벌즈 영역 */}
-      {(viewMode === 'drums' || viewMode === 'both') && (
-        <div style={{
-          flex: viewMode === 'drums' ? 1 : 'none',
-          minHeight: viewMode === 'drums' ? '320px' : '190px',
-          background: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
-          borderRadius: '26px', padding: viewMode === 'drums' ? '14px 20px' : '8px 16px',
-          border: '4px solid #334155',
-          boxShadow: 'inset 0 6px 20px rgba(0,0,0,0.45), 0 12px 28px rgba(0,0,0,0.25)',
-          display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden'
-        }}>
-          {/* 무대 바닥 은은한 조명 효과 */}
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: 'radial-gradient(ellipse at 50% 60%, rgba(251, 191, 36, 0.12) 0%, transparent 70%)',
-            pointerEvents: 'none'
-          }} />
+      {/* 4. 🎹🥁 실제 전자 드럼키보드 콘솔 (All-in-One Electronic Drum & Keyboard Console) */}
+      <div className="drum-console-body" style={{
+        flex: 1,
+        minHeight: viewMode === 'both' ? '350px' : (viewMode === 'drums' ? '320px' : '230px'),
+        padding: '12px 16px 14px',
+        display: 'flex', flexDirection: 'column',
+        position: 'relative', overflow: 'hidden',
+        border: '4.5px solid #334155',
+        boxShadow: 'inset 0 3px 6px rgba(255, 255, 255, 0.18), 0 14px 34px rgba(0, 0, 0, 0.45)'
+      }}>
+        {/* 콘솔 모서리 크롬 나사 4개 */}
+        <div style={{ position: 'absolute', top: '8px', left: '10px', width: '8px', height: '8px', borderRadius: '50%', background: '#94a3b8', boxShadow: 'inset 0 1px 2px #fff, 0 1px 3px rgba(0,0,0,0.5)' }} />
+        <div style={{ position: 'absolute', top: '8px', right: '10px', width: '8px', height: '8px', borderRadius: '50%', background: '#94a3b8', boxShadow: 'inset 0 1px 2px #fff, 0 1px 3px rgba(0,0,0,0.5)' }} />
+        <div style={{ position: 'absolute', bottom: '8px', left: '10px', width: '8px', height: '8px', borderRadius: '50%', background: '#94a3b8', boxShadow: 'inset 0 1px 2px #fff, 0 1px 3px rgba(0,0,0,0.5)' }} />
+        <div style={{ position: 'absolute', bottom: '8px', right: '10px', width: '8px', height: '8px', borderRadius: '50%', background: '#94a3b8', boxShadow: 'inset 0 1px 2px #fff, 0 1px 3px rgba(0,0,0,0.5)' }} />
 
-          {/* 🌟 A. 드럼 위에 우뚝 솟은 황금 심벌즈 2개 (크래쉬 심벌즈 & 라이드 심벌즈) */}
+        {/* 🌟 A. 상단 드럼 & 심벌즈 섹션 (드럼 모드 또는 전체 모드) */}
+        {(viewMode === 'drums' || viewMode === 'both') && (
           <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '0 20px', zIndex: 10, marginBottom: viewMode === 'drums' ? '12px' : '4px'
+            display: 'flex', flexDirection: 'column',
+            flex: viewMode === 'drums' ? 1 : 'none',
+            marginBottom: viewMode === 'both' ? '6px' : '0'
           }}>
-            {/* 💥 1. 좌측: 크래쉬 심벌즈 (Crash Cymbal) & 크롬 스탠드 */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-              {/* 심벌즈 크롬 지지대 (스탠드 파이프) */}
-              <div style={{
-                position: 'absolute', top: '28px', width: '7px', height: '90px',
-                background: 'linear-gradient(90deg, #94a3b8 0%, #f8fafc 50%, #475569 100%)',
-                borderRadius: '4px', zIndex: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
-              }} />
-
-              {/* 반짝이는 금빛 크래쉬 심벌즈 원반 */}
-              <button
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  handleDrumHit('crash', () => audioEngine.playCrashCymbal(0.88), '#facc15', 20, 0);
-                }}
-                onClick={() => handleDrumHit('crash', () => audioEngine.playCrashCymbal(0.88), '#facc15', 20, 0)}
-                className={activeDrumId === 'crash' ? 'cymbal-crash-anim' : ''}
-                style={{
-                  width: viewMode === 'drums' ? '155px' : '118px',
-                  height: viewMode === 'drums' ? '76px' : '56px',
-                  borderRadius: '50%',
-                  background: activeDrumId === 'crash'
-                    ? 'radial-gradient(circle at 48% 45%, #ffffff 0%, #fde047 30%, #eab308 70%, #92400e 100%)'
-                    : 'radial-gradient(circle at 46% 44%, #fef9c3 0%, #facc15 32%, #ca8a04 70%, #78350f 100%)',
-                  border: '3.5px solid #78350f',
-                  boxShadow: activeDrumId === 'crash'
-                    ? '0 0 32px #fde047, inset 0 2px 8px rgba(255,255,255,0.9)'
-                    : '0 10px 22px rgba(0,0,0,0.5), inset 0 2px 6px rgba(255,255,255,0.6)',
-                  cursor: 'pointer', zIndex: 3, position: 'relative',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  transform: 'perspective(300px) rotateX(24deg)',
-                  transition: 'background 0.1s ease'
-                }}
-              >
-                {/* 심벌즈 중심 금속 돔 (Bell) & 나비너트 */}
+            {/* 황금 심벌즈 2개 & 중앙 브랜드 배지 */}
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '0 16px', zIndex: 10, marginBottom: viewMode === 'drums' ? '12px' : '4px'
+            }}>
+              {/* 💥 1. 좌측: 크래쉬 심벌즈 (Crash Cymbal) & 크롬 스탠드 */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
                 <div style={{
-                  width: '26px', height: '18px', borderRadius: '50%',
-                  background: 'radial-gradient(circle at 40% 40%, #ffffff 0%, #eab308 60%, #78350f 100%)',
-                  border: '1.5px solid #451a03', boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#475569' }} />
-                </div>
-                {/* 심벌즈 표면 레이싱 동심원 홈 */}
-                <div style={{
-                  position: 'absolute', inset: '8px', borderRadius: '50%',
-                  border: '1.5px dashed rgba(120, 53, 15, 0.45)', pointerEvents: 'none'
+                  position: 'absolute', top: '28px', width: '7px', height: '90px',
+                  background: 'linear-gradient(90deg, #94a3b8 0%, #f8fafc 50%, #475569 100%)',
+                  borderRadius: '4px', zIndex: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
                 }} />
-              </button>
+                <button
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    handleDrumHit('crash', () => audioEngine.playCrashCymbal(0.88), '#facc15', 20, 0);
+                  }}
+                  onClick={() => handleDrumHit('crash', () => audioEngine.playCrashCymbal(0.88), '#facc15', 20, 0)}
+                  className={activeDrumId === 'crash' ? 'cymbal-crash-anim' : ''}
+                  style={{
+                    width: viewMode === 'drums' ? '155px' : '118px',
+                    height: viewMode === 'drums' ? '76px' : '56px',
+                    borderRadius: '50%',
+                    background: activeDrumId === 'crash'
+                      ? 'radial-gradient(circle at 48% 45%, #ffffff 0%, #fde047 30%, #eab308 70%, #92400e 100%)'
+                      : 'radial-gradient(circle at 46% 44%, #fef9c3 0%, #facc15 32%, #ca8a04 70%, #78350f 100%)',
+                    border: '3.5px solid #78350f',
+                    boxShadow: activeDrumId === 'crash'
+                      ? '0 0 32px #fde047, inset 0 2px 8px rgba(255,255,255,0.9)'
+                      : '0 10px 22px rgba(0,0,0,0.5), inset 0 2px 6px rgba(255,255,255,0.6)',
+                    cursor: 'pointer', zIndex: 3, position: 'relative',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    transform: 'perspective(300px) rotateX(24deg)',
+                    transition: 'background 0.1s ease'
+                  }}
+                >
+                  <div style={{
+                    width: '26px', height: '18px', borderRadius: '50%',
+                    background: 'radial-gradient(circle at 40% 40%, #ffffff 0%, #eab308 60%, #78350f 100%)',
+                    border: '1.5px solid #451a03', boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#475569' }} />
+                  </div>
+                  <div style={{
+                    position: 'absolute', inset: '8px', borderRadius: '50%',
+                    border: '1.5px dashed rgba(120, 53, 15, 0.45)', pointerEvents: 'none'
+                  }} />
+                </button>
+                <div style={{
+                  marginTop: '4px', background: activeDrumId === 'crash' ? '#facc15' : '#0f172a',
+                  color: activeDrumId === 'crash' ? '#78350f' : '#fef08a',
+                  padding: '2px 10px', borderRadius: '12px', fontSize: '0.76rem', fontWeight: 900,
+                  border: '1.5px solid #ca8a04', zIndex: 4, boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                }}>
+                  💥 크래쉬 심벌 (챙-!)
+                </div>
+              </div>
 
-              {/* 심벌즈 이름 배지 */}
+              {/* 가운데 브랜드 배지 */}
               <div style={{
-                marginTop: '4px', background: activeDrumId === 'crash' ? '#facc15' : '#1e293b',
-                color: activeDrumId === 'crash' ? '#78350f' : '#fef08a',
-                padding: '2px 10px', borderRadius: '12px', fontSize: '0.76rem', fontWeight: 900,
-                border: '1.5px solid #ca8a04', zIndex: 4, boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                textAlign: 'center', zIndex: 5, padding: '5px 14px', borderRadius: '16px',
+                background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(8px)',
+                border: '1.5px solid #475569', boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.6)'
               }}>
-                💥 크래쉬 심벌 (챙-!)
+                <div style={{ fontSize: '0.88rem', fontWeight: 900, color: '#fde047', letterSpacing: '0.5px' }}>
+                  🥁 ELECTRONIC DRUM KEYBOARD 🎹
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '2px' }}>
+                  <div className="speaker-grille-dots" style={{ width: '38px', height: '8px', borderRadius: '3px', opacity: 0.7 }} />
+                  <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 800 }}>BABY PLAY STUDIO</span>
+                  <div className="speaker-grille-dots" style={{ width: '38px', height: '8px', borderRadius: '3px', opacity: 0.7 }} />
+                </div>
+              </div>
+
+              {/* ✨ 2. 우측: 라이드 & 하이햇 심벌즈 (Ride Cymbal) & 크롬 스탠드 */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+                <div style={{
+                  position: 'absolute', top: '28px', width: '7px', height: '90px',
+                  background: 'linear-gradient(90deg, #94a3b8 0%, #f8fafc 50%, #475569 100%)',
+                  borderRadius: '4px', zIndex: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
+                }} />
+                <button
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    handleDrumHit('ride', () => audioEngine.playRideCymbal(0.8), '#fef08a', 80, 1);
+                  }}
+                  onClick={() => handleDrumHit('ride', () => audioEngine.playRideCymbal(0.8), '#fef08a', 80, 1)}
+                  className={activeDrumId === 'ride' ? 'cymbal-ride-anim' : ''}
+                  style={{
+                    width: viewMode === 'drums' ? '150px' : '114px',
+                    height: viewMode === 'drums' ? '74px' : '54px',
+                    borderRadius: '50%',
+                    background: activeDrumId === 'ride'
+                      ? 'radial-gradient(circle at 52% 46%, #ffffff 0%, #fef08a 30%, #eab308 70%, #854d0e 100%)'
+                      : 'radial-gradient(circle at 50% 45%, #fef9c3 0%, #facc15 32%, #ca8a04 70%, #713f12 100%)',
+                    border: '3.5px solid #713f12',
+                    boxShadow: activeDrumId === 'ride'
+                      ? '0 0 32px #fef08a, inset 0 2px 8px rgba(255,255,255,0.9)'
+                      : '0 10px 22px rgba(0,0,0,0.5), inset 0 2px 6px rgba(255,255,255,0.6)',
+                    cursor: 'pointer', zIndex: 3, position: 'relative',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    transform: 'perspective(300px) rotateX(24deg)',
+                    transition: 'background 0.1s ease'
+                  }}
+                >
+                  <div style={{
+                    width: '24px', height: '17px', borderRadius: '50%',
+                    background: 'radial-gradient(circle at 40% 40%, #ffffff 0%, #eab308 60%, #713f12 100%)',
+                    border: '1.5px solid #451a03', boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#475569' }} />
+                  </div>
+                  <div style={{
+                    position: 'absolute', inset: '7px', borderRadius: '50%',
+                    border: '1.5px dashed rgba(113, 63, 18, 0.45)', pointerEvents: 'none'
+                  }} />
+                </button>
+                <div style={{
+                  marginTop: '4px', background: activeDrumId === 'ride' ? '#fde047' : '#0f172a',
+                  color: activeDrumId === 'ride' ? '#713f12' : '#fef9c3',
+                  padding: '2px 10px', borderRadius: '12px', fontSize: '0.76rem', fontWeight: 900,
+                  border: '1.5px solid #ca8a04', zIndex: 4, boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
+                }}>
+                  ✨ 라이드 심벌 (칭-!)
+                </div>
               </div>
             </div>
 
-            {/* 가운데 안내 타이틀 (드럼 모드일 때만 여유있게 표시) */}
-            {viewMode === 'drums' && (
-              <div style={{
-                textAlign: 'center', zIndex: 5, padding: '4px 14px', borderRadius: '18px',
-                background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(6px)', border: '1.5px solid rgba(255,255,255,0.15)'
-              }}>
-                <div style={{ fontSize: '0.95rem', fontWeight: 900, color: '#fde047' }}>
-                  🥁 쿵치팍치 드럼 세트 & 심벌즈
-                </div>
-                <div style={{ fontSize: '0.74rem', color: '#cbd5e1', fontWeight: 700 }}>
-                  위쪽 심벌즈를 치면 챙챙-! 드럼을 치면 쿵쿵-!
-                </div>
-              </div>
-            )}
+            {/* 🥁 5구 전자 드럼 패드 아크 (스네어, 하이톰, 베이스킥, 로우톰, 플로어톰) */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)',
+              gap: viewMode === 'drums' ? '12px' : '8px',
+              alignItems: 'center', zIndex: 10
+            }}>
+              {[
+                {
+                  id: 'snare',
+                  name: '스네어',
+                  soundTag: '착-!',
+                  color: '#f97316',
+                  border: '#c2410c',
+                  headColor: '#fff7ed',
+                  headBorder: '#fed7aa',
+                  play: () => audioEngine.playSnareDrum(0.9),
+                  jumpIdx: 2,
+                  leftPct: 22
+                },
+                {
+                  id: 'hi-tom',
+                  name: '작은 톰톰',
+                  soundTag: '퐁-!',
+                  color: '#06b6d4',
+                  border: '#0891b2',
+                  headColor: '#ecfeff',
+                  headBorder: '#a5f3fc',
+                  play: () => audioEngine.playHighTom(0.85),
+                  jumpIdx: 0,
+                  leftPct: 36
+                },
+                {
+                  id: 'bass',
+                  name: '쿵쿵 킥',
+                  soundTag: '쿵-!',
+                  color: '#ef4444',
+                  border: '#b91c1c',
+                  headColor: '#fef2f2',
+                  headBorder: '#fecaca',
+                  play: () => audioEngine.playBassDrum(1.0),
+                  jumpIdx: 3,
+                  leftPct: 50,
+                  isBig: true
+                },
+                {
+                  id: 'low-tom',
+                  name: '중간 톰톰',
+                  soundTag: '통-!',
+                  color: '#10b981',
+                  border: '#059669',
+                  headColor: '#f0fdf4',
+                  headBorder: '#bbf7d0',
+                  play: () => audioEngine.playLowTom(0.85),
+                  jumpIdx: 1,
+                  leftPct: 64
+                },
+                {
+                  id: 'floor-tom',
+                  name: '큰북 톰',
+                  soundTag: '둥-!',
+                  color: '#8b5cf6',
+                  border: '#6d28d9',
+                  headColor: '#f5f3ff',
+                  headBorder: '#ddd6fe',
+                  play: () => audioEngine.playFloorTom(0.9),
+                  jumpIdx: 2,
+                  leftPct: 78
+                }
+              ].map((drum) => {
+                const isActive = activeDrumId === drum.id;
+                const isBass = drum.isBig;
 
-            {/* ✨ 2. 우측: 라이드 & 하이햇 심벌즈 (Ride Cymbal) & 크롬 스탠드 */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-              {/* 스탠드 파이프 */}
-              <div style={{
-                position: 'absolute', top: '28px', width: '7px', height: '90px',
-                background: 'linear-gradient(90deg, #94a3b8 0%, #f8fafc 50%, #475569 100%)',
-                borderRadius: '4px', zIndex: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
-              }} />
+                return (
+                  <button
+                    key={drum.id}
+                    onPointerDown={(e) => {
+                      e.preventDefault();
+                      handleDrumHit(drum.id, drum.play, drum.color, drum.leftPct, drum.jumpIdx);
+                    }}
+                    onClick={() => handleDrumHit(drum.id, drum.play, drum.color, drum.leftPct, drum.jumpIdx)}
+                    className={isActive ? 'drum-hit-anim' : ''}
+                    style={{
+                      height: viewMode === 'drums' ? (isBass ? '130px' : '110px') : (isBass ? '95px' : '82px'),
+                      background: isActive
+                        ? `linear-gradient(180deg, #ffffff 0%, ${drum.headColor} 40%, ${drum.color} 100%)`
+                        : `linear-gradient(180deg, ${drum.headColor} 0%, #ffffff 40%, ${drum.color} 100%)`,
+                      borderRadius: '24px',
+                      border: `4px solid ${isActive ? '#ffffff' : drum.border}`,
+                      boxShadow: isActive
+                        ? `0 0 26px ${drum.color}, 0 2px 6px rgba(0,0,0,0.5)`
+                        : `0 8px 18px rgba(0,0,0,0.35), inset 0 3px 6px rgba(255,255,255,0.7)`,
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
+                      padding: viewMode === 'drums' ? '8px 4px' : '5px 2px',
+                      cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                      transform: isActive ? 'scale(0.95)' : isBass ? 'scale(1.04)' : 'none',
+                      transition: 'transform 0.08s ease, box-shadow 0.08s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '80%' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#cbd5e1', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }} />
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#cbd5e1', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }} />
+                    </div>
 
-              {/* 반짝이는 금빛 라이드 심벌즈 원반 */}
-              <button
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  handleDrumHit('ride', () => audioEngine.playRideCymbal(0.8), '#fef08a', 80, 1);
-                }}
-                onClick={() => handleDrumHit('ride', () => audioEngine.playRideCymbal(0.8), '#fef08a', 80, 1)}
-                className={activeDrumId === 'ride' ? 'cymbal-ride-anim' : ''}
-                style={{
-                  width: viewMode === 'drums' ? '150px' : '114px',
-                  height: viewMode === 'drums' ? '74px' : '54px',
-                  borderRadius: '50%',
-                  background: activeDrumId === 'ride'
-                    ? 'radial-gradient(circle at 52% 46%, #ffffff 0%, #fef08a 30%, #eab308 70%, #854d0e 100%)'
-                    : 'radial-gradient(circle at 50% 45%, #fef9c3 0%, #facc15 32%, #ca8a04 70%, #713f12 100%)',
-                  border: '3.5px solid #713f12',
-                  boxShadow: activeDrumId === 'ride'
-                    ? '0 0 32px #fef08a, inset 0 2px 8px rgba(255,255,255,0.9)'
-                    : '0 10px 22px rgba(0,0,0,0.5), inset 0 2px 6px rgba(255,255,255,0.6)',
-                  cursor: 'pointer', zIndex: 3, position: 'relative',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  transform: 'perspective(300px) rotateX(24deg)',
-                  transition: 'background 0.1s ease'
-                }}
-              >
-                {/* 벨 돔 */}
-                <div style={{
-                  width: '24px', height: '17px', borderRadius: '50%',
-                  background: 'radial-gradient(circle at 40% 40%, #ffffff 0%, #eab308 60%, #713f12 100%)',
-                  border: '1.5px solid #451a03', boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center'
-                }}>
-                  <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#475569' }} />
-                </div>
-                <div style={{
-                  position: 'absolute', inset: '7px', borderRadius: '50%',
-                  border: '1.5px dashed rgba(113, 63, 18, 0.45)', pointerEvents: 'none'
-                }} />
-              </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <span style={{
+                        fontSize: viewMode === 'drums' ? (isBass ? '2.1rem' : '1.7rem') : (isBass ? '1.6rem' : '1.3rem'),
+                        lineHeight: 1
+                      }}>
+                        {isBass ? '🥁' : '⚪'}
+                      </span>
+                      <span style={{
+                        fontSize: viewMode === 'drums' ? '1.05rem' : '0.85rem',
+                        fontWeight: 900, color: '#1e293b', marginTop: '2px'
+                      }}>
+                        {drum.name}
+                      </span>
+                      <span style={{
+                        fontSize: viewMode === 'drums' ? '0.85rem' : '0.72rem',
+                        fontWeight: 900, color: drum.color
+                      }}>
+                        {drum.soundTag}
+                      </span>
+                    </div>
 
-              {/* 심벌즈 이름 배지 */}
-              <div style={{
-                marginTop: '4px', background: activeDrumId === 'ride' ? '#fde047' : '#1e293b',
-                color: activeDrumId === 'ride' ? '#713f12' : '#fef9c3',
-                padding: '2px 10px', borderRadius: '12px', fontSize: '0.76rem', fontWeight: 900,
-                border: '1.5px solid #ca8a04', zIndex: 4, boxShadow: '0 2px 6px rgba(0,0,0,0.3)'
-              }}>
-                ✨ 라이드 심벌 (칭-!)
-              </div>
+                    <div style={{
+                      width: '60%', height: '4px', borderRadius: '2px',
+                      background: drum.border, opacity: 0.65
+                    }} />
+                  </button>
+                );
+              })}
             </div>
           </div>
+        )}
 
-          {/* 🥁 B. 심벌즈 아래 드럼들 (스네어, 하이톰, 로우톰, 플로어톰, 쿵쿵 베이스 킥) */}
+        {/* 🎛️ B. 중앙 조작 패널 스트립 (입체 스피커 그릴 & LED 비트 메터) */}
+        {viewMode === 'both' && (
           <div style={{
-            flex: 1, display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
-            gap: viewMode === 'drums' ? '12px' : '8px',
-            alignItems: 'center', zIndex: 10,
-            marginTop: viewMode === 'drums' ? '4px' : '0'
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '4px 12px', margin: '4px 0 8px', borderRadius: '12px',
+            background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)',
+            border: '1.5px solid #334155', boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.6)'
           }}>
-            {[
-              {
-                id: 'snare',
-                name: '스네어',
-                soundTag: '착-!',
-                color: '#f97316',
-                border: '#c2410c',
-                headColor: '#fff7ed',
-                headBorder: '#fed7aa',
-                play: () => audioEngine.playSnareDrum(0.9),
-                jumpIdx: 2,
-                leftPct: 22
-              },
-              {
-                id: 'hi-tom',
-                name: '작은 톰톰',
-                soundTag: '퐁-!',
-                color: '#06b6d4',
-                border: '#0891b2',
-                headColor: '#ecfeff',
-                headBorder: '#a5f3fc',
-                play: () => audioEngine.playHighTom(0.85),
-                jumpIdx: 0,
-                leftPct: 36
-              },
-              {
-                id: 'bass',
-                name: '쿵쿵 킥',
-                soundTag: '쿵-!',
-                color: '#ef4444',
-                border: '#b91c1c',
-                headColor: '#fef2f2',
-                headBorder: '#fecaca',
-                play: () => audioEngine.playBassDrum(1.0),
-                jumpIdx: 3,
-                leftPct: 50,
-                isBig: true
-              },
-              {
-                id: 'low-tom',
-                name: '중간 톰톰',
-                soundTag: '통-!',
-                color: '#10b981',
-                border: '#059669',
-                headColor: '#f0fdf4',
-                headBorder: '#bbf7d0',
-                play: () => audioEngine.playLowTom(0.85),
-                jumpIdx: 1,
-                leftPct: 64
-              },
-              {
-                id: 'floor-tom',
-                name: '큰북 톰',
-                soundTag: '둥-!',
-                color: '#8b5cf6',
-                border: '#6d28d9',
-                headColor: '#f5f3ff',
-                headBorder: '#ddd6fe',
-                play: () => audioEngine.playFloorTom(0.9),
-                jumpIdx: 2,
-                leftPct: 78
-              }
-            ].map((drum) => {
-              const isActive = activeDrumId === drum.id;
-              const isBass = drum.isBig;
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div className="speaker-grille-dots" style={{ width: '70px', height: '18px', borderRadius: '6px', opacity: 0.8 }} />
+              <span style={{ fontSize: '0.68rem', fontWeight: 900, color: '#64748b' }}>SPEAKER L</span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '3px', alignItems: 'flex-end', height: '16px' }}>
+                {[6, 12, 16, 10, 14, 8, 15, 11].map((h, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      width: '4px', height: `${h}px`, borderRadius: '2px',
+                      background: isDrumBeatOn
+                        ? (i % 2 === 0 ? '#10b981' : '#f59e0b')
+                        : '#475569',
+                      transition: 'all 0.1s ease'
+                    }}
+                  />
+                ))}
+              </div>
+              <span style={{
+                fontSize: '0.74rem', fontWeight: 900,
+                color: isDrumBeatOn ? '#4ade80' : '#94a3b8'
+              }}>
+                {isDrumBeatOn ? '🔥 BEAT PLAYING' : 'READY'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.68rem', fontWeight: 900, color: '#64748b' }}>SPEAKER R</span>
+              <div className="speaker-grille-dots" style={{ width: '70px', height: '18px', borderRadius: '6px', opacity: 0.8 }} />
+            </div>
+          </div>
+        )}
+
+        {/* 🎹 C. 8음계 실로폰/피아노 일체형 건반 영역 */}
+        {(viewMode === 'xylophone' || viewMode === 'both') && (
+          <div style={{
+            height: viewMode === 'both' ? '150px' : '230px',
+            background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)',
+            borderRadius: '20px', padding: viewMode === 'both' ? '8px 12px' : '14px 18px',
+            border: '3px solid #334155',
+            boxShadow: 'inset 0 4px 10px rgba(0,0,0,0.6), 0 2px 6px rgba(255,255,255,0.05)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px',
+            flexShrink: 0
+          }}>
+            {XYLOPHONE_KEYS.map((key, kIdx) => {
+              const isActive = activeKeyId === key.id;
+              const isTarget = targetKeyIndex === kIdx;
 
               return (
                 <button
-                  key={drum.id}
+                  key={key.id}
                   onPointerDown={(e) => {
                     e.preventDefault();
-                    handleDrumHit(drum.id, drum.play, drum.color, drum.leftPct, drum.jumpIdx);
+                    handleKeyPress(key, kIdx);
                   }}
-                  onClick={() => handleDrumHit(drum.id, drum.play, drum.color, drum.leftPct, drum.jumpIdx)}
-                  className={isActive ? 'drum-hit-anim' : ''}
+                  onClick={() => handleKeyPress(key, kIdx)}
                   style={{
-                    height: viewMode === 'drums' ? (isBass ? '130px' : '110px') : (isBass ? '95px' : '82px'),
+                    flex: 1, height: key.height,
                     background: isActive
-                      ? `linear-gradient(180deg, #ffffff 0%, ${drum.headColor} 40%, ${drum.color} 100%)`
-                      : `linear-gradient(180deg, ${drum.headColor} 0%, #ffffff 40%, ${drum.color} 100%)`,
-                    borderRadius: '24px',
-                    border: `4px solid ${isActive ? '#ffffff' : drum.border}`,
+                      ? `linear-gradient(180deg, #ffffff 0%, ${key.color} 100%)`
+                      : `linear-gradient(180deg, ${key.color} 0%, ${key.border} 100%)`,
+                    borderRadius: '15px', border: `3px solid ${isTarget ? '#ffffff' : key.border}`,
                     boxShadow: isActive
-                      ? `0 0 26px ${drum.color}, 0 2px 6px rgba(0,0,0,0.5)`
-                      : `0 8px 18px rgba(0,0,0,0.35), inset 0 3px 6px rgba(255,255,255,0.7)`,
+                      ? `0 2px 4px rgba(0,0,0,0.4), 0 0 22px ${key.color}`
+                      : `0 8px 16px rgba(0,0,0,0.35), inset 0 2px 4px rgba(255,255,255,0.4)`,
+                    transform: isActive ? 'translateY(5px) scale(0.97)' : isTarget ? 'translateY(-5px) scale(1.02)' : 'none',
+                    transition: 'transform 0.08s ease, box-shadow 0.08s ease',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
-                    padding: viewMode === 'drums' ? '8px 4px' : '5px 2px',
-                    cursor: 'pointer', position: 'relative', overflow: 'hidden',
-                    transform: isActive ? 'scale(0.95)' : isBass ? 'scale(1.04)' : 'none',
-                    transition: 'transform 0.08s ease, box-shadow 0.08s ease'
+                    padding: viewMode === 'both' ? '8px 2px' : '12px 4px',
+                    cursor: 'pointer', position: 'relative'
                   }}
                 >
-                  {/* 상단 림 크롬 텐션 러그 (은색 나사 2개) */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '80%' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#cbd5e1', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }} />
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#cbd5e1', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }} />
-                  </div>
+                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f8fafc', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }} />
 
-                  {/* 드럼 헤드 타격점 동심원 및 이름 라벨 */}
+                  {isTarget && (
+                    <div style={{
+                      position: 'absolute', top: '-16px', background: '#facc15', color: '#78350f',
+                      fontSize: '0.72rem', fontWeight: 900, padding: '1px 5px', borderRadius: '8px',
+                      boxShadow: '0 4px 10px rgba(0,0,0,0.25)', animation: 'bounce 0.8s infinite'
+                    }}>
+                      콕! 👇
+                    </div>
+                  )}
+
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                     <span style={{
-                      fontSize: viewMode === 'drums' ? (isBass ? '2.1rem' : '1.7rem') : (isBass ? '1.6rem' : '1.3rem'),
-                      lineHeight: 1
+                      fontSize: viewMode === 'both' ? '1.15rem' : '1.45rem',
+                      fontWeight: 900, color: '#ffffff', textShadow: '0 2px 4px rgba(0,0,0,0.4)'
                     }}>
-                      {isBass ? '🥁' : '⚪'}
+                      {key.note}
                     </span>
                     <span style={{
-                      fontSize: viewMode === 'drums' ? '1.05rem' : '0.85rem',
-                      fontWeight: 900, color: '#1e293b', marginTop: '2px'
+                      fontSize: viewMode === 'both' ? '0.72rem' : '0.85rem',
+                      fontWeight: 800, color: '#ffffff', opacity: 0.85
                     }}>
-                      {drum.name}
-                    </span>
-                    <span style={{
-                      fontSize: viewMode === 'drums' ? '0.85rem' : '0.72rem',
-                      fontWeight: 900, color: drum.color
-                    }}>
-                      {drum.soundTag}
+                      {key.solfege}
                     </span>
                   </div>
 
-                  {/* 하단 림 */}
-                  <div style={{
-                    width: '60%', height: '4px', borderRadius: '2px',
-                    background: drum.border, opacity: 0.65
-                  }} />
+                  <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f8fafc', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }} />
                 </button>
               );
             })}
           </div>
-        </div>
-      )}
-
-      {/* 5. 🎹 8음계 실로폰 건반 영역 (실로폰 또는 모둠 악기 모드일 때 표시) */}
-      {(viewMode === 'xylophone' || viewMode === 'both') && (
-        <div style={{
-          height: viewMode === 'both' ? '155px' : '230px',
-          background: '#334155', borderRadius: '26px',
-          padding: viewMode === 'both' ? '10px 14px' : '16px 20px',
-          border: '4.5px solid #1e293b',
-          boxShadow: 'inset 0 6px 14px rgba(0,0,0,0.35), 0 12px 26px rgba(0,0,0,0.2)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '7px',
-          flexShrink: 0
-        }}>
-          {XYLOPHONE_KEYS.map((key, kIdx) => {
-            const isActive = activeKeyId === key.id;
-            const isTarget = targetKeyIndex === kIdx;
-
-            return (
-              <button
-                key={key.id}
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  handleKeyPress(key, kIdx);
-                }}
-                onClick={() => handleKeyPress(key, kIdx)}
-                style={{
-                  flex: 1, height: key.height,
-                  background: isActive
-                    ? `linear-gradient(180deg, #ffffff 0%, ${key.color} 100%)`
-                    : `linear-gradient(180deg, ${key.color} 0%, ${key.border} 100%)`,
-                  borderRadius: '15px', border: `3px solid ${isTarget ? '#ffffff' : key.border}`,
-                  boxShadow: isActive
-                    ? `0 2px 4px rgba(0,0,0,0.4), 0 0 22px ${key.color}`
-                    : `0 8px 16px rgba(0,0,0,0.35), inset 0 2px 4px rgba(255,255,255,0.4)`,
-                  transform: isActive ? 'translateY(5px) scale(0.97)' : isTarget ? 'translateY(-5px) scale(1.02)' : 'none',
-                  transition: 'transform 0.08s ease, box-shadow 0.08s ease',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
-                  padding: viewMode === 'both' ? '8px 2px' : '12px 4px',
-                  cursor: 'pointer', position: 'relative'
-                }}
-              >
-                {/* 상단 은색 못 */}
-                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f8fafc', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }} />
-
-                {/* 반짝이 타겟 표시 */}
-                {isTarget && (
-                  <div style={{
-                    position: 'absolute', top: '-16px', background: '#facc15', color: '#78350f',
-                    fontSize: '0.72rem', fontWeight: 900, padding: '1px 5px', borderRadius: '8px',
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.25)', animation: 'bounce 0.8s infinite'
-                  }}>
-                    콕! 👇
-                  </div>
-                )}
-
-                {/* 건반 음계 라벨 */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <span style={{
-                    fontSize: viewMode === 'both' ? '1.15rem' : '1.45rem',
-                    fontWeight: 900, color: '#ffffff', textShadow: '0 2px 4px rgba(0,0,0,0.4)'
-                  }}>
-                    {key.note}
-                  </span>
-                  <span style={{
-                    fontSize: viewMode === 'both' ? '0.72rem' : '0.85rem',
-                    fontWeight: 800, color: '#ffffff', opacity: 0.85
-                  }}>
-                    {key.solfege}
-                  </span>
-                </div>
-
-                {/* 하단 은색 못 */}
-                <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f8fafc', boxShadow: '0 2px 4px rgba(0,0,0,0.3)' }} />
-              </button>
-            );
-          })}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -3851,9 +3915,22 @@ function SleepingRabbitIllustration({ isAsleep, hasBlanket }) {
         <ellipse cx="68" cy="88" rx="10" ry="7" fill="#f472b6" opacity="0.6" className="animal-blush-anim" />
         <ellipse cx="132" cy="88" rx="10" ry="7" fill="#f472b6" opacity="0.6" className="animal-blush-anim" />
 
-        {/* 감은 눈 (스마일 곡선 ︶ ︶) */}
-        <path d="M 72 78 Q 80 85 88 78" fill="none" stroke="#475569" strokeWidth="3" strokeLinecap="round" />
-        <path d="M 112 78 Q 120 85 128 78" fill="none" stroke="#475569" strokeWidth="3" strokeLinecap="round" />
+        {/* 눈: 이불을 덮고 잠들었을 때는 감은 눈(︶ ︶), 깨어있을 때는 초롱초롱 뜬 눈 */}
+        {isAsleep ? (
+          <g>
+            <path d="M 72 78 Q 80 85 88 78" fill="none" stroke="#475569" strokeWidth="3" strokeLinecap="round" />
+            <path d="M 112 78 Q 120 85 128 78" fill="none" stroke="#475569" strokeWidth="3" strokeLinecap="round" />
+          </g>
+        ) : (
+          <g>
+            <ellipse cx="80" cy="78" rx="6" ry="7.5" fill="#1e293b" />
+            <circle cx="78" cy="75.5" r="2.3" fill="#ffffff" />
+            <circle cx="82" cy="80.5" r="1.1" fill="#ffffff" />
+            <ellipse cx="120" cy="78" rx="6" ry="7.5" fill="#1e293b" />
+            <circle cx="118" cy="75.5" r="2.3" fill="#ffffff" />
+            <circle cx="122" cy="80.5" r="1.1" fill="#ffffff" />
+          </g>
+        )}
 
         {/* 귀여운 Y자 코와 입 */}
         <ellipse cx="100" cy="85" rx="4.5" ry="3.5" fill="#f472b6" />
@@ -3895,9 +3972,22 @@ function SleepingPuppyIllustration({ isAsleep, hasBlanket }) {
         <ellipse cx="68" cy="88" rx="10" ry="7" fill="#fb7185" opacity="0.6" className="animal-blush-anim" />
         <ellipse cx="132" cy="88" rx="10" ry="7" fill="#fb7185" opacity="0.6" className="animal-blush-anim" />
 
-        {/* 감은 눈 (스마일 곡선 ︶ ︶) */}
-        <path d="M 72 78 Q 80 84 88 78" fill="none" stroke="#334155" strokeWidth="3" strokeLinecap="round" />
-        <path d="M 112 78 Q 120 84 128 78" fill="none" stroke="#334155" strokeWidth="3" strokeLinecap="round" />
+        {/* 눈: 이불을 덮고 잠들었을 때는 감은 눈(︶ ︶), 깨어있을 때는 초롱초롱 뜬 눈 */}
+        {isAsleep ? (
+          <g>
+            <path d="M 72 78 Q 80 84 88 78" fill="none" stroke="#334155" strokeWidth="3" strokeLinecap="round" />
+            <path d="M 112 78 Q 120 84 128 78" fill="none" stroke="#334155" strokeWidth="3" strokeLinecap="round" />
+          </g>
+        ) : (
+          <g>
+            <ellipse cx="80" cy="78" rx="6" ry="7.5" fill="#334155" />
+            <circle cx="78" cy="75.5" r="2.3" fill="#ffffff" />
+            <circle cx="82" cy="80.5" r="1.1" fill="#ffffff" />
+            <ellipse cx="120" cy="78" rx="6" ry="7.5" fill="#334155" />
+            <circle cx="118" cy="75.5" r="2.3" fill="#ffffff" />
+            <circle cx="122" cy="80.5" r="1.1" fill="#ffffff" />
+          </g>
+        )}
 
         {/* 촉촉한 밤톨 코와 미소 입 */}
         <ellipse cx="100" cy="85" rx="6" ry="4.5" fill="#334155" />
@@ -3943,9 +4033,22 @@ function SleepingKittenIllustration({ isAsleep, hasBlanket }) {
         <ellipse cx="68" cy="88" rx="10" ry="7" fill="#f43f5e" opacity="0.55" className="animal-blush-anim" />
         <ellipse cx="132" cy="88" rx="10" ry="7" fill="#f43f5e" opacity="0.55" className="animal-blush-anim" />
 
-        {/* 감은 눈 (스마일 곡선 ︶ ︶) */}
-        <path d="M 72 78 Q 80 84 88 78" fill="none" stroke="#334155" strokeWidth="3" strokeLinecap="round" />
-        <path d="M 112 78 Q 120 84 128 78" fill="none" stroke="#334155" strokeWidth="3" strokeLinecap="round" />
+        {/* 눈: 이불을 덮고 잠들었을 때는 감은 눈(︶ ︶), 깨어있을 때는 초롱초롱 뜬 눈 */}
+        {isAsleep ? (
+          <g>
+            <path d="M 72 78 Q 80 84 88 78" fill="none" stroke="#334155" strokeWidth="3" strokeLinecap="round" />
+            <path d="M 112 78 Q 120 84 128 78" fill="none" stroke="#334155" strokeWidth="3" strokeLinecap="round" />
+          </g>
+        ) : (
+          <g>
+            <ellipse cx="80" cy="78" rx="6" ry="7.5" fill="#0f172a" />
+            <circle cx="78" cy="75.5" r="2.3" fill="#ffffff" />
+            <circle cx="82" cy="80" r="1.2" fill="#38bdf8" opacity="0.9" />
+            <ellipse cx="120" cy="78" rx="6" ry="7.5" fill="#0f172a" />
+            <circle cx="118" cy="75.5" r="2.3" fill="#ffffff" />
+            <circle cx="122" cy="80" r="1.2" fill="#38bdf8" opacity="0.9" />
+          </g>
+        )}
 
         {/* 분홍 삼각 코와 고양이 수염 */}
         <polygon points="100,83 96,88 104,88" fill="#f43f5e" />
@@ -4062,25 +4165,43 @@ function BedtimeSleepView() {
   const handlePatAnimal = (animalId) => {
     const st = animalStates[animalId];
     const newPats = st.pats + 1;
-    const becomesAsleep = newPats >= 3;
+    const animal = SLEEP_ANIMAL_DATA.find(a => a.id === animalId);
+    const animalBase = animal ? animal.name.replace('아기 ', '') : '동물';
 
     audioEngine.playMusicBox(440 + Math.random() * 200, 0.4);
-
     setHearts(prev => [...prev.slice(-10), { id: Date.now() + Math.random(), animalId }]);
 
-    setAnimalStates(prev => ({
-      ...prev,
-      [animalId]: {
-        ...prev[animalId],
-        pats: newPats,
-        isAsleep: becomesAsleep || prev[animalId].hasBlanket,
-        yawn: !becomesAsleep && !prev[animalId].hasBlanket
-      }
-    }));
+    // 🛌 핵심 규칙: 동물은 이불을 덮어줘야지만 잡니다!
+    // 이불이 없는 상태에서는 아무리 토닥여도 잠들지 않고, 하품하며 이불을 덮어달라고 반응합니다.
+    if (st.hasBlanket) {
+      setAnimalStates(prev => ({
+        ...prev,
+        [animalId]: {
+          ...prev[animalId],
+          pats: newPats,
+          isAsleep: true,
+          yawn: false
+        }
+      }));
+      speakNaturalKorean(`${animalBase}가 이불을 꼭 덮고 쿨쿨 잘 자고 있어요.`, { pitch: 1.15, rate: 0.88 });
+    } else {
+      setAnimalStates(prev => ({
+        ...prev,
+        [animalId]: {
+          ...prev[animalId],
+          pats: newPats,
+          isAsleep: false,
+          yawn: true
+        }
+      }));
+      setTimeout(() => {
+        setAnimalStates(prev => ({
+          ...prev,
+          [animalId]: { ...prev[animalId], yawn: false }
+        }));
+      }, 1600);
 
-    if (becomesAsleep) {
-      const animal = SLEEP_ANIMAL_DATA.find(a => a.id === animalId);
-      speakNaturalKorean(`${animal.name}가 스르륵 눈을 감고 잠들었어요. 쿨쿨~`, { pitch: 1.15, rate: 0.88 });
+      speakNaturalKorean(`${animalBase}가 하품을 해요. 포근한 이불을 덮어주세요~`, { pitch: 1.16, rate: 0.92 });
     }
   };
 
@@ -4109,7 +4230,11 @@ function BedtimeSleepView() {
       }
     }));
 
-    speakNaturalKorean(blanket.blanketName, {
+    const animalBase = targetAnimal.name.replace('아기 ', '');
+    const blanketObj = attachJosa(blanket.blanketName, '을/를');
+    const announceText = `${animalBase}에게 ${blanketObj} 덮어줬어요.`;
+
+    speakNaturalKorean(announceText, {
       pitch: 1.15,
       rate: 0.92
     });
@@ -4120,7 +4245,7 @@ function BedtimeSleepView() {
     ]);
   };
 
-  // 이불 개어주기 (다시 바구니로 복귀)
+  // 이불 개어주기 (다시 바구니로 복귀) - 이불이 벗겨지면 동물은 잠에서 깸
   const handleRemoveBlanket = (animalId, e) => {
     if (e) e.stopPropagation();
     audioEngine.playSnap();
@@ -4129,9 +4254,14 @@ function BedtimeSleepView() {
       [animalId]: {
         ...prev[animalId],
         hasBlanket: false,
-        blanketData: null
+        blanketData: null,
+        isAsleep: false,
+        yawn: false
       }
     }));
+    const animal = SLEEP_ANIMAL_DATA.find(a => a.id === animalId);
+    const animalBase = animal ? animal.name.replace('아기 ', '') : '동물';
+    speakNaturalKorean(`${animalBase}가 이불이 걷히자 잠에서 깨어났어요!`, { pitch: 1.16, rate: 0.92 });
   };
 
   // 이불 드래그 시작

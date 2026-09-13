@@ -380,6 +380,31 @@ button:active {
   animation: drumShockwave 0.35s ease-out forwards;
 }
 
+/* 🎹 실제 전자 드럼키보드 콘솔 스타일링 */
+@keyframes ledMeterPulse {
+  0%, 100% { opacity: 0.35; filter: drop-shadow(0 0 2px currentColor); }
+  50% { opacity: 1; filter: drop-shadow(0 0 8px currentColor); }
+}
+
+.led-beat-meter {
+  animation: ledMeterPulse 0.58s infinite ease-in-out;
+}
+
+.drum-console-speaker {
+  background: radial-gradient(circle at 50% 50%, #334155 35%, #0f172a 75%);
+  position: relative;
+  overflow: hidden;
+}
+
+.drum-console-speaker::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(#64748b 22%, transparent 22%);
+  background-size: 6px 6px;
+  opacity: 0.65;
+}
+
 /* 🛏️ 코 잘 시간 이불 드래그 & 포근하게 덮어주기 애니메이션 */
 @keyframes blanketSnuggle {
   0% {
@@ -590,6 +615,41 @@ button:active {
   align-items: center;
   gap: 6px;
 }
+
+/* 🎹 실제 전자 드럼키보드 콘솔 일체형 입체 스타일 */
+.drum-console-body {
+  position: relative;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border-radius: 28px;
+  border: 4.5px solid #334155;
+  box-shadow: inset 0 3px 6px rgba(255, 255, 255, 0.15), 0 14px 32px rgba(0, 0, 0, 0.4);
+}
+
+.drum-console-bezel {
+  border-radius: 20px;
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.drum-pad-rubber {
+  position: relative;
+  border-radius: 24px;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  transition: transform 0.08s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.08s ease;
+}
+
+.drum-pad-rubber:active {
+  transform: scale(0.94) !important;
+}
+
+.speaker-grille-dots {
+  background-image: radial-gradient(#64748b 22%, transparent 22%);
+  background-size: 6px 6px;
+  background-position: 0 0, 3px 3px;
+}
+
 
 
 
