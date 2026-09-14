@@ -240,8 +240,12 @@ class BabySoundEngine {
     }
   }
 
-  // 🎙️ 아이패드 Safari 100% 호환 음성 재생 엔진 (터치 제스처 + setTimeout 비동기 타이머 완벽 대응)
+  // 🎙️ 사람 음성 재생: MP3 방식 대신 100% 안정적인 네이티브 TTS fallbackFn으로 직결
   async playVoice(url, fallbackFn = null, onEnded = null) {
+    if (fallbackFn) {
+      fallbackFn();
+      return;
+    }
     if (this.muted) return;
     this.stopVoice();
     this.init();
@@ -2525,31 +2529,15 @@ export function speakNaturalKorean(text, { pitch = 1.16, rate = 0.92, priority =
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// 🎙️ PC Edge 인준(InJoon) 고음질 MP3 플레이어 (아이패드/모바일 100% 비동기 지원 Web Audio 엔진 연동)
+// 🎙️ 사람 음성 안내 플레이어 (아이패드/모바일 100% 호환 - 기존 순수 네이티브 한국어 TTS로 완전 롤백)
 // ═════════════════════════════════════════════════════════════════════════════
 export function playVoiceAudio(audioSrc, fallbackFn = null, onEnded = null) {
   if (typeof window === 'undefined') return;
-  const isIOS = typeof navigator !== 'undefined' && (
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  );
 
-  // 📱 아이패드/iOS 환경: MP3 비동기 로딩 및 WebKit 미디어 재생 정책 충돌을 원천 방지하고,
-  // 예전에 오류 없이 100% 깔끔하게 작동하던 순수 한국어 읽어주기(TTS)로 즉시 직결 재생!
-  if (isIOS) {
-    if (fallbackFn) fallbackFn();
-    return;
-  }
-
-  try {
-    if (audioEngine && typeof audioEngine.playVoice === 'function') {
-      audioEngine.playVoice(audioSrc, fallbackFn, onEnded);
-      return;
-    }
-
-    if (fallbackFn) fallbackFn();
-  } catch (err) {
-    if (fallbackFn) fallbackFn();
+  // 📱 아이패드 및 모든 환경에서 MP3 재생 정책 충돌 및 묵음 문제를 원천 방지하기 위해
+  // 100% 오류 없이 안정적으로 작동하던 기존 한국어 TTS(SpeechSynthesis)로 완전 롤백하여 직결 재생합니다.
+  if (fallbackFn) {
+    fallbackFn();
   }
 }
 
