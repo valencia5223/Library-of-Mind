@@ -1358,6 +1358,108 @@ const REAL_FRUITS = [
   }
 ];
 
+// =============================================================================
+// 16종 씽씽 탈것 – 볼보 흰색 S90 포함 고화질 실사 사진 + 다정한 한국어 음성
+// =============================================================================
+const REAL_VEHICLES = [
+  {
+    id: 'car', name: '자동차', soundText: '부릉부릉! 빵빵!', icon: '🚗',
+    img: '/vehicles/volvo_s90_white.jpg',
+    color: '#0284c7', bg: '#f0f9ff', fitPos: 'center 50%',
+    category: 'vehicle', detail: '세련되고 안전한 볼보 흰색 S90 승용차'
+  },
+  {
+    id: 'fire_truck', name: '소방차', soundText: '애앵애앵! 불 끄러 출동!', icon: '🚒',
+    img: 'https://images.pexels.com/photos/260024/pexels-photo-260024.jpeg?auto=compress&cs=tinysrgb&w=600',
+    color: '#ef4444', bg: '#fef2f2', fitPos: 'center 40%',
+    category: 'vehicle', detail: '용감하게 불을 끄는 빨간 소방차'
+  },
+  {
+    id: 'police_car', name: '경찰차', soundText: '삐뽀삐뽀! 출동해요!', icon: '🚓',
+    img: 'https://images.pexels.com/photos/926390/pexels-photo-926390.jpeg?auto=compress&cs=tinysrgb&w=600',
+    color: '#3b82f6', bg: '#eff6ff', fitPos: 'center 45%',
+    category: 'vehicle', detail: '마을을 안전하게 지키는 멋진 경찰차'
+  },
+  {
+    id: 'ambulance', name: '구급차', soundText: '삐용삐용! 병원으로 가요!', icon: '🚑',
+    img: 'https://images.pexels.com/photos/263402/pexels-photo-263402.jpeg?auto=compress&cs=tinysrgb&w=600',
+    color: '#10b981', bg: '#ecfdf5', fitPos: 'center 50%',
+    category: 'vehicle', detail: '아픈 사람을 병원으로 데려다주는 구급차'
+  },
+  {
+    id: 'bus', name: '버스', soundText: '붕붕~ 정류장에 멈춰요!', icon: '🚌',
+    img: 'https://images.pexels.com/photos/385998/pexels-photo-385998.jpeg?auto=compress&cs=tinysrgb&w=600',
+    color: '#f59e0b', bg: '#fffbeb', fitPos: 'center 45%',
+    category: 'vehicle', detail: '친구들과 함께 타는 커다란 버스'
+  },
+  {
+    id: 'train', name: '기차', soundText: '칙칙폭폭! 땡땡땡!', icon: '🚂',
+    img: 'https://images.pexels.com/photos/210182/pexels-photo-210182.jpeg?auto=compress&cs=tinysrgb&w=600',
+    color: '#8b5cf6', bg: '#f5f3ff', fitPos: 'center 40%',
+    category: 'vehicle', detail: '철길 위를 신나게 달리는 칙칙폭폭 기차'
+  },
+  {
+    id: 'airplane', name: '비행기', soundText: '슝~ 하늘 높이 날아요!', icon: '✈️',
+    img: 'https://images.pexels.com/photos/46148/aircraft-jet-landing-cloud-46148.jpeg?auto=compress&cs=tinysrgb&w=600',
+    color: '#06b6d4', bg: '#ecfeff', fitPos: 'center 50%',
+    category: 'vehicle', detail: '구름 위 푸른 하늘을 나는 비행기'
+  },
+  {
+    id: 'helicopter', name: '헬리콥터', soundText: '두두두두! 날아가요!', icon: '🚁',
+    img: 'https://images.pexels.com/photos/726233/pexels-photo-726233.jpeg?auto=compress&cs=tinysrgb&w=600',
+    color: '#14b8a6', bg: '#f0fdfa', fitPos: 'center 45%',
+    category: 'vehicle', detail: '프로펠러를 빙글빙글 돌려 하늘로 뜨는 헬리콥터'
+  },
+  {
+    id: 'ship', name: '배', soundText: '뿌우우웅~ 바다를 건너요!', icon: '🚢',
+    img: 'https://images.pexels.com/photos/813011/pexels-photo-813011.jpeg?auto=compress&cs=tinysrgb&w=600',
+    color: '#2563eb', bg: '#eff6ff', fitPos: 'center 40%',
+    category: 'vehicle', detail: '넓고 푸른 바다를 건너는 커다란 배'
+  },
+  {
+    id: 'excavator', name: '포크레인', soundText: '으라차차! 흙을 파요!', icon: '🚜',
+    img: 'https://images.pexels.com/photos/2219024/pexels-photo-2219024.jpeg?auto=compress&cs=tinysrgb&w=600',
+    color: '#d97706', bg: '#fffbeb', fitPos: 'center 45%',
+    category: 'vehicle', detail: '힘차게 땅을 파고 흙을 옮기는 중장비 포크레인'
+  },
+  {
+    id: 'truck', name: '트럭', soundText: '부릉! 무거운 짐을 실어요!', icon: '🚚',
+    img: 'https://images.pexels.com/photos/93398/pexels-photo-93398.jpeg?auto=compress&cs=tinysrgb&w=600',
+    color: '#475569', bg: '#f8fafc', fitPos: 'center 45%',
+    category: 'vehicle', detail: '짐을 가득 싣고 달리는 씩씩한 트럭'
+  },
+  {
+    id: 'motorcycle', name: '오토바이', soundText: '부아앙~! 빠르게 달려요!', icon: '🏍️',
+    img: 'https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?auto=compress&cs=tinysrgb&w=600',
+    color: '#dc2626', bg: '#fef2f2', fitPos: 'center 45%',
+    category: 'vehicle', detail: '바람을 가르며 빠르게 달리는 오토바이'
+  },
+  {
+    id: 'bicycle', name: '자전거', soundText: '따르릉따르릉! 비켜나세요!', icon: '🚲',
+    img: 'https://images.pexels.com/photos/100582/pexels-photo-100582.jpeg?auto=compress&cs=tinysrgb&w=600',
+    color: '#84cc16', bg: '#f7fee7', fitPos: 'center 45%',
+    category: 'vehicle', detail: '페달을 밟아 씽씽 달리는 두 바퀴 자전거'
+  },
+  {
+    id: 'tractor', name: '트랙터', soundText: '덜덜덜~ 밭을 갈아요!', icon: '🌾',
+    img: 'https://images.pexels.com/photos/2165688/pexels-photo-2165688.jpeg?auto=compress&cs=tinysrgb&w=600',
+    color: '#65a30d', bg: '#f7fee7', fitPos: 'center 45%',
+    category: 'vehicle', detail: '시골 들판에서 열심히 일하는 트랙터'
+  },
+  {
+    id: 'hot_air_balloon', name: '열기구', soundText: '둥실둥실~ 하늘 여행!', icon: '🎈',
+    img: 'https://images.pexels.com/photos/2325446/pexels-photo-2325446.jpeg?auto=compress&cs=tinysrgb&w=600',
+    color: '#e11d48', bg: '#fff1f2', fitPos: 'center 45%',
+    category: 'vehicle', detail: '따뜻한 공기로 두둥실 떠오르는 알록달록 열기구'
+  },
+  {
+    id: 'rocket', name: '우주선', soundText: '카운트다운! 슝~ 우주로!', icon: '🚀',
+    img: 'https://images.pexels.com/photos/23764/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=600',
+    color: '#7c3aed', bg: '#faf5ff', fitPos: 'center 50%',
+    category: 'vehicle', detail: '반짝이는 별들을 만나러 우주로 날아가는 로켓'
+  }
+];
+
 // 배열 무작위 셔플 헬퍼
 const shuffleArray = (arr) => [...arr].sort(() => 0.5 - Math.random());
 
@@ -4702,15 +4804,18 @@ export default function App() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isIpadFrame, setIsIpadFrame] = useState(true);
 
-  // 탭 전환 시마다 동물 및 과일/채소 카드 무작위 셔플
+  // 탭 전환 시마다 동물 및 과일/채소, 탈것 카드 무작위 셔플
   const [animalItems, setAnimalItems] = useState(() => shuffleArray(REAL_ANIMALS));
   const [fruitItems, setFruitItems] = useState(() => shuffleArray(REAL_FRUITS));
+  const [vehicleItems, setVehicleItems] = useState(() => shuffleArray(REAL_VEHICLES));
 
   useEffect(() => {
     if (activeTab === 'animal') {
       setAnimalItems(shuffleArray(REAL_ANIMALS));
     } else if (activeTab === 'fruit') {
       setFruitItems(shuffleArray(REAL_FRUITS));
+    } else if (activeTab === 'vehicle') {
+      setVehicleItems(shuffleArray(REAL_VEHICLES));
     }
   }, [activeTab]);
 
@@ -5138,6 +5243,8 @@ export default function App() {
     setTimeout(() => {
       if (item.soundUrl) {
         audioEngine.playItemSound(item);
+      } else if (item.category === 'vehicle') {
+        speakNaturalKorean(`${item.name}! ${item.soundText}`, { pitch: 1.15, rate: 0.92 });
       } else {
         speakNaturalKorean(`맛있는 ${item.name}!`, { pitch: 1.16, rate: 0.92 });
       }
@@ -5149,12 +5256,13 @@ export default function App() {
     setSelectedRealItem(null);
   };
 
-  const speakQuizQuestion = (animal) => {
-    const target = typeof animal === 'string' ? REAL_ANIMALS.find(a => a.name === animal) : animal;
-    const name = target?.name || animal;
+  const [quizPoolType, setQuizPoolType] = useState('animal'); // 'animal' | 'vehicle'
+
+  const speakQuizQuestion = (item) => {
+    const name = item?.name || item;
     const subj = attachJosa(name, '은/는');
-    if (target?.id) {
-      playVoiceAudio(`/sounds/voice/quiz_${target.id}.mp3`, () => {
+    if (item?.id && item.category !== 'vehicle') {
+      playVoiceAudio(`/sounds/voice/quiz_${item.id}.mp3`, () => {
         speakNaturalKorean(`${subj} 누구일까요?`, { pitch: 1.16, rate: 0.92 });
       });
     } else {
@@ -5162,20 +5270,22 @@ export default function App() {
     }
   };
 
-  const generateQuizQuestion = () => {
+  const generateQuizQuestion = (pool = quizPoolType) => {
     audioEngine.stopAllSounds();
-    const target = REAL_ANIMALS[Math.floor(Math.random() * REAL_ANIMALS.length)];
-    const others = REAL_ANIMALS.filter(i => i.id !== target.id);
+    const source = pool === 'vehicle' ? REAL_VEHICLES : REAL_ANIMALS;
+    const target = source[Math.floor(Math.random() * source.length)];
+    const others = source.filter(i => i.id !== target.id);
     const shuffledOthers = [...others].sort(() => 0.5 - Math.random()).slice(0, 3);
     const options = [target, ...shuffledOthers].sort(() => 0.5 - Math.random());
-    setQuizQuestion({ target, options });
+    setQuizQuestion({ target, options, pool });
     setQuizFeedback(null);
     speakQuizQuestion(target);
   };
 
-  const startQuizModal = () => {
+  const startQuizModal = (pool = 'animal') => {
+    setQuizPoolType(pool);
     setIsQuizModalOpen(true);
-    generateQuizQuestion();
+    generateQuizQuestion(pool);
   };
 
   const handleAnswerQuiz = (option) => {
@@ -5436,7 +5546,7 @@ export default function App() {
     currentStrokeRef.current = null;
   };
 
-  const isScrollableTab = ['animal', 'fruit', 'song'].includes(activeTab);
+  const isScrollableTab = ['animal', 'fruit', 'vehicle', 'song'].includes(activeTab);
 
   return (
     <div style={{
@@ -5500,18 +5610,19 @@ export default function App() {
         boxShadow: '0 16px 36px -8px rgba(239, 68, 68, 0.22)',
         overflow: 'hidden', display: 'flex', flexDirection: 'column'
       }}>
-        {/* 탭 네비게이션 (8종 테마 컬러) */}
+        {/* 탭 네비게이션 (9종 테마 컬러) */}
         <nav style={{
-          display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '6px',
-          padding: '8px 10px', background: '#fff1f2', borderBottom: '3px solid #fca5a5',
+          display: 'grid', gridTemplateColumns: 'repeat(9, 1fr)', gap: '5px',
+          padding: '8px 8px', background: '#fff1f2', borderBottom: '3px solid #fca5a5',
           flexShrink: 0
         }}>
           {[
             { id: 'animal', label: '📸 생생 동물', sub: '울음소리 탐험', color: '#ef4444' },
-            { id: 'xylophone', label: '🎹 퐁퐁 실로폰', sub: '실로폰 · 드럼 · 심벌', color: '#f59e0b' },
+            { id: 'fruit', label: '🍎 싱싱 과일', sub: '실사 채소 관찰', color: '#10b981' },
+            { id: 'vehicle', label: '🚗 씽씽 탈것', sub: '출동! 자동차', color: '#0284c7' },
+            { id: 'xylophone', label: '🎹 퐁퐁 실로폰', sub: '실로폰 · 드럼', color: '#f59e0b' },
             { id: 'sleep', label: '🌙 코 잘 시간', sub: '오르골 자장가', color: '#6366f1' },
-            { id: 'fruit', label: '🍎 싱싱 과일/채소', sub: '고화질 실사 관찰', color: '#10b981' },
-            { id: 'ocean', label: '🌊 신비 바다속', sub: '뽀글 생물 탐험', color: '#0284c7' },
+            { id: 'ocean', label: '🌊 신비 바다속', sub: '뽀글 생물 탐험', color: '#06b6d4' },
             { id: 'puzzle', label: '🧩 아기 퍼즐', sub: '4조각 맞추기', color: '#8b5cf6' },
             { id: 'paint', label: '🎨 무지개 물감', sub: '터치 감각 미술', color: '#3b82f6' },
             { id: 'song', label: '🎵 동요 재생', sub: `한국 동요 (${LOCAL_NURSERY_SONGS.length}곡)`, color: '#ec4899' }
@@ -5522,6 +5633,7 @@ export default function App() {
                 if (tab.id !== 'sleep') audioEngine.stopLullaby();
                 if (tab.id !== 'xylophone') audioEngine.stopDrumGroove();
                 if (tab.id === 'animal') setAnimalItems(shuffleArray(REAL_ANIMALS));
+                if (tab.id === 'vehicle') setVehicleItems(shuffleArray(REAL_VEHICLES));
                 if (tab.id === 'fruit') {
                   setFruitItems(shuffleArray(REAL_FRUITS));
                   // 🍎 과일 탭 진입 시 과일먹이기 핵심 음원 사전 프리로드
@@ -5542,7 +5654,7 @@ export default function App() {
                 setActiveTab(tab.id);
                 audioEngine.playFreq(520, 'sine', 0.15);
               }} style={{
-                padding: '8px 3px', borderRadius: '16px',
+                padding: '8px 2px', borderRadius: '16px',
                 border: isActive ? `3px solid ${tab.color}` : '2px solid #fed7aa',
                 background: isActive ? tab.color : '#ffffff',
                 color: isActive ? '#ffffff' : '#475569', fontWeight: 900, cursor: 'pointer',
@@ -5550,8 +5662,8 @@ export default function App() {
                 transform: isActive ? 'scale(1.02)' : 'scale(1)', transition: 'all 0.15s ease',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
               }}>
-                <span style={{ fontSize: '0.98rem', lineHeight: 1.2 }}>{tab.label}</span>
-                <span style={{ fontSize: '0.7rem', opacity: isActive ? 0.95 : 0.7, fontWeight: 800, marginTop: '2px' }}>{tab.sub}</span>
+                <span style={{ fontSize: '0.94rem', lineHeight: 1.2 }}>{tab.label}</span>
+                <span style={{ fontSize: '0.68rem', opacity: isActive ? 0.95 : 0.7, fontWeight: 800, marginTop: '2px' }}>{tab.sub}</span>
               </button>
             );
           })}
@@ -5681,6 +5793,89 @@ export default function App() {
                     </div>
                     <div style={{ padding: '0.65rem 0.4rem', textAlign: 'center', background: item.bg }}>
                       <h3 style={{ fontSize: '1.05rem', fontWeight: 900, color: '#1e293b', margin: 0 }}>{item.icon} {item.name}</h3>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ===== 모듈 2.5: 🚗 16종 부릉부릉 탈것 (볼보 흰색 S90 포함 고화질 실사 관찰 + 퀴즈) ===== */}
+          {activeTab === 'vehicle' && (
+            <div>
+              <div style={{
+                background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)', borderRadius: '24px', padding: '1.2rem 1.6rem', marginBottom: '1.6rem',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                border: '2.5px solid #7dd3fc', flexWrap: 'wrap', gap: '14px',
+                boxShadow: '0 8px 20px -4px rgba(2, 132, 199, 0.15)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '2.4rem' }}>🚗</span>
+                  <div>
+                    <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0369a1', margin: 0 }}>
+                      카드를 누르면 부릉부릉 씽씽 소리가 들려요!
+                    </h2>
+                    <span style={{ fontSize: '0.85rem', color: '#0284c7', fontWeight: 800 }}>
+                      ✨ 볼보 흰색 S90 자동차와 소방차, 경찰차, 비행기 등 16종 생생 탈것 탐험
+                    </span>
+                  </div>
+                </div>
+                <button onClick={() => startQuizModal('vehicle')} style={{
+                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#ffffff',
+                  border: 'none', padding: '12px 24px', borderRadius: '18px', fontWeight: 900,
+                  fontSize: '1.1rem', cursor: 'pointer', boxShadow: '0 6px 18px rgba(2,132,199,0.35)',
+                  display: 'flex', alignItems: 'center', gap: '8px'
+                }}>
+                  <Sparkles size={22} /> 🎯 탈것 퀴즈!
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.1rem' }}>
+                {vehicleItems.map(item => (
+                  <div key={item.id} onClick={() => openRealDetailModal(item)} style={{
+                    background: '#ffffff', border: `3.5px solid ${item.color}`, borderRadius: '22px',
+                    overflow: 'hidden', cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,0,0,0.07)',
+                    transition: 'all 0.15s ease', display: 'flex', flexDirection: 'column'
+                  }}>
+                    <div style={{ width: '100%', height: '175px', overflow: 'hidden', background: '#f8fafc', position: 'relative' }}>
+                      <img
+                        src={item.img}
+                        alt={item.name}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://images.pexels.com/photos/210019/pexels-photo-210019.jpeg?auto=compress&cs=tinysrgb&w=600';
+                        }}
+                        style={{
+                          width: '100%', height: '100%', objectFit: 'cover',
+                          objectPosition: item.fitPos || 'center 50%'
+                        }}
+                      />
+                      {item.id === 'car' && (
+                        <div style={{
+                          position: 'absolute', top: '10px', left: '10px',
+                          background: 'rgba(15, 23, 42, 0.82)', backdropFilter: 'blur(4px)',
+                          color: '#ffffff', fontSize: '0.74rem', fontWeight: 900,
+                          padding: '3px 8px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '4px'
+                        }}>
+                          ⭐ 볼보 S90
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ padding: '0.9rem 0.6rem', textAlign: 'center', background: item.bg }}>
+                      <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: '0 0 6px 0' }}>
+                        {item.icon} {item.name}
+                      </h3>
+                      <span style={{
+                        background: item.color, color: '#ffffff', fontSize: '0.84rem', fontWeight: 900,
+                        padding: '4px 12px', borderRadius: '14px', display: 'inline-block'
+                      }}>
+                        🔊 {item.soundText}
+                      </span>
+                      {item.detail && (
+                        <p style={{ margin: '6px 0 0 0', fontSize: '0.76rem', color: '#64748b', fontWeight: 700 }}>
+                          {item.detail}
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -6486,9 +6681,14 @@ export default function App() {
             </div>
 
             <div style={{ padding: '2rem', textAlign: 'center', background: selectedRealItem.bg }}>
-              <h2 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#0f172a', margin: '0 0 14px 0' }}>
+              <h2 style={{ fontSize: '2.2rem', fontWeight: 900, color: '#0f172a', margin: '0 0 8px 0' }}>
                 {selectedRealItem.icon ? `${selectedRealItem.icon} ` : ''}{selectedRealItem.name}
               </h2>
+              {selectedRealItem.detail && (
+                <p style={{ margin: '0 0 16px 0', fontSize: '1.05rem', color: '#475569', fontWeight: 800 }}>
+                  {selectedRealItem.detail}
+                </p>
+              )}
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
                 {selectedRealItem.soundUrl && (
                   <button onClick={() => audioEngine.playItemSound(selectedRealItem)} style={{
@@ -6497,7 +6697,7 @@ export default function App() {
                     cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,0,0,0.18)',
                     display: 'inline-flex', alignItems: 'center', gap: '10px'
                   }}>
-                    <Volume2 size={24} /> 울음소리 다시 듣기 🔊
+                    <Volume2 size={24} /> 소리 다시 듣기 🔊
                   </button>
                 )}
                 <button onClick={() => speakNaturalKorean(selectedRealItem.soundText ? `${selectedRealItem.name}! ${selectedRealItem.soundText}` : `맛있는 ${selectedRealItem.name}!`, { pitch: 1.16, rate: 0.92 })} style={{
@@ -6506,7 +6706,7 @@ export default function App() {
                   cursor: 'pointer', boxShadow: '0 8px 20px rgba(99,102,241,0.25)',
                   display: 'inline-flex', alignItems: 'center', gap: '10px'
                 }}>
-                  🗣️ 다정한 구어체로 듣기
+                  🗣️ {selectedRealItem.category === 'vehicle' ? '탈것 이름과 소리 듣기' : '다정한 구어체로 듣기'}
                 </button>
               </div>
             </div>
@@ -6523,8 +6723,8 @@ export default function App() {
         }}>
           <div style={{
             background: '#ffffff', borderRadius: '36px', maxWidth: '850px', width: '100%',
-            padding: '2.2rem', border: '6px solid #ef4444',
-            boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.3)', position: 'relative'
+            padding: '2.2rem', border: quizQuestion.pool === 'vehicle' ? '6px solid #0284c7' : '6px solid #ef4444',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)', position: 'relative'
           }}>
             <button onClick={() => { setIsQuizModalOpen(false); audioEngine.stopAllSounds(); }} style={{
               position: 'absolute', top: '20px', right: '20px', background: '#f1f5f9', color: '#475569',
@@ -6533,11 +6733,15 @@ export default function App() {
             }}><X size={26} /></button>
 
             <div style={{
-              background: '#fff1f2', border: '3.5px solid #fecdd3', borderRadius: '24px',
-              padding: '1.4rem', textAlign: 'center', marginBottom: '1.8rem'
+              background: quizQuestion.pool === 'vehicle' ? '#e0f2fe' : '#fff1f2',
+              border: quizQuestion.pool === 'vehicle' ? '3.5px solid #bae6fd' : '3.5px solid #fecdd3',
+              borderRadius: '24px', padding: '1.4rem', textAlign: 'center', marginBottom: '1.8rem'
             }}>
-              <h2 style={{ fontSize: '1.8rem', fontWeight: 900, color: '#9f1239', margin: '0 0 10px 0' }}>
-                ❓ {quizQuestion.target.name}는(은) 누구일까요?
+              <h2 style={{
+                fontSize: '1.8rem', fontWeight: 900,
+                color: quizQuestion.pool === 'vehicle' ? '#0369a1' : '#9f1239', margin: '0 0 10px 0'
+              }}>
+                ❓ {quizQuestion.target.name}{attachJosa(quizQuestion.target.name, '은/는')} 어디 있을까요?
               </h2>
               <button onClick={() => speakQuizQuestion(quizQuestion.target.name)} style={{
                 background: '#be123c', color: '#ffffff', border: 'none', padding: '10px 22px',
