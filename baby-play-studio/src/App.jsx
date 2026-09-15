@@ -1359,102 +1359,96 @@ const REAL_FRUITS = [
 ];
 
 // =============================================================================
-// 16종 씽씽 탈것 – 볼보 흰색 S90 포함 고화질 실사 사진 + 다정한 한국어 음성
+// 15종 씽씽 탈것 – 렉서스 ES 350e 블랙 포함 100% 검증된 고화질 실사 사진
 // =============================================================================
 const REAL_VEHICLES = [
   {
     id: 'car', name: '자동차', soundText: '부릉부릉! 빵빵!', icon: '🚗',
-    img: '/vehicles/volvo_s90_white.jpg',
+    img: '/vehicles/lexus_es350e_black.png',
     color: '#0284c7', bg: '#f0f9ff', fitPos: 'center 50%',
-    category: 'vehicle', detail: '세련되고 안전한 볼보 흰색 S90 승용차'
+    category: 'vehicle', detail: '품격 있고 멋진 렉서스 ES 350e 블랙 세단'
   },
   {
     id: 'fire_truck', name: '소방차', soundText: '애앵애앵! 불 끄러 출동!', icon: '🚒',
-    img: 'https://images.pexels.com/photos/260024/pexels-photo-260024.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#ef4444', bg: '#fef2f2', fitPos: 'center 40%',
+    img: '/vehicles/fire_truck.jpg',
+    color: '#ef4444', bg: '#fef2f2', fitPos: 'center 50%',
     category: 'vehicle', detail: '용감하게 불을 끄는 빨간 소방차'
   },
   {
     id: 'police_car', name: '경찰차', soundText: '삐뽀삐뽀! 출동해요!', icon: '🚓',
-    img: 'https://images.pexels.com/photos/926390/pexels-photo-926390.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#3b82f6', bg: '#eff6ff', fitPos: 'center 45%',
+    img: '/vehicles/police_car.jpg',
+    color: '#3b82f6', bg: '#eff6ff', fitPos: 'center 50%',
     category: 'vehicle', detail: '마을을 안전하게 지키는 멋진 경찰차'
   },
   {
     id: 'ambulance', name: '구급차', soundText: '삐용삐용! 병원으로 가요!', icon: '🚑',
-    img: 'https://images.pexels.com/photos/263402/pexels-photo-263402.jpeg?auto=compress&cs=tinysrgb&w=600',
+    img: '/vehicles/ambulance.jpg',
     color: '#10b981', bg: '#ecfdf5', fitPos: 'center 50%',
     category: 'vehicle', detail: '아픈 사람을 병원으로 데려다주는 구급차'
   },
   {
     id: 'bus', name: '버스', soundText: '붕붕~ 정류장에 멈춰요!', icon: '🚌',
-    img: 'https://images.pexels.com/photos/385998/pexels-photo-385998.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#f59e0b', bg: '#fffbeb', fitPos: 'center 45%',
-    category: 'vehicle', detail: '친구들과 함께 타는 커다란 버스'
+    img: '/vehicles/bus.jpg',
+    color: '#f59e0b', bg: '#fffbeb', fitPos: 'center 50%',
+    category: 'vehicle', detail: '친구들과 함께 타는 커다란 노란 버스'
   },
   {
     id: 'train', name: '기차', soundText: '칙칙폭폭! 땡땡땡!', icon: '🚂',
-    img: 'https://images.pexels.com/photos/210182/pexels-photo-210182.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#8b5cf6', bg: '#f5f3ff', fitPos: 'center 40%',
+    img: '/vehicles/train.jpg',
+    color: '#8b5cf6', bg: '#f5f3ff', fitPos: 'center 50%',
     category: 'vehicle', detail: '철길 위를 신나게 달리는 칙칙폭폭 기차'
   },
   {
     id: 'airplane', name: '비행기', soundText: '슝~ 하늘 높이 날아요!', icon: '✈️',
-    img: 'https://images.pexels.com/photos/46148/aircraft-jet-landing-cloud-46148.jpeg?auto=compress&cs=tinysrgb&w=600',
+    img: '/vehicles/airplane.jpg',
     color: '#06b6d4', bg: '#ecfeff', fitPos: 'center 50%',
     category: 'vehicle', detail: '구름 위 푸른 하늘을 나는 비행기'
   },
   {
     id: 'helicopter', name: '헬리콥터', soundText: '두두두두! 날아가요!', icon: '🚁',
-    img: 'https://images.pexels.com/photos/726233/pexels-photo-726233.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#14b8a6', bg: '#f0fdfa', fitPos: 'center 45%',
+    img: '/vehicles/helicopter.jpg',
+    color: '#14b8a6', bg: '#f0fdfa', fitPos: 'center 50%',
     category: 'vehicle', detail: '프로펠러를 빙글빙글 돌려 하늘로 뜨는 헬리콥터'
   },
   {
     id: 'ship', name: '배', soundText: '뿌우우웅~ 바다를 건너요!', icon: '🚢',
-    img: 'https://images.pexels.com/photos/813011/pexels-photo-813011.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#2563eb', bg: '#eff6ff', fitPos: 'center 40%',
+    img: '/vehicles/ship.jpg',
+    color: '#2563eb', bg: '#eff6ff', fitPos: 'center 50%',
     category: 'vehicle', detail: '넓고 푸른 바다를 건너는 커다란 배'
   },
   {
     id: 'excavator', name: '포크레인', soundText: '으라차차! 흙을 파요!', icon: '🚜',
-    img: 'https://images.pexels.com/photos/2219024/pexels-photo-2219024.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#d97706', bg: '#fffbeb', fitPos: 'center 45%',
+    img: '/vehicles/excavator.jpg',
+    color: '#d97706', bg: '#fffbeb', fitPos: 'center 50%',
     category: 'vehicle', detail: '힘차게 땅을 파고 흙을 옮기는 중장비 포크레인'
   },
   {
     id: 'truck', name: '트럭', soundText: '부릉! 무거운 짐을 실어요!', icon: '🚚',
-    img: 'https://images.pexels.com/photos/93398/pexels-photo-93398.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#475569', bg: '#f8fafc', fitPos: 'center 45%',
+    img: '/vehicles/truck.jpg',
+    color: '#475569', bg: '#f8fafc', fitPos: 'center 50%',
     category: 'vehicle', detail: '짐을 가득 싣고 달리는 씩씩한 트럭'
   },
   {
     id: 'motorcycle', name: '오토바이', soundText: '부아앙~! 빠르게 달려요!', icon: '🏍️',
-    img: 'https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#dc2626', bg: '#fef2f2', fitPos: 'center 45%',
-    category: 'vehicle', detail: '바람을 가르며 빠르게 달리는 오토바이'
+    img: '/vehicles/motorcycle.jpg',
+    color: '#dc2626', bg: '#fef2f2', fitPos: 'center 50%',
+    category: 'vehicle', detail: '바람을 가르며 빠르게 달리는 멋진 오토바이'
   },
   {
     id: 'bicycle', name: '자전거', soundText: '따르릉따르릉! 비켜나세요!', icon: '🚲',
-    img: 'https://images.pexels.com/photos/100582/pexels-photo-100582.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#84cc16', bg: '#f7fee7', fitPos: 'center 45%',
+    img: '/vehicles/bicycle.jpg',
+    color: '#84cc16', bg: '#f7fee7', fitPos: 'center 50%',
     category: 'vehicle', detail: '페달을 밟아 씽씽 달리는 두 바퀴 자전거'
   },
   {
     id: 'tractor', name: '트랙터', soundText: '덜덜덜~ 밭을 갈아요!', icon: '🌾',
-    img: 'https://images.pexels.com/photos/2165688/pexels-photo-2165688.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#65a30d', bg: '#f7fee7', fitPos: 'center 45%',
+    img: '/vehicles/tractor.jpg',
+    color: '#65a30d', bg: '#f7fee7', fitPos: 'center 50%',
     category: 'vehicle', detail: '시골 들판에서 열심히 일하는 트랙터'
   },
   {
-    id: 'hot_air_balloon', name: '열기구', soundText: '둥실둥실~ 하늘 여행!', icon: '🎈',
-    img: 'https://images.pexels.com/photos/2325446/pexels-photo-2325446.jpeg?auto=compress&cs=tinysrgb&w=600',
-    color: '#e11d48', bg: '#fff1f2', fitPos: 'center 45%',
-    category: 'vehicle', detail: '따뜻한 공기로 두둥실 떠오르는 알록달록 열기구'
-  },
-  {
     id: 'rocket', name: '우주선', soundText: '카운트다운! 슝~ 우주로!', icon: '🚀',
-    img: 'https://images.pexels.com/photos/23764/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=600',
+    img: '/vehicles/rocket.jpg',
     color: '#7c3aed', bg: '#faf5ff', fitPos: 'center 50%',
     category: 'vehicle', detail: '반짝이는 별들을 만나러 우주로 날아가는 로켓'
   }
@@ -5259,14 +5253,20 @@ export default function App() {
   const [quizPoolType, setQuizPoolType] = useState('animal'); // 'animal' | 'vehicle'
 
   const speakQuizQuestion = (item) => {
-    const name = item?.name || item;
+    const targetObj = typeof item === 'string'
+      ? ([...REAL_ANIMALS, ...REAL_VEHICLES].find(x => x.name === item) || { name: item })
+      : item;
+    const name = targetObj?.name || (typeof item === 'string' ? item : '');
+    const isVehicle = targetObj?.category === 'vehicle' || quizPoolType === 'vehicle';
     const subj = attachJosa(name, '은/는');
-    if (item?.id && item.category !== 'vehicle') {
-      playVoiceAudio(`/sounds/voice/quiz_${item.id}.mp3`, () => {
-        speakNaturalKorean(`${subj} 누구일까요?`, { pitch: 1.16, rate: 0.92 });
+    const questionText = isVehicle ? `${subj} 어디 있을까요?` : `${subj} 누구일까요?`;
+
+    if (targetObj?.id && targetObj.category !== 'vehicle') {
+      playVoiceAudio(`/sounds/voice/quiz_${targetObj.id}.mp3`, () => {
+        speakNaturalKorean(questionText, { pitch: 1.16, rate: 0.92 });
       });
     } else {
-      speakNaturalKorean(`${subj} 누구일까요?`, { pitch: 1.16, rate: 0.92 });
+      speakNaturalKorean(questionText, { pitch: 1.16, rate: 0.92 });
     }
   };
 
@@ -5300,7 +5300,7 @@ export default function App() {
       }
       setTimeout(() => {
         audioEngine.stopAllSounds();
-        generateQuizQuestion();
+        generateQuizQuestion(quizPoolType);
       }, 3000);
     } else {
       setQuizFeedback('wrong');
@@ -5816,7 +5816,7 @@ export default function App() {
                       카드를 누르면 부릉부릉 씽씽 소리가 들려요!
                     </h2>
                     <span style={{ fontSize: '0.85rem', color: '#0284c7', fontWeight: 800 }}>
-                      ✨ 볼보 흰색 S90 자동차와 소방차, 경찰차, 비행기 등 16종 생생 탈것 탐험
+                      ✨ 렉서스 ES 350e 블랙 자동차와 소방차, 경찰차, 비행기 등 15종 생생 탈것 탐험
                     </span>
                   </div>
                 </div>
@@ -5853,11 +5853,11 @@ export default function App() {
                       {item.id === 'car' && (
                         <div style={{
                           position: 'absolute', top: '10px', left: '10px',
-                          background: 'rgba(15, 23, 42, 0.82)', backdropFilter: 'blur(4px)',
+                          background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(4px)',
                           color: '#ffffff', fontSize: '0.74rem', fontWeight: 900,
                           padding: '3px 8px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '4px'
                         }}>
-                          ⭐ 볼보 S90
+                          ⭐ 렉서스 ES350e
                         </div>
                       )}
                     </div>
@@ -6741,9 +6741,9 @@ export default function App() {
                 fontSize: '1.8rem', fontWeight: 900,
                 color: quizQuestion.pool === 'vehicle' ? '#0369a1' : '#9f1239', margin: '0 0 10px 0'
               }}>
-                ❓ {quizQuestion.target.name}{attachJosa(quizQuestion.target.name, '은/는')} 어디 있을까요?
+                ❓ {attachJosa(quizQuestion.target.name, '은/는')} {quizQuestion.pool === 'vehicle' ? '어디 있을까요?' : '누구일까요?'}
               </h2>
-              <button onClick={() => speakQuizQuestion(quizQuestion.target.name)} style={{
+              <button onClick={() => speakQuizQuestion(quizQuestion.target)} style={{
                 background: '#be123c', color: '#ffffff', border: 'none', padding: '10px 22px',
                 borderRadius: '16px', fontWeight: 900, fontSize: '1.05rem', cursor: 'pointer',
                 display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(190, 18, 60, 0.25)'
