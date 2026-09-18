@@ -112,6 +112,7 @@ export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard =
   const [editingSchedule, setEditingSchedule] = useState(null);
 
   // Form states
+  const [scheduleDate, setScheduleDate] = useState('');
   const [title, setTitle] = useState('');
   const [time, setTime] = useState('10:00');
   const [category, setCategory] = useState('WORK'); // 기본값: WORK (💼 업무)
@@ -368,8 +369,10 @@ const getKoreanHoliday = (dateObj) => {
   // 일정 등록 / 수정 모달 열기
   const handleOpenAddModal = (dateObj, scheduleToEdit = null) => {
     setSelectedDate(dateObj);
+    const dateFormatted = formatDateString(dateObj);
     if (scheduleToEdit) {
       setEditingSchedule(scheduleToEdit);
+      setScheduleDate(scheduleToEdit.date || dateFormatted);
       setTitle(scheduleToEdit.title);
       setTime(scheduleToEdit.time || '10:00');
       setCategory(scheduleToEdit.category || 'WORK');
@@ -377,6 +380,7 @@ const getKoreanHoliday = (dateObj) => {
       setSharedFriendId(scheduleToEdit.shared_friend_id || '');
     } else {
       setEditingSchedule(null);
+      setScheduleDate(dateFormatted);
       setTitle('');
       setTime('10:00');
       setCategory('WORK'); // 기본값: 업무
@@ -389,9 +393,9 @@ const getKoreanHoliday = (dateObj) => {
   // 일정 저장
   const handleSaveSchedule = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !selectedDate) return;
+    if (!title.trim() || !scheduleDate) return;
 
-    const dateStr = formatDateString(selectedDate);
+    const dateStr = scheduleDate;
     const isShared = Boolean(sharedFriendId);
     const newSchedule = {
       id: editingSchedule ? editingSchedule.id : `sch_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
@@ -749,7 +753,7 @@ const getKoreanHoliday = (dateObj) => {
               <h3 className="modal-title flex align-center gap-2">
                 <CalendarIcon size={20} className="text-primary" />
                 {editingSchedule ? '일정 수정하기' : '새 일정 추가'}
-                <span className="text-xs sub-text font-normal">({formatDateString(selectedDate)})</span>
+                <span className="text-xs sub-text font-normal">({scheduleDate || formatDateString(selectedDate)})</span>
               </h3>
               <button className="modal-close" onClick={() => setShowModal(false)} title="닫기">
                 <X size={18} />
@@ -773,6 +777,23 @@ const getKoreanHoliday = (dateObj) => {
               <div className="grid grid-2 gap-3">
                 <div>
                   <label className="form-label font-bold text-xs flex align-center gap-1">
+                    <CalendarIcon size={13} className="text-primary" /> 날짜 *
+                  </label>
+                  <input
+                    type="date"
+                    className="input-field mt-1 font-bold"
+                    value={scheduleDate}
+                    onChange={(e) => setScheduleDate(e.target.value)}
+                    required
+                    style={{
+                      padding: '0.65rem 0.85rem',
+                      fontSize: '0.9rem',
+                      height: '42px'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="form-label font-bold text-xs flex align-center gap-1">
                     <Clock size={13} className="text-primary" /> 시간
                   </label>
                   <input
@@ -787,24 +808,27 @@ const getKoreanHoliday = (dateObj) => {
                     }}
                   />
                 </div>
-                <div>
-                  <label className="form-label font-bold text-xs">카테고리 태그</label>
-                  <select
-                    className="input-field mt-1 font-bold"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    style={{
-                      padding: '0.65rem 0.85rem',
-                      fontSize: '0.9rem',
-                      height: '42px'
-                    }}
-                  >
-                    <option value="WORK">💼 업무</option>
-                    <option value="READING">📖 독서</option>
-                    <option value="PERSONAL">☕ 개인</option>
-                    <option value="IMPORTANT">🔥 중요</option>
-                  </select>
-                </div>
+              </div>
+
+              <div>
+                <label className="form-label font-bold text-xs flex align-center gap-1">
+                  <Tag size={13} className="text-primary" /> 카테고리 태그
+                </label>
+                <select
+                  className="input-field mt-1 font-bold"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  style={{
+                    padding: '0.65rem 0.85rem',
+                    fontSize: '0.9rem',
+                    height: '42px'
+                  }}
+                >
+                  <option value="WORK">💼 업무</option>
+                  <option value="READING">📖 독서</option>
+                  <option value="PERSONAL">☕ 개인</option>
+                  <option value="IMPORTANT">🔥 중요</option>
+                </select>
               </div>
 
               <div>
@@ -847,7 +871,15 @@ const getKoreanHoliday = (dateObj) => {
                   <button
                     type="button"
                     onClick={() => {
-                      const url = generateGoogleCalendarUrl(editingSchedule);
+                      const currentScheduleData = {
+                        ...editingSchedule,
+                        date: scheduleDate || editingSchedule.date,
+                        time: time,
+                        title: title,
+                        memo: memo,
+                        category: category
+                      };
+                      const url = generateGoogleCalendarUrl(currentScheduleData);
                       window.open(url, '_blank');
                     }}
                     style={{
@@ -872,7 +904,17 @@ const getKoreanHoliday = (dateObj) => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => downloadICSFile(editingSchedule)}
+                    onClick={() => {
+                      const currentScheduleData = {
+                        ...editingSchedule,
+                        date: scheduleDate || editingSchedule.date,
+                        time: time,
+                        title: title,
+                        memo: memo,
+                        category: category
+                      };
+                      downloadICSFile(currentScheduleData);
+                    }}
                     style={{
                       flex: 1,
                       display: 'flex',
