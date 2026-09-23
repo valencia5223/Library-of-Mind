@@ -32,10 +32,16 @@ export default function AuthModal({
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
 
-  // 모달이 열리거나 닫힐 때 메시지 초기화
+  // 로그인 상태에서 비밀번호 변경 UI 토글 상태
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // 모달이 열리거나 닫힐 때 메시지 및 변경 폼 초기화
   useEffect(() => {
     if (!isOpen) {
       setMessage(null);
+      setIsChangingPassword(false);
+      setNewPassword('');
+      setConfirmPassword('');
     }
   }, [isOpen]);
 
@@ -190,6 +196,48 @@ export default function AuthModal({
     }
   };
 
+  // 4. 로그인된 상태에서 비밀번호 변경 핸들러
+  const handleChangePasswordLoggedIn = async (e) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) {
+      setMessage({ type: 'error', text: '새 비밀번호는 최소 6자 이상이어야 합니다.' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setMessage({ type: 'error', text: '비밀번호와 비밀번호 확인이 일치하지 않습니다.' });
+      return;
+    }
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      if (!isSupabaseConfigured()) {
+        setMessage({ type: 'success', text: '테스트 모드: 비밀번호가 성공적으로 변경되었습니다.' });
+        setTimeout(() => {
+          setIsChangingPassword(false);
+          setNewPassword('');
+          setConfirmPassword('');
+        }, 1200);
+        return;
+      }
+
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+
+      setMessage({ type: 'success', text: '🎉 비밀번호가 안전하게 변경되었습니다!' });
+      setTimeout(() => {
+        setIsChangingPassword(false);
+        setNewPassword('');
+        setConfirmPassword('');
+      }, 1500);
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || '비밀번호 변경 중 오류가 발생했습니다.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogout = async () => {
     if (isSupabaseConfigured()) {
       await supabase.auth.signOut();
@@ -240,7 +288,101 @@ export default function AuthModal({
               </button>
             )}
 
-            <button className="btn btn-secondary mt-4 w-full justify-center" onClick={handleLogout}>
+            {/* 로그인된 사용자 비밀번호 변경 토글 및 폼 */}
+            {!isChangingPassword ? (
+              <button
+                type="button"
+                className="btn btn-secondary mt-3 w-full justify-center flex align-center gap-1"
+                onClick={() => {
+                  setMessage(null);
+                  setIsChangingPassword(true);
+                  setNewPassword('');
+                  setConfirmPassword('');
+                }}
+                style={{
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  fontSize: '0.9rem',
+                  padding: '0.6rem'
+                }}
+              >
+                <KeyRound size={16} /> 비밀번호 변경하기
+              </button>
+            ) : (
+              <form
+                onSubmit={handleChangePasswordLoggedIn}
+                className="password-change-box text-left mt-3 p-3 rounded"
+                style={{
+                  background: 'rgba(0, 0, 0, 0.03)',
+                  border: '1px solid var(--border-color, rgba(0,0,0,0.1))',
+                  borderRadius: '12px',
+                  textAlign: 'left'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <h4 style={{ margin: 0, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <KeyRound size={16} className="text-primary" /> 비밀번호 변경
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsChangingPassword(false);
+                      setMessage(null);
+                    }}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: 'var(--text-sub, #888)' }}
+                  >
+                    취소
+                  </button>
+                </div>
+
+                {message && (
+                  <div className={`alert-box alert-${message.type} mb-3 p-2 rounded`} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
+                    {message.type === 'success' ? <CheckCircle2 size={15} className="text-success" /> : <AlertCircle size={15} className="text-danger" />}
+                    <span>{message.text}</span>
+                  </div>
+                )}
+
+                <div className="form-group" style={{ marginBottom: '0.6rem' }}>
+                  <label style={{ fontSize: '0.8rem', marginBottom: '0.2rem' }}>새 비밀번호</label>
+                  <div className="input-icon-wrapper">
+                    <Lock size={16} className="input-icon" />
+                    <input
+                      type="password"
+                      placeholder="새 비밀번호 (6자 이상)"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      style={{ fontSize: '0.88rem', padding: '0.5rem 0.5rem 0.5rem 2.2rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '0.8rem' }}>
+                  <label style={{ fontSize: '0.8rem', marginBottom: '0.2rem' }}>새 비밀번호 확인</label>
+                  <div className="input-icon-wrapper">
+                    <Lock size={16} className="input-icon" />
+                    <input
+                      type="password"
+                      placeholder="새 비밀번호 다시 입력"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      style={{ fontSize: '0.88rem', padding: '0.5rem 0.5rem 0.5rem 2.2rem' }}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-full w-full justify-center"
+                  disabled={loading}
+                  style={{ fontSize: '0.88rem', padding: '0.55rem' }}
+                >
+                  {loading ? '변경 중...' : '새 비밀번호 저장'}
+                </button>
+              </form>
+            )}
+
+            <button className="btn btn-secondary mt-3 w-full justify-center" onClick={handleLogout}>
               로그아웃
             </button>
           </div>
