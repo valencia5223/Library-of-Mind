@@ -24,6 +24,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('login'); // 'login' | 'signup' | 'forgot' | 'reset'
   const [showPdfLibrary, setShowPdfLibrary] = useState(false);
   const [showHabitBoardModal, setShowHabitBoardModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -60,14 +61,29 @@ export default function App() {
   const [sessions, setSessions] = useState([]);
   // 인증 및 세션 확인
   useEffect(() => {
+    // URL 해시에 recovery(비밀번호 재설정 링크) 파라미터가 있는지 확인
+    const checkRecoveryHash = () => {
+      const hash = window.location.hash;
+      if (hash && (hash.includes('type=recovery') || hash.includes('type%3Drecovery'))) {
+        setAuthModalMode('reset');
+        setIsAuthOpen(true);
+      }
+    };
+    checkRecoveryHash();
+
     if (isSupabaseConfigured()) {
       supabase.auth.getSession().then(({ data: { session } }) => {
         setUser(session?.user ?? null);
         setLoading(false);
       });
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         setUser(session?.user ?? null);
+        // Supabase 비밀번호 재설정 링크 접속 이벤트 감지
+        if (event === 'PASSWORD_RECOVERY') {
+          setAuthModalMode('reset');
+          setIsAuthOpen(true);
+        }
       });
 
       return () => subscription.unsubscribe();
@@ -697,11 +713,16 @@ export default function App() {
       {/* 인증 모달 */}
       <AuthModal
         isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
+        onClose={() => {
+          setIsAuthOpen(false);
+          setAuthModalMode('login');
+        }}
         user={user}
         setUser={setUser}
         isAdmin={isAdmin}
         onOpenAdmin={() => setIsAdminOpen(true)}
+        mode={authModalMode}
+        setMode={setAuthModalMode}
       />
 
       {/* 관리자 전용 회원 승인 관리 모달 */}
