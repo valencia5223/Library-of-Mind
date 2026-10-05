@@ -21,6 +21,15 @@ import potatoImg from './assets/potato.jpg';
 import tomatoImg from './assets/tomato.jpg';
 import cucumberImg from './assets/cucumber.jpg';
 import eggplantImg from './assets/eggplant.jpg';
+import { VOICE, FEED_PRAISE_COUNT, attachJosa, formatSpokenKoreanText, voiceKey } from './voiceLines.js';
+import VOICE_INDEX from './voiceIndex.json';
+
+// 남성 아나운서 음성 MP3가 준비된 문장 키 목록 (npm run voices 로 생성)
+const VOICE_KEYS = new Set(VOICE_INDEX);
+const voiceClipUrl = (text) => {
+  const key = voiceKey(text);
+  return VOICE_KEYS.has(key) ? `/voice/${key}.mp3` : null;
+};
 
 // --- 실제 동물 울음소리 MP3 재생 사운드 엔진 ---
 class BabySoundEngine {
@@ -31,8 +40,9 @@ class BabySoundEngine {
     this.audioCache = new Map();
     this.voiceBufferCache = new Map();
     this.currentVoiceSource = null;
-    this.currentVoiceAudio = null;
     this.voicePlayToken = 0;
+    // 화면 전환/모달 닫기 때마다 증가 → 이전 화면에서 예약된 음성 타이머 무효화
+    this.sceneEpoch = 0;
     this.isAudioUnlocked = false;
 
     // 📱 iOS Safari 비동기 타이머 오디오 차단 원천 해결용 전역 싱글톤 Audio 객체
@@ -50,6 +60,10 @@ class BabySoundEngine {
 
   init() {
     if (!this.ctx) {
+      // 📱 iOS 16.4+: 무음 스위치/모드에서도 Web Audio 음성이 들리도록 재생 세션으로 지정
+      try {
+        if (navigator.audioSession) navigator.audioSession.type = 'playback';
+      } catch (e) { }
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) this.ctx = new AudioCtx();
     }
@@ -152,21 +166,21 @@ class BabySoundEngine {
       } catch (e) { }
       this.currentVoiceSource = null;
     }
-    if (this.sharedVoiceAudio) {
-      try {
-        this.sharedVoiceAudio.onended = null;
-        this.sharedVoiceAudio.pause();
-        this.sharedVoiceAudio.currentTime = 0;
-      } catch (e) { }
-    }
-    if (this.currentVoiceAudio && this.currentVoiceAudio !== this.sharedVoiceAudio) {
-      try {
-        this.currentVoiceAudio.onended = null;
-        this.currentVoiceAudio.pause();
-        this.currentVoiceAudio.currentTime = 0;
-      } catch (e) { }
-      this.currentVoiceAudio = null;
-    }
+    cancelNativeSpeech();
+  }
+
+  // 🎬 화면 전환/모달 닫기: 음성 정지 + 이전 화면에서 later()로 예약한 음성/진행 타이머 무효화
+  interruptVoice() {
+    this.sceneEpoch++;
+    this.stopVoice();
+  }
+
+  // 현재 화면이 유지될 때만 실행되는 setTimeout (화면을 떠나면 자동 취소)
+  later(fn, ms) {
+    const epoch = this.sceneEpoch;
+    return setTimeout(() => {
+      if (this.sceneEpoch === epoch) fn();
+    }, ms);
   }
 
   // 🎙️ Safari / iOS WebKit 호환 decodeAudioData 헬퍼 (Promise + Callback + 1.5s 타임아웃 안전가드)
@@ -240,68 +254,35 @@ class BabySoundEngine {
     }
   }
 
-  // 🎙️ 사람 음성 재생: MP3 방식 대신 100% 안정적인 네이티브 TTS fallbackFn으로 직결
-  async playVoice(url, fallbackFn = null, onEnded = null) {
-    if (fallbackFn) {
-      fallbackFn();
-      return;
-    }
-    if (this.muted) return;
+  // 🎙️ 남성 아나운서 음성 MP3 재생 (Web Audio 버퍼)
+  // 항상 한 번에 하나만 재생: 새 음성은 이전 음성을 끊고 시작하므로 쌓여서 반복되는 일이 없다.
+  // 버퍼를 못 받거나 오디오가 잠겨 있으면 fallbackFn(브라우저 TTS)으로 대체한다.
+  async playVoiceClip(url, fallbackFn = null) {
     this.stopVoice();
+    if (this.muted) return;
+    const token = this.voicePlayToken;
     this.init();
 
-    const token = ++this.voicePlayToken;
-    const fullUrl = (typeof window !== 'undefined' && url.startsWith('/') && !url.startsWith('//'))
-      ? (window.location.origin + url)
-      : url;
-
-    // 1️⃣ 사전 캐싱된 Web Audio 버퍼가 있으면 즉시 Web Audio BufferSource로 재생
-    // Web Audio BufferSource는 keep-alive 노드 덕분에 setTimeout/비동기 타이머 안에서도 iOS Safari 제스처 제약 없이 100% 즉시 재생됨!
-    const cachedBuffer = this.voiceBufferCache.get(url) || this.voiceBufferCache.get(fullUrl);
-    if (cachedBuffer && this.ctx) {
-      this._playBufferDirect(cachedBuffer, token, onEnded);
-      return;
+    const withTimeout = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r(null), ms))]);
+    // 📱 iOS에서 resume/decode가 멈춰 있어도 일정 시간 안에 결론을 낸다
+    let buf = this.voiceBufferCache.get(url) || await withTimeout(this.getVoiceBuffer(url).catch(() => null), 2000);
+    if (this.voicePlayToken !== token) return;
+    if (buf && this.ctx && this.ctx.state !== 'running') {
+      await withTimeout(this.ctx.resume().catch(() => { }), 300);
+      if (this.voicePlayToken !== token) return;
     }
 
-    // 2️⃣ 아직 캐시되지 않았으면 Web Audio API로 즉시 비동기 디코딩 및 재생
-    try {
-      const buf = await this.getVoiceBuffer(url);
-      if (buf && this.voicePlayToken === token) {
-        this._playBufferDirect(buf, token, onEnded);
-        return;
-      }
-    } catch (e) { }
-
-    // 3️⃣ 백업으로 HTML5 Audio 시도
-    try {
-      const audio = new Audio(fullUrl);
-      this.currentVoiceAudio = audio;
-      audio.onended = () => {
-        if (this.voicePlayToken === token) {
-          this.currentVoiceAudio = null;
-          if (onEnded) onEnded();
-        }
-      };
-      audio.onerror = () => {
-        if (this.voicePlayToken === token && fallbackFn) {
-          this.currentVoiceAudio = null;
-          fallbackFn();
-        }
-      };
-      const p = audio.play();
-      if (p !== undefined) {
-        p.catch(() => {
-          if (this.voicePlayToken === token && fallbackFn) {
-            this.currentVoiceAudio = null;
-            fallbackFn();
-          }
-        });
-      }
-    } catch (e) {
-      if (fallbackFn && this.voicePlayToken === token) {
-        fallbackFn();
-      }
+    if (buf && this.ctx && this.ctx.state === 'running') {
+      this._playBufferDirect(buf, token);
+    } else if (fallbackFn) {
+      fallbackFn();
     }
+  }
+
+  // 🎙️ 다음에 나올 음성 미리 받아두기 (아이패드에서 지연 없이 바로 재생)
+  preloadVoice(text) {
+    const url = voiceClipUrl(text);
+    if (url && !this.voiceBufferCache.has(url)) this.getVoiceBuffer(url).catch(() => { });
   }
 
   // Web Audio 버퍼 직접 재생 헬퍼 (비동기 타이머/setTimeout에서도 아이패드에서 100% 재생됨)
@@ -338,7 +319,7 @@ class BabySoundEngine {
       } catch (e) { }
       this.currentAudio = null;
     }
-    this.stopVoice();
+    this.interruptVoice();
     this.stopLullaby();
   }
 
@@ -1617,6 +1598,16 @@ const choices = pickBearChoices(food);
   return { threeAnimals, target, food, choices };
 }
 
+// 라운드에서 나올 수 있는 음성(요청 · 칭찬 · 거절)을 미리 받아두기 (아이패드 즉시 재생)
+function preloadFeedRoundVoices(round) {
+  if (!round?.target || !round?.food) return;
+  const { target, food } = round;
+  audioEngine.preloadVoice(VOICE.feedWish(target, food));
+  for (let i = 0; i < FEED_PRAISE_COUNT; i++) audioEngine.preloadVoice(VOICE.feedPraise(food, i));
+  audioEngine.preloadVoice(VOICE.feedWrongFood(target, food));
+  audioEngine.preloadVoice(VOICE.feedWrongAnimal(target, food));
+}
+
 // =============================================================================
 // 🐾 SVG 애니메이션 다채로운 동물 캐릭터 컴포넌트 (10종 고유 실루엣 극대화 모델)
 // =============================================================================
@@ -2437,7 +2428,7 @@ function AnimatedAnimalCharacter({ animal, mood = 'hungry', isOver = false, reje
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// 🔊 고품질 자연어 한국어 음성 (TTS) 엔진 (상냥하고 다정한 유아 친화 구어체 톤)
+// 🔊 한국어 음성 안내 (남성 아나운서 MP3 우선 + 브라우저 TTS 대체)
 // ═════════════════════════════════════════════════════════════════════════════
 
 // 브라우저 보이스 캐시 및 비동기 이벤트 리스너 등록 (아이패드 Safari 보이스 늦은 로딩 대응)
@@ -2513,49 +2504,30 @@ export function getKoreanVoiceInfo() {
   return { voice: best.voice, isMale: !!best.isMale };
 }
 
-// 하위 호환용 래퍼 함수
-export function getBestKoreanVoice() {
-  return getKoreanVoiceInfo().voice;
-}
-
-// 텍스트를 자연스러운 구어체(다정한 대화체)로 튜닝하고 기호/이모지/물결표 제거
-export function formatSpokenKoreanText(text) {
-  if (!text) return '';
-
-  // 1. 이모지, 물결표(~), 특수 기호 제거 (TTS 유닛이 "물결표", "물결표 사인" 등 기호를 소리내어 읽는 현상 100% 방지)
-  let cleanText = text
-    .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '')
-    .replace(/[~～]/g, ' ')
-    .replace(/[*#@^&_+={}\[\]<>"'`]/g, ' ')
-    .replace(/["'""'']/g, '');
-
-  // 2. '배고파요' 뒤에 부드러운 쉼표(,)를 두어 0.8초의 긴 묵음 텀은 없애고, 0.2초의 적절하고 자연스러운 호흡 구분 부여
-  cleanText = cleanText
-    .replace(/배고파요[!.,·…~～\s]*/g, '배고파요, ')
-    .replace(/어디 있을까요\?/g, '어디에 있을까요?')
-    .replace(/누구일까요\?/g, '누구일까요?')
-    .replace(/맞춰볼까요\?/g, '맞춰볼까요?')
-    .replace(/먹고 싶어요[!.]?/g, '먹고 싶대요!')
-    .replace(/참 잘했어요[!.]?/g, '참 잘했어요! 대단해요!')
-    .replace(/정말 최고예요[!.]?/g, '정말 최고예요!')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  return cleanText;
-}
-
 // 📱 iOS Safari WebKit GC(가비지 컬렉터)로 인한 발화 중단 방지용 전역 배열
 if (typeof window !== 'undefined') {
   window._activeUtterances = window._activeUtterances || [];
 }
 
-export function speakNaturalKorean(text, { pitch = 1.16, rate = 0.92, priority = true } = {}) {
+let nativeSpeechTimer = null;
+
+// 브라우저 TTS 대기열 비우기 (예전 문장이 쌓여 여러 번 반복되는 현상 방지)
+function cancelNativeSpeech() {
+  if (nativeSpeechTimer) {
+    clearTimeout(nativeSpeechTimer);
+    nativeSpeechTimer = null;
+  }
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-
   try {
-    const spokenText = formatSpokenKoreanText(text);
-    if (!spokenText) return;
+    const synth = window.speechSynthesis;
+    if (synth.speaking || synth.pending) synth.cancel();
+  } catch (e) { }
+}
 
+// 브라우저 기본 TTS (MP3가 없는 문장 / MP3 재생 실패 시 대체용)
+function speakNativeKorean(spokenText, { pitch = 1.0, rate = 0.95 } = {}) {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  try {
     const utterance = new SpeechSynthesisUtterance(spokenText);
     utterance.lang = 'ko-KR';
 
@@ -2563,90 +2535,48 @@ export function speakNaturalKorean(text, { pitch = 1.16, rate = 0.92, priority =
       /iPad|iPhone|iPod/.test(navigator.userAgent) ||
       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
     );
+    // 📱 iOS Safari에서는 특정 voice 객체(미다운로드 Siri 등) 지정 시 발화가 드롭되므로 기본 한국어 음성 사용
+    const { voice: bestVoice } = getKoreanVoiceInfo();
+    if (!isIOS && bestVoice) utterance.voice = bestVoice;
+    // 피치를 억지로 낮추면 기계음처럼 들리므로 자연스러운 범위로만 조절
+    utterance.pitch = Math.max(0.9, Math.min(1.1, pitch));
+    utterance.rate = Math.max(0.85, Math.min(1.0, rate));
 
-    const { voice: bestVoice, isMale } = getKoreanVoiceInfo();
-    // 📱 iOS Safari에서는 특정 voice 객체(미다운로드 Siri 등) 지정 시 발화가 드롭되므로 voice 미지정(기본 한국어 사용)
-    if (!isIOS && bestVoice) {
-      utterance.voice = bestVoice;
-    }
-
-    // 🎧 기기 및 보이스 환경별 피치(Pitch) 지능형 자동 보정:
-    let finalPitch = pitch;
-    let finalRate = rate;
-
-    if (isIOS || !isMale) {
-      finalPitch = Math.max(0.80, Math.min(0.92, pitch * 0.74));
-      finalRate = Math.min(rate, 0.92);
-    }
-
-    utterance.pitch = finalPitch;
-    utterance.rate = finalRate;
-
-    // 📱 iOS WebKit GC 버그 방지: 발화 완료될 때까지 전역 배열에 유지
     const cleanup = () => {
-      if (typeof window !== 'undefined' && window._activeUtterances) {
-        const idx = window._activeUtterances.indexOf(utterance);
-        if (idx > -1) window._activeUtterances.splice(idx, 1);
-      }
+      const idx = window._activeUtterances.indexOf(utterance);
+      if (idx > -1) window._activeUtterances.splice(idx, 1);
     };
     utterance.onend = cleanup;
     utterance.onerror = cleanup;
+    window._activeUtterances.push(utterance);
 
-    if (typeof window !== 'undefined' && window._activeUtterances) {
-      window._activeUtterances.push(utterance);
-    }
-
-    // 📱 iOS Safari 백그라운드 전환 후 복귀 시 일시정지 상태 자동 해제
-    try {
-      window.speechSynthesis.resume();
-    } catch (e) { }
-
-    if (isIOS) {
-      // 📱 iOS Safari에서는 cancel() 호출 시 WebKit 오디오 큐 락 및 후속 발화 영구 침묵 버그 발생
-      // cancel()을 부르지 않고 resume() 후 직접 speak() 호출해야 누락 없이 연속 발화됨
+    // cancel() 직후 바로 speak() 하면 iOS에서 발화가 누락되므로 짧게 띄운 뒤 한 문장만 발화
+    cancelNativeSpeech();
+    nativeSpeechTimer = setTimeout(() => {
+      nativeSpeechTimer = null;
       try {
         window.speechSynthesis.resume();
         window.speechSynthesis.speak(utterance);
       } catch (e) { }
-    } else if (priority && window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-      setTimeout(() => {
-        try {
-          window.speechSynthesis.resume();
-          window.speechSynthesis.speak(utterance);
-        } catch (e) { }
-      }, 50);
-    } else {
-      window.speechSynthesis.speak(utterance);
-    }
+    }, 80);
   } catch (err) {
     console.warn('TTS playback error:', err);
   }
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-// 🎙️ 사람 음성 안내 플레이어 (아이패드/모바일 100% 호환 - 기존 순수 네이티브 한국어 TTS로 완전 롤백)
-// ═════════════════════════════════════════════════════════════════════════════
-export function playVoiceAudio(audioSrc, fallbackFn = null, onEnded = null) {
+// 🎙️ 음성 안내: 남성 아나운서 MP3가 있으면 MP3로, 없으면 브라우저 TTS로 읽는다.
+// 이전 음성은 항상 끊고 새 음성 하나만 재생한다.
+export function speakNaturalKorean(text, ttsOptions = {}) {
   if (typeof window === 'undefined') return;
-
-  // 📱 아이패드 및 모든 환경에서 MP3 재생 정책 충돌 및 묵음 문제를 원천 방지하기 위해
-  // 100% 오류 없이 안정적으로 작동하던 기존 한국어 TTS(SpeechSynthesis)로 완전 롤백하여 직결 재생합니다.
-  if (fallbackFn) {
-    fallbackFn();
+  const spokenText = formatSpokenKoreanText(text);
+  if (!spokenText) return;
+  const url = voiceClipUrl(spokenText);
+  if (url) {
+    audioEngine.playVoiceClip(url, () => speakNativeKorean(spokenText, ttsOptions));
+  } else {
+    audioEngine.stopVoice();
+    if (!audioEngine.muted) speakNativeKorean(spokenText, ttsOptions);
   }
-}
-
-// 한글 조사 자동 연결 헬퍼 (은/는, 이/가, 을/를, 과/와)
-export function attachJosa(word, josaType) {
-  if (!word) return '';
-  const lastChar = word.charCodeAt(word.length - 1);
-  const hasBatchim = (lastChar - 0xac00) % 28 > 0;
-  if (josaType === '은/는') return word + (hasBatchim ? '은' : '는');
-  if (josaType === '이/가') return word + (hasBatchim ? '이' : '가');
-  if (josaType === '을/를') return word + (hasBatchim ? '을' : '를');
-  if (josaType === '과/와') return word + (hasBatchim ? '과' : '와');
-  return word;
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -4274,7 +4204,6 @@ function BedtimeSleepView() {
     const st = animalStates[animalId];
     const newPats = st.pats + 1;
     const animal = SLEEP_ANIMAL_DATA.find(a => a.id === animalId);
-    const animalBase = animal ? animal.name.replace('아기 ', '') : '동물';
 
     audioEngine.playMusicBox(440 + Math.random() * 200, 0.4);
     setHearts(prev => [...prev.slice(-10), { id: Date.now() + Math.random(), animalId }]);
@@ -4291,7 +4220,7 @@ function BedtimeSleepView() {
           yawn: false
         }
       }));
-      speakNaturalKorean(`${animalBase}가 이불을 꼭 덮고 쿨쿨 잘 자고 있어요.`, { pitch: 1.15, rate: 0.88 });
+      speakNaturalKorean(VOICE.sleepAsleep(animal));
     } else {
       setAnimalStates(prev => ({
         ...prev,
@@ -4309,7 +4238,7 @@ function BedtimeSleepView() {
         }));
       }, 1600);
 
-      speakNaturalKorean(`${animalBase}가 하품을 해요. 포근한 이불을 덮어주세요~`, { pitch: 1.16, rate: 0.92 });
+      speakNaturalKorean(VOICE.sleepYawn(animal));
     }
   };
 
@@ -4338,14 +4267,7 @@ function BedtimeSleepView() {
       }
     }));
 
-    const animalBase = targetAnimal.name.replace('아기 ', '');
-    const blanketObj = attachJosa(blanket.blanketName, '을/를');
-    const announceText = `${animalBase}에게 ${blanketObj} 덮어줬어요.`;
-
-    speakNaturalKorean(announceText, {
-      pitch: 1.15,
-      rate: 0.92
-    });
+    speakNaturalKorean(VOICE.sleepBlanket(targetAnimal, blanket));
 
     setHearts(prev => [
       ...prev.slice(-10),
@@ -4368,8 +4290,7 @@ function BedtimeSleepView() {
       }
     }));
     const animal = SLEEP_ANIMAL_DATA.find(a => a.id === animalId);
-    const animalBase = animal ? animal.name.replace('아기 ', '') : '동물';
-    speakNaturalKorean(`${animalBase}가 이불이 걷히자 잠에서 깨어났어요!`, { pitch: 1.16, rate: 0.92 });
+    speakNaturalKorean(VOICE.sleepWake(animal));
   };
 
   // 이불 드래그 시작
@@ -4999,9 +4920,7 @@ export default function App() {
       } else if (currentOverSlot !== null) {
         // 다른 사각형 슬롯에 잘못 놓음
         audioEngine.playFreq(220, 'sawtooth', 0.2);
-        playVoiceAudio('/sounds/voice/puzzle_wrong.mp3', () => {
-          speakNaturalKorean('여기가 아니에요~ 제자리에 쏙 맞춰보세요!', { pitch: 1.15, rate: 0.93 });
-        });
+        speakNaturalKorean(VOICE.puzzleWrong());
       }
 
       draggingPieceRef.current = null;
@@ -5020,12 +4939,10 @@ export default function App() {
     };
   }, [activeTab, placedPieces, puzzleTheme, puzzleCompleted]);
 
-  // 🌊 바다속 음성 미션 (다정하고 상냥한 인준 MP3 보이스 우선 재생)
+  // 🌊 바다속 음성 미션
   const speakOceanMission = (creature) => {
-    const subj = attachJosa(creature.name, '은/는');
-    playVoiceAudio(`/sounds/voice/ocean_mission_${creature.id}.mp3`, () => {
-      speakNaturalKorean(`신비한 바다속에서 ${subj} 어디 있을까요?`, { pitch: 1.16, rate: 0.92 });
-    });
+    speakNaturalKorean(VOICE.oceanMission(creature));
+    audioEngine.preloadVoice(VOICE.oceanFound(creature));
   };
 
   const generateNextOceanMission = () => {
@@ -5065,17 +4982,14 @@ export default function App() {
       setOceanScore(prev => prev + 1);
       audioEngine.playFanfare();
 
-      const obj = attachJosa(creature.name, '을/를');
-      playVoiceAudio(`/sounds/voice/ocean_found_${creature.id}.mp3`, () => {
-        speakNaturalKorean(`찾았다! ${obj} 찾았어요! 정말 최고예요~ 🎉`, { pitch: 1.2, rate: 0.94 });
-      });
+      speakNaturalKorean(VOICE.oceanFound(creature));
 
-      // 2.8초 후 다음 미션으로 자동 전환
-      setTimeout(() => {
+      // 2.8초 후 다음 미션으로 자동 전환 (그 사이 다른 화면으로 가면 취소 → 돌아올 때 새 미션)
+      audioEngine.later(() => {
         generateNextOceanMission();
       }, 2800);
     } else if (creature.id !== oceanTarget.id) {
-      speakNaturalKorean(`${creature.name}! ${creature.soundText}`, { pitch: 1.15, rate: 0.95 });
+      speakNaturalKorean(VOICE.itemSound(creature));
     }
   };
 
@@ -5110,12 +5024,9 @@ export default function App() {
     // 4조각 모두 맞췄는지 확인
     if (updated.every(Boolean)) {
       setPuzzleCompleted(true);
-      setTimeout(() => {
+      audioEngine.later(() => {
         audioEngine.playFanfare();
-        const obj = attachJosa(puzzleTheme.name, '을/를');
-        playVoiceAudio(`/sounds/voice/puzzle_done_${puzzleTheme.id}.mp3`, () => {
-          speakNaturalKorean(`와아! 멋진 ${obj} 퍼즐을 완성했어요! 참 잘했어요~ 🌟`, { pitch: 1.2, rate: 0.94 });
-        });
+        speakNaturalKorean(VOICE.puzzleDone(puzzleTheme));
       }, 300);
     }
   };
@@ -5130,10 +5041,8 @@ export default function App() {
   const handleSelectPuzzleTheme = (theme) => {
     setPuzzleTheme(theme);
     handleResetPuzzle(theme);
-    const obj = attachJosa(theme.name, '을/를');
-    playVoiceAudio(`/sounds/voice/puzzle_start_${theme.id}.mp3`, () => {
-      speakNaturalKorean(`우리 ${obj} 퍼즐을 맞춰볼까요?`, { pitch: 1.16, rate: 0.93 });
-    });
+    speakNaturalKorean(VOICE.puzzleStart(theme));
+    audioEngine.preloadVoice(VOICE.puzzleDone(theme));
   };
 
   const handleNextPuzzleTheme = () => {
@@ -5155,15 +5064,8 @@ export default function App() {
       }
     });
 
-    // 🦁 과일먹이기 핵심 음원 앱 시작 시 사전 버퍼 캐싱 (아이패드 0초 즉시 사운드 출력 보장)
-    [0, 1, 2].forEach(idx => {
-      audioEngine.getVoiceBuffer(`/sounds/voice/feed_praise_${idx}.mp3`).catch(() => {});
-    });
-    audioEngine.getVoiceBuffer('/sounds/voice/feed_reject_wrong_food.mp3').catch(() => {});
-    audioEngine.getVoiceBuffer('/sounds/voice/feed_reject_wrong_animal.mp3').catch(() => {});
-    if (feedRound?.target && feedRound?.food) {
-      audioEngine.getVoiceBuffer(`/sounds/voice/feed_${feedRound.target.id}_${feedRound.food.id}.mp3`).catch(() => {});
-    }
+    // 🦁 과일먹이기 첫 라운드 음성 사전 버퍼 캐싱 (아이패드 즉시 재생)
+    preloadFeedRoundVoices(feedRound);
 
     // 📱 iOS Safari 전역 제스처 언락 (화면 아무 곳이나 탭하면 Web Audio 즉시 활성화)
     const handleGlobalUnlock = () => {
@@ -5238,9 +5140,9 @@ export default function App() {
       if (item.soundUrl) {
         audioEngine.playItemSound(item);
       } else if (item.category === 'vehicle') {
-        speakNaturalKorean(`${item.name}! ${item.soundText}`, { pitch: 1.15, rate: 0.92 });
+        speakNaturalKorean(VOICE.itemSound(item));
       } else {
-        speakNaturalKorean(`맛있는 ${item.name}!`, { pitch: 1.16, rate: 0.92 });
+        speakNaturalKorean(VOICE.tasty(item));
       }
     }, 100);
   };
@@ -5257,17 +5159,8 @@ export default function App() {
       ? ([...REAL_ANIMALS, ...REAL_VEHICLES].find(x => x.name === item) || { name: item })
       : item;
     const name = targetObj?.name || (typeof item === 'string' ? item : '');
-    const isVehicle = targetObj?.category === 'vehicle' || quizPoolType === 'vehicle';
-    const subj = attachJosa(name, '은/는');
-    const questionText = isVehicle ? `${subj} 어디 있을까요?` : `${subj} 누구일까요?`;
-
-    if (targetObj?.id && targetObj.category !== 'vehicle') {
-      playVoiceAudio(`/sounds/voice/quiz_${targetObj.id}.mp3`, () => {
-        speakNaturalKorean(questionText, { pitch: 1.16, rate: 0.92 });
-      });
-    } else {
-      speakNaturalKorean(questionText, { pitch: 1.16, rate: 0.92 });
-    }
+    const isVehicle = targetObj?.category ? targetObj.category === 'vehicle' : quizPoolType === 'vehicle';
+    speakNaturalKorean(VOICE.quiz(name, isVehicle));
   };
 
   const generateQuizQuestion = (pool = quizPoolType) => {
@@ -5294,11 +5187,11 @@ export default function App() {
       setQuizFeedback('correct');
       audioEngine.playFanfare();
       if (quizQuestion.target.soundUrl) {
-        setTimeout(() => {
+        audioEngine.later(() => {
           audioEngine.playItemSound(quizQuestion.target);
         }, 300);
       }
-      setTimeout(() => {
+      audioEngine.later(() => {
         audioEngine.stopAllSounds();
         generateQuizQuestion(quizPoolType);
       }, 3000);
@@ -5309,17 +5202,12 @@ export default function App() {
     }
   };
 
-  // 🦁 동물 과일 먹이기 음성 안내 (인준 고음질 MP3 우선 재생 - 아이패드 100% 동일 남성 목소리)
+  // 🦁 동물 과일 먹이기 음성 안내
   const speakFeedWish = (animal, food) => {
     const targetAnimal = animal || feedRound?.target;
     const targetFood = food || feedRound?.food;
     if (!targetAnimal || !targetFood) return;
-    const subj = attachJosa(targetAnimal.name, '이/가');
-    const obj = attachJosa(targetFood.name, '을/를');
-    const audioUrl = `/sounds/voice/feed_${targetAnimal.id}_${targetFood.id}.mp3`;
-    playVoiceAudio(audioUrl, () => {
-      speakNaturalKorean(`배고파요, ${subj} 맛있는 ${obj} 먹고 싶대요!`, { pitch: 1.18, rate: 0.93 });
-    });
+    speakNaturalKorean(VOICE.feedWish(targetAnimal, targetFood));
   };
 
   const openFeedModal = () => {
@@ -5335,19 +5223,10 @@ export default function App() {
     isFeedBusyRef.current = false;
     setIsFeedModalOpen(true);
 
-    // 칭찬 & 거절 음성 사전 버퍼 캐싱
-    [0, 1, 2].forEach(idx => {
-      audioEngine.getVoiceBuffer(`/sounds/voice/feed_praise_${idx}.mp3`).catch(() => {});
-    });
-    audioEngine.getVoiceBuffer('/sounds/voice/feed_reject_wrong_food.mp3').catch(() => {});
-    audioEngine.getVoiceBuffer('/sounds/voice/feed_reject_wrong_animal.mp3').catch(() => {});
+    // 이번 라운드 칭찬 & 거절 음성 사전 버퍼 캐싱
+    preloadFeedRoundVoices(round);
 
-    // 3마리 동물 x 원하는 과일 음원 사전 버퍼 캐싱
-    round.threeAnimals.forEach(a => {
-      audioEngine.getVoiceBuffer(`/sounds/voice/feed_${a.id}_${round.food.id}.mp3`).catch(() => {});
-    });
-
-    // 목표 동물 음성 즉시 재생 (버퍼 준비 및 fallback 자동 보장)
+    // 목표 동물 음성 즉시 재생 (버퍼가 없으면 받아서 재생, 실패 시 TTS)
     speakFeedWish(round.target, round.food);
   };
 
@@ -5369,62 +5248,28 @@ export default function App() {
 
         // 🚀 다음 라운드 동물/과일 사전 선정 및 음성 백그라운드 프리로드 (정답 맞춘 터치 순간 캐싱)
         const upcomingRound = pickFeedRound();
-        audioEngine.getVoiceBuffer(`/sounds/voice/feed_${upcomingRound.target.id}_${upcomingRound.food.id}.mp3`).catch(() => {});
-        upcomingRound.threeAnimals.forEach(a => {
-          audioEngine.getVoiceBuffer(`/sounds/voice/feed_${a.id}_${upcomingRound.food.id}.mp3`).catch(() => {});
-        });
+        preloadFeedRoundVoices(upcomingRound);
 
-        // 🗣️ 동물이 직접 소감 표현 (인준 고음질 MP3 우선 재생)
-        const praisePhrases = [
-          `냠냠! ${wantedFood.name} 정말 맛있어요! 고마워요!`,
-          `와아! ${wantedFood.name} 최고예요! 냠냠 맛있어요!`,
-          `냠냠 꿀꺽! 달콤한 ${wantedFood.name} 맛있어요! 배가 든든해요!`
-        ];
-        const randomIdx = Math.floor(Math.random() * praisePhrases.length);
-        const randomPraise = praisePhrases[randomIdx];
+        // 🗣️ 동물이 직접 소감 표현
+        const randomIdx = Math.floor(Math.random() * FEED_PRAISE_COUNT);
+        speakNaturalKorean(VOICE.feedPraise(wantedFood, randomIdx));
 
         // 1.0초 후 기뻐하기 (만세 + 하트눈 + 팡파레)
-        setTimeout(() => {
+        audioEngine.later(() => {
           setAnimalMoods(prev => ({ ...prev, [targetAnimal.id]: 'happy' }));
           audioEngine.playFanfare();
         }, 1000);
 
-        const praiseStartTime = Date.now();
-        let hasAdvanced = false;
-        const advanceToNextRound = () => {
-          if (hasAdvanced) return;
-          hasAdvanced = true;
-          const nextRound = upcomingRound || pickFeedRound();
-          setFeedRound(nextRound);
+        // 칭찬 음성이 끝나고 축하를 즐긴 뒤 4.6초 후 다음 문제로 전환
+        // (그 전에 창을 닫거나 다른 화면으로 가면 취소되어 다음 문제 음성이 뒤늦게 나오지 않음)
+        audioEngine.later(() => {
+          setFeedRound(upcomingRound);
           setAnimalMoods({});
           setRejectedAnimalId(null);
           setRejectedFood(null);
           isFeedBusyRef.current = false;
-          speakFeedWish(nextRound.target, nextRound.food);
-        };
-
-        // 🛡️ 음성 짤림 100% 방지: 어떤 경우에도 최소 4.6초간 동물 축하 및 음성 완독 보장
-        const tryAdvanceWithMinDelay = (extraWait = 0) => {
-          const elapsed = Date.now() - praiseStartTime;
-          const waitTime = Math.max(0, 4600 - elapsed) + extraWait;
-          setTimeout(advanceToNextRound, waitTime);
-        };
-
-        // 칭찬 음성 재생 -> 음성이 끝까지 다 나오고 최소 4.6초 축하를 온전히 즐긴 후 다음 문제로 전환
-        playVoiceAudio(
-          `/sounds/voice/feed_praise_${randomIdx}.mp3`,
-          () => {
-            speakNaturalKorean(randomPraise, { pitch: 1.16, rate: 0.92 });
-            tryAdvanceWithMinDelay(0);
-          },
-          () => {
-            // MP3 음성 완독 후에도 최소 4.6초 축하 시간을 확보한 뒤 부드럽게 다음 문제로 전환
-            tryAdvanceWithMinDelay(500);
-          }
-        );
-
-        // 안전 타이머: 최대 5.5초 내 다음 라운드 보장
-        setTimeout(advanceToNextRound, 5500);
+          speakFeedWish(upcomingRound.target, upcomingRound.food);
+        }, 4600);
       } else {
         // 목표 동물인데 다른 과일을 줌
         isFeedBusyRef.current = true;
@@ -5436,11 +5281,7 @@ export default function App() {
         setTimeout(() => audioEngine.playFreq(280, 'sawtooth', 0.12, 0.4), 120);
         setTimeout(() => audioEngine.playFreq(160, 'sawtooth', 0.2, 0.5), 240);
 
-        const animalSubj = attachJosa(targetAnimal.name, '은/는');
-        const foodObj = attachJosa(wantedFood.name, '을/를');
-        playVoiceAudio('/sounds/voice/feed_reject_wrong_food.mp3', () => {
-          speakNaturalKorean(`으응, 이거 말고! ${animalSubj} ${foodObj} 먹고 싶대요.`, { pitch: 1.16, rate: 0.92 });
-        });
+        speakNaturalKorean(VOICE.feedWrongFood(targetAnimal, wantedFood));
 
         setTimeout(() => {
           setAnimalMoods(prev => ({ ...prev, [targetAnimal.id]: 'hungry' }));
@@ -5460,10 +5301,7 @@ export default function App() {
       setTimeout(() => audioEngine.playFreq(280, 'sawtooth', 0.12, 0.4), 120);
       setTimeout(() => audioEngine.playFreq(160, 'sawtooth', 0.2, 0.5), 240);
 
-      const foodObj = attachJosa(wantedFood.name, '을/를');
-      playVoiceAudio('/sounds/voice/feed_reject_wrong_animal.mp3', () => {
-        speakNaturalKorean(`나는 아니에요. ${targetAnimal.name}에게 ${foodObj} 주세요!`, { pitch: 1.16, rate: 0.92 });
-      });
+      speakNaturalKorean(VOICE.feedWrongAnimal(targetAnimal, wantedFood));
 
       setTimeout(() => {
         setAnimalMoods(prev => ({ ...prev, [droppedAnimalId]: 'hungry' }));
@@ -5630,26 +5468,24 @@ export default function App() {
             const isActive = activeTab === tab.id;
             return (
               <button key={tab.id} onClick={() => {
+                // 이전 화면의 음성과 예약된 음성(다음 문제 안내 등)을 모두 끊는다
+                audioEngine.interruptVoice();
                 if (tab.id !== 'sleep') audioEngine.stopLullaby();
                 if (tab.id !== 'xylophone') audioEngine.stopDrumGroove();
                 if (tab.id === 'animal') setAnimalItems(shuffleArray(REAL_ANIMALS));
                 if (tab.id === 'vehicle') setVehicleItems(shuffleArray(REAL_VEHICLES));
                 if (tab.id === 'fruit') {
                   setFruitItems(shuffleArray(REAL_FRUITS));
-                  // 🍎 과일 탭 진입 시 과일먹이기 핵심 음원 사전 프리로드
-                  [0, 1, 2].forEach(idx => audioEngine.getVoiceBuffer(`/sounds/voice/feed_praise_${idx}.mp3`).catch(() => {}));
-                  audioEngine.getVoiceBuffer('/sounds/voice/feed_reject_wrong_food.mp3').catch(() => {});
-                  audioEngine.getVoiceBuffer('/sounds/voice/feed_reject_wrong_animal.mp3').catch(() => {});
-                  if (feedRound?.target && feedRound?.food) {
-                    audioEngine.getVoiceBuffer(`/sounds/voice/feed_${feedRound.target.id}_${feedRound.food.id}.mp3`).catch(() => {});
-                  }
+                  // 🍎 과일 탭 진입 시 과일먹이기 첫 라운드 음성 사전 프리로드
+                  preloadFeedRoundVoices(feedRound);
                 }
-                if (tab.id === 'ocean') speakOceanMission(oceanTarget);
+                if (tab.id === 'ocean') {
+                  // 찾은 직후 화면을 떠났다면 다음 미션 전환이 취소됐으므로 여기서 새 미션 시작
+                  if (oceanFound) generateNextOceanMission();
+                  else speakOceanMission(oceanTarget);
+                }
                 if (tab.id === 'puzzle' && !puzzleCompleted) {
-                  const obj = attachJosa(puzzleTheme.name, '을/를');
-                  playVoiceAudio(`/sounds/voice/puzzle_start_${puzzleTheme.id}.mp3`, () => {
-                    speakNaturalKorean(`우리 ${obj} 퍼즐을 맞춰볼까요?`, { pitch: 1.16, rate: 0.93 });
-                  });
+                  speakNaturalKorean(VOICE.puzzleStart(puzzleTheme));
                 }
                 setActiveTab(tab.id);
                 audioEngine.playFreq(520, 'sine', 0.15);
@@ -6700,7 +6536,7 @@ export default function App() {
                     <Volume2 size={24} /> 소리 다시 듣기 🔊
                   </button>
                 )}
-                <button onClick={() => speakNaturalKorean(selectedRealItem.soundText ? `${selectedRealItem.name}! ${selectedRealItem.soundText}` : `맛있는 ${selectedRealItem.name}!`, { pitch: 1.16, rate: 0.92 })} style={{
+                <button onClick={() => speakNaturalKorean(selectedRealItem.soundText ? VOICE.itemSound(selectedRealItem) : VOICE.tasty(selectedRealItem))} style={{
                   background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', color: '#ffffff', border: 'none',
                   padding: '14px 24px', borderRadius: '22px', fontSize: '1.2rem', fontWeight: 900,
                   cursor: 'pointer', boxShadow: '0 8px 20px rgba(99,102,241,0.25)',

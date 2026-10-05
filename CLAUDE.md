@@ -62,6 +62,7 @@ Python 프로젝트: `yuna_nutrition_tracker/requirements.txt`, 로컬 실행은
   2. 콘텐츠 데이터 배열: `REAL_ANIMALS`, `REAL_FRUITS`, `REAL_VEHICLES`, `RAINBOW_PAINTS`, `TRACING_TEMPLATES`, `STAMP_ITEMS`, `FEEDABLE_ANIMALS` 등. 항목 추가는 보통 여기에 객체 하나를 추가하는 것으로 끝난다.
   3. SVG 일러스트/서브뷰 컴포넌트(`XylophoneChoirView`, `BedtimeSleepView` 등).
   4. `export default function App()` — `activeTab` 으로 탭 전환: `animal`, `fruit`, `vehicle`, `ocean`, `puzzle`, `paint`, `song`, `xylophone`, `sleep`.
+- 음성 안내: 모든 문장은 `src/voiceLines.js` 의 `VOICE` 빌더로 만들고 `speakNaturalKorean()` 으로 재생한다. 남성 아나운서(Edge TTS `ko-KR-InJoonNeural`) MP3가 `public/voice/<해시>.mp3` 로 미리 생성돼 있고(목록: `src/voiceIndex.json`), 없으면 브라우저 TTS로 대체된다. 문장·동물·과일을 바꾸면 `npm run voices` 를 다시 실행할 것. 음성은 항상 하나만 재생(새 음성이 이전 음성을 끊음)하며, 화면을 떠난 뒤 실행되면 안 되는 음성 타이머는 `audioEngine.later()` 를 쓴다(`interruptVoice()`/`stopAllSounds()` 시 취소).
 - 동요 목록은 `import.meta.glob('/public/music/*.mp3')` 로 자동 생성된다. 곡 추가 = `public/music/` 에 mp3 추가(파일명 앞 숫자는 정렬용이며 제목에서 제거됨). `public/songs_code.js`, `songs_data.json` 은 예전 방식의 산출물이다.
 - 이미지는 `src/assets/`(import) 또는 `public/`(URL 경로)에 둔다. 실제 사진을 쓸 때는 대상과 일치하는지 검증된 이미지를 사용한다(최근 커밋에서 차량 사진을 실사로 교체함).
 - UI 텍스트와 음성은 모두 한국어이고, 대상은 영유아(큰 터치 영역, 모바일/태블릿 우선)다.
