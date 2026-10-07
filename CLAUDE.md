@@ -65,7 +65,10 @@ Python 프로젝트: `yuna_nutrition_tracker/requirements.txt`, 로컬 실행은
 - 동요 목록은 `import.meta.glob('/public/music/*.mp3')` 로 자동 생성된다. 곡 추가 = `public/music/` 에 mp3 추가(파일명 앞 숫자는 정렬용이며 제목에서 제거됨). `public/songs_code.js`, `songs_data.json` 은 예전 방식의 산출물이다.
 - 이미지는 `src/assets/`(과일, import) 또는 `public/`(`animals/`, `vehicles/`, URL 경로)에 둔다. 실제 사진을 쓸 때는 대상과 일치하는지 검증된 이미지를 사용하고, 외부 출처 사진은 `baby-play-studio/IMAGE_CREDITS.md` 에 작성자·라이선스를 기록한다.
 - 동물 항목에 `soundUrl`(울음소리 MP3)이 없으면 `soundText` 를 음성 안내로 읽는다(기린·공룡 등).
-- `ocean` 탭은 "물고기 어항"(`LivingAquariumView`)이다. 캔버스에 Boids 물고기 떼·햇살·해초·거품을 그리고, 그 위에 `OceanCreatureSVG` 생물 8마리(`pickOceanScene`, 찾을 대상 포함)를 띄워 매 프레임 ref 로 위치를 직접 갱신한다(React 리렌더 없음). 톡=흩어지기, 꾹 누르기=따라오기, 기울기 센서(iOS는 "기울여서 놀기" 버튼으로 권한 요청). 생물 터치 판정은 그림보다 넉넉하게 잡는다.
-  - 새 바다 생물은 `OCEAN_CREATURES` 데이터 + `OceanCreatureSVG` 의 `if (id === ...)` 분기를 함께 추가하고, 움직임 방식(`AQUA_MOTION`)·좌우 뒤집기(`AQUA_FLIP`, 그림이 오른쪽을 볼 때)·속도(`AQUA_SPEED`)를 지정한다. 분기가 없으면 물개 그림이 나온다.
-  - 느린 기기에서는 프레임이 계속 늦으면 해상도와 물고기 수를 자동으로 줄인다.
+- `ocean` 탭은 "내 어항" 다마고치형 게임으로, App.jsx 밖의 별도 파일이다(App 은 `<AquariumGame>` 에 `OCEAN_CREATURES`·`OceanCreatureSVG`·`audioEngine`·`speakNaturalKorean` 을 props 로 넘김).
+  - `src/aquariumData.js`: 물고기 종류(`FISH_SPECIES`, 그림 파라미터 포함)·장식·바다 친구 가격, 성장/컨디션 규칙(`RATES`, `growFactor`), 보상(`REWARDS`), localStorage 저장(`bps_aquarium_v1`)·꺼둔 시간 따라잡기(`catchUpOffline`). 저장 형식을 바꾸면 `version` 을 올리고 이전 데이터 변환을 넣을 것.
+  - `src/AquariumGame.jsx`: 캔버스(물고기 `drawFish`·장식 `drawDecor`·자갈·거품) + WebGL 빛 레이어(물결 빛무늬·햇살, `mix-blend-mode: screen`) + SVG 바다 친구 + 이끼/탁한 물 오버레이 캔버스. 위치는 매 프레임 ref 로 갱신(React 리렌더 없음), 상단 상태(조개·물 깨끗함)만 0.4초마다 state 로 반영.
+  - 규칙: 물고기마다 배부름·기분, 어항 전체 물 더러움 → 컨디션 → 성장 속도(슬프면 멈춤, 죽지 않음). 밥은 한 번에 한 그릇(남아 있으면 더 못 줌). 청소 모드에서 문질러 이끼·똥 제거, 물갈이로 물 더러움 0. 비파(`algaeEater`)는 유리 이끼를 먹는다.
+  - 새 물고기 = `FISH_SPECIES` 항목 추가(필요하면 `drawFish` 의 shape 분기). 새 장식 = `DECOR_ITEMS` + `drawDecor` 분기 + `DECOR_BOX` 크기. 새 바다 친구 = `OCEAN_CREATURES` + `OceanCreatureSVG` 분기 + `FRIEND_PRICES`(그림이 오른쪽을 보면 `FRIEND_FLIP`). 이름이 음성 문장에 들어가므로 추가 후 음성을 다시 생성할 것.
+  - 느린 기기에서는 프레임이 계속 늦으면 해상도·빛 레이어 해상도를 자동으로 낮춘다.
 - UI 텍스트와 음성은 모두 한국어이고, 대상은 영유아(큰 터치 영역, 모바일/태블릿 우선)다.

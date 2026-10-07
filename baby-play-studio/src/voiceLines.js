@@ -1,3 +1,5 @@
+import { FISH_SPECIES, STAGE_NAMES } from './aquariumData.js';
+
 // ═════════════════════════════════════════════════════════════════════════════
 // 🎙️ 음성 안내 문장 모음
 // 앱에서 말하는 모든 문장은 여기서 만든다. scripts/generate-voices.mjs 가 이 파일로
@@ -15,6 +17,7 @@ export function attachJosa(word, josaType) {
   if (josaType === '이/가') return word + (hasBatchim ? '이' : '가');
   if (josaType === '을/를') return word + (hasBatchim ? '을' : '를');
   if (josaType === '과/와') return word + (hasBatchim ? '과' : '와');
+  if (josaType === '이에요/예요') return word + (hasBatchim ? '이에요' : '예요');
   return word;
 }
 
@@ -69,9 +72,21 @@ export const VOICE = {
   puzzleStart: (theme) => `우리 ${attachJosa(theme.name, '을/를')} 퍼즐을 맞춰볼까요?`,
   puzzleDone: (theme) => `와아! 멋진 ${attachJosa(theme.name, '을/를')} 퍼즐을 완성했어요! 참 잘했어요~ 🌟`,
 
-  // 🌊 바다속
-  oceanMission: (creature) => `신비한 바다속에서 ${attachJosa(creature.name, '은/는')} 어디 있을까요?`,
-  oceanFound: (creature) => `찾았다! ${attachJosa(creature.name, '을/를')} 찾았어요! 정말 최고예요~ 🎉`,
+  // 🐠 내 어항 키우기
+  aquaWelcome: () => '우리 어항에 온 걸 환영해요! 아기 물고기들을 잘 키워 주세요!',
+  aquaWelcomeBack: () => '다시 왔네요! 물고기들이 기다리고 있었어요!',
+  aquaHungry: () => '물고기들이 배고프대요! 밥을 주세요!',
+  aquaDirty: () => '물이 더러워졌어요! 깨끗하게 청소해 주세요!',
+  aquaFeed: () => '맛있는 밥이에요! 냠냠!',
+  aquaWaterChange: () => '새 물로 갈아줬어요! 물고기들이 신나요!',
+  aquaClean: () => '반짝반짝 깨끗해졌어요!',
+  aquaPearl: () => '반짝반짝 조개를 찾았어요!',
+  aquaNeedMore: () => '조개가 조금 더 필요해요!',
+  aquaGrow: (species, stage) => `와아! ${attachJosa(species.name, '이/가')} ${stage === 'juvenile' ? '어린 물고기로' : '다 큰 물고기로'} 자랐어요!`,
+  aquaNewFish: (species) => `새 친구 ${attachJosa(species.name, '이/가')} 왔어요! 잘 키워 주세요!`,
+  aquaNewFriend: (creature) => `바다 친구 ${attachJosa(creature.name, '이/가')} 어항에 왔어요!`,
+  aquaFishInfo: (species, stage) => `${attachJosa(species.name, '이에요/예요')} 지금은 ${attachJosa(STAGE_NAMES[stage], '이에요/예요')}`,
+  aquaSadFish: (species) => `${attachJosa(species.name, '이/가')} 슬퍼요. 밥을 주고 물을 깨끗하게 해 주세요!`,
 
   // 📸 동물 · 탈것 · 바다생물 소리 / 🍎 과일
   itemSound: (item) => `${item.name}! ${item.soundText}`,
@@ -99,7 +114,13 @@ export function collectVoiceLines({ animals, fruits, vehicles, feedAnimals, food
     sleepAnimals.forEach(b => lines.push(VOICE.sleepBlanket(a, b)));
   });
   puzzles.forEach(t => lines.push(VOICE.puzzleStart(t), VOICE.puzzleDone(t)));
-  oceanCreatures.forEach(c => lines.push(VOICE.oceanMission(c), VOICE.oceanFound(c), VOICE.itemSound(c)));
+  oceanCreatures.forEach(c => lines.push(VOICE.itemSound(c), VOICE.aquaNewFriend(c)));
+  lines.push(VOICE.aquaWelcome(), VOICE.aquaWelcomeBack(), VOICE.aquaHungry(), VOICE.aquaDirty(), VOICE.aquaFeed(),
+    VOICE.aquaWaterChange(), VOICE.aquaClean(), VOICE.aquaPearl(), VOICE.aquaNeedMore());
+  FISH_SPECIES.forEach(sp => {
+    lines.push(VOICE.aquaGrow(sp, 'juvenile'), VOICE.aquaGrow(sp, 'adult'), VOICE.aquaNewFish(sp), VOICE.aquaSadFish(sp));
+    Object.keys(STAGE_NAMES).forEach(stage => lines.push(VOICE.aquaFishInfo(sp, stage)));
+  });
   [...animals, ...fruits, ...vehicles].forEach(i => lines.push(i.soundText ? VOICE.itemSound(i) : VOICE.tasty(i)));
   fruits.forEach(i => lines.push(VOICE.tasty(i)));
   animals.forEach(i => lines.push(VOICE.quiz(i.name, false)));

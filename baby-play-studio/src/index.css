@@ -219,14 +219,6 @@ button:active {
 }
 
 /* ============================== */
-/* 🐠 살아있는 어항 */
-/* ============================== */
-@keyframes aqua-halo {
-  from { transform: scale(0.92); opacity: 0.7; }
-  to { transform: scale(1.12); opacity: 1; }
-}
-
-/* ============================== */
 /* 🧩 아기 퍼즐 애니메이션 */
 /* ============================== */
 @keyframes puzzle-snap-pop {
