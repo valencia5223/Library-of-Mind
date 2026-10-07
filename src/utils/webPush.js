@@ -2,9 +2,9 @@
 
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
-// 표준 Web Push VAPID 공개 키 (Edge Function VAPID Key와 100% 매칭)
-export const VAPID_PUBLIC_KEY = import.meta.env?.VITE_VAPID_PUBLIC_KEY || 
-  'BNaIMXgaSQc25hN8q1ifdBuHvX2oV5k8P89MH5w29dDvvTGWlag-Bs7JwbhVIlIERbJQgwRA6Wx5oGnJjnT6qTA';
+// 표준 Web Push VAPID 공개 키 (Edge Function 의 VAPID_PUBLIC_KEY Secret 과 같은 값이어야 함)
+// 기본값을 두지 않는다: 누락 시 예전 키로 조용히 구독되면 푸시가 403으로 실패해 원인 추적이 어렵다
+export const VAPID_PUBLIC_KEY = import.meta.env?.VITE_VAPID_PUBLIC_KEY || '';
 
 // 모바일 Safari / 인앱 웹뷰(카카오톡 등) ReferenceError 방지용 안전 알림 지원 확인 헬퍼
 export function isNotificationSupported() {
@@ -32,6 +32,16 @@ export function urlBase64ToUint8Array(base64String) {
   return outputArray;
 }
 
+// 기존 구독이 현재 VAPID 공개키로 만들어졌는지 확인 (키 정보를 알 수 없는 브라우저는 일치로 간주해 불필요한 재구독 방지)
+function isSameApplicationServerKey(subscription, publicKeyBase64) {
+  const subKey = subscription.options?.applicationServerKey;
+  if (!subKey) return true;
+  const current = urlBase64ToUint8Array(publicKeyBase64);
+  const existing = new Uint8Array(subKey);
+  if (existing.length !== current.length) return false;
+  return existing.every((byte, i) => byte === current[i]);
+}
+
 // 1. 서비스 워커 등록 함수
 export async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) {
@@ -55,6 +65,11 @@ export async function registerServiceWorker() {
 export async function subscribeUserToPush(userId, userEmail, forceRefresh = false) {
   if (!isNotificationSupported() || !('serviceWorker' in navigator) || !('PushManager' in window)) {
     console.warn('이 브라우저는 PushManager/Notification API를 지원하지 않습니다.');
+    return null;
+  }
+
+  if (!VAPID_PUBLIC_KEY) {
+    console.warn('VITE_VAPID_PUBLIC_KEY 환경변수가 없어 웹 푸시 구독을 건너뜁니다 (.env / Render Environment 확인).');
     return null;
   }
 
@@ -85,10 +100,19 @@ export async function subscribeUserToPush(userId, userEmail, forceRefresh = fals
     // 3) 기존 구형 또는 타 VAPID 구독이 존재하면 해제 후 항상 최신 VAPID 키로 재구독
     let subscription = await registration.pushManager.getSubscription();
 
-    if (subscription && forceRefresh) {
+    // VAPID 키를 교체한 경우, 예전 공개키로 만든 구독은 새 키로 서명한 푸시를 거부(403)하므로 재구독이 필요하다
+    const keyChanged = subscription && !isSameApplicationServerKey(subscription, VAPID_PUBLIC_KEY);
+
+    if (subscription && (forceRefresh || keyChanged)) {
+      const oldEndpoint = subscription.endpoint;
       try {
         await subscription.unsubscribe();
         subscription = null;
+        if (keyChanged) console.log('🔑 VAPID 공개키 변경 감지 → 기존 구독 해제 후 재구독');
+        // 더 이상 유효하지 않은 예전 endpoint 행을 DB에서 정리
+        if (isSupabaseConfigured()) {
+          await supabase.from('push_subscriptions').delete().eq('endpoint', oldEndpoint);
+        }
       } catch (e) {
         console.warn('기존 구독 해제 예외:', e);
       }

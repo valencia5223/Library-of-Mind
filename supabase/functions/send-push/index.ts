@@ -3,9 +3,15 @@
 import webpush from 'npm:web-push@^3.6.7';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
-const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY') || 'BNaIMXgaSQc25hN8q1ifdBuHvX2oV5k8P89MH5w29dDvvTGWlag-Bs7JwbhVIlIERbJQgwRA6Wx5oGnJjnT6qTA';
-const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY') || '4_Wkb0ex4_9JzoaDvK1SvX2O9NqFXwq81EYjlqVJ_ZE';
+// VAPID 키는 소스에 두지 않고 Supabase Secrets 로만 주입한다
+//   supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=...
+const VAPID_PUBLIC_KEY = Deno.env.get('VAPID_PUBLIC_KEY');
+const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY');
 const VAPID_SUBJECT = 'mailto:admin@libraryofmind.app';
+
+if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+  throw new Error('VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY 환경변수가 설정되지 않았습니다 (supabase secrets set 필요)');
+}
 
 webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 

@@ -43,15 +43,14 @@ Python 프로젝트: `yuna_nutrition_tracker/requirements.txt`, 로컬 실행은
 
 - `src/App.jsx` 가 상위 상태(사용자, `books`/`notes`/`sessions`, `activeTab`)와 대부분의 Supabase CRUD를 가지고, 탭별 컴포넌트(`src/components/`)에 props로 내려준다. 탭: `schedule`(기본), `bookshelf`, `search`, `focus`, `stats`, `social`, `places`. 모달류는 App 상태 플래그로 열고 닫는다.
 - 친구 서재 보기: `viewedFriend` 가 설정되면 같은 뷰가 친구의 `user_id` 데이터로 다시 로드된다.
-- Supabase 클라이언트 파일이 두 개 있다:
-  - `src/supabase.js` — 거의 모든 컴포넌트가 import하는 주 클라이언트.
-  - `src/supabaseClient.js` — placeholder 대체값과 `isSupabaseConfigured()` 를 제공하는 버전.
-  새 코드는 기존 주변 코드가 쓰는 쪽을 따를 것.
+- Supabase 클라이언트는 `src/supabaseClient.js` (placeholder 대체값 + `isSupabaseConfigured()`)를 모든 코드가 사용한다. `isSupabaseConfigured()` 가 false면 데모 모드로 localStorage에만 저장한다. (`src/supabase.js`, `src/mockData.js` 는 어디서도 import하지 않는 미사용 파일)
+- 낙관적 업데이트로 임시 id(`b-`/`n-`/`s-` + timestamp)를 먼저 넣고, insert 후 `.select().single()` 결과로 실제 UUID로 교체한다(`replaceTempId`). 새 insert 흐름도 이 패턴을 따를 것.
+- 스키마 SQL 파일에 없는 테이블/RPC가 코드에서 쓰인다: `user_schedules`, `shared_restaurants`, `user_profiles`, RPC `get_pending_approval_users`, `approve_user_signup`. 실제 정의는 Supabase 대시보드에서 확인할 것.
 - 환경변수: `.env` 의 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
 - 주요 테이블: `user_books`, `book_notes`, `reading_sessions`, `user_schedules`, `user_friends`, `shared_memos`, `shared_restaurants`, `profiles`, `push_subscriptions`. 스키마는 `supabase_schema.sql`, `supabase_bookshelf_schema.sql`.
 - `user_books` 업데이트는 DB에 없는 컬럼 때문에 실패할 수 있어, App.jsx 에서 "안전 필드"만 먼저 저장하고 추가 필드를 따로 저장하는 폴백 패턴을 쓴다. 컬럼을 추가할 때 이 흐름을 유지할 것.
 - 실시간 기능은 Supabase Realtime 채널 사용(예: `global_user_nudge:${user.id}`).
-- 웹 푸시: `src/utils/webPush.js` → `public/sw.js` 서비스워커 등록, 발송은 Supabase Edge Function `supabase/functions/send-push/index.ts` (`verify_jwt = false`).
+- 웹 푸시: `src/utils/webPush.js` → `public/sw.js` 서비스워커 등록, 발송은 Supabase Edge Function `supabase/functions/send-push/index.ts` (`verify_jwt = false`). VAPID 키는 Supabase Secrets(`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`)로만 주입하며 소스에 하드코딩하지 않는다. 클라이언트 공개키는 `VITE_VAPID_PUBLIC_KEY`.
 
 ## baby-play-studio 아키텍처
 

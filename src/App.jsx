@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import AuthModal from './components/AuthModal';
 import BookshelfView from './components/BookshelfView';
@@ -32,8 +32,9 @@ export default function App() {
   // 알림 클릭 시 바로 열리는 1:1 채팅 룸 친구 상태
   const [activeMemoFriend, setActiveMemoFriend] = useState(null);
 
-  // 관리자 권한 확인 (valencia5223@gmail.com 또는 admin 키워드)
-  const isAdmin = user && (user.email === 'valencia5223@gmail.com' || user.email?.includes('admin') || !isSupabaseConfigured());
+  // 관리자 권한 확인 (지정된 관리자 이메일만 허용, 데모 모드는 로컬 전용이므로 허용)
+  // 주의: 이메일에 'admin' 이 포함됐다는 이유로 관리자 권한을 주면 누구나 가입만으로 관리자가 될 수 있다.
+  const isAdmin = user && (user.email === 'valencia5223@gmail.com' || !isSupabaseConfigured());
 
   // URL 딥링크 (?open_chat=true) 파라미터 감지 시 1:1 채팅 모달 자동 오픈
   useEffect(() => {
@@ -270,16 +271,23 @@ export default function App() {
     }
   }, [viewedFriend]);
 
+  // 친구 서재 전환이 빠르게 일어날 때 늦게 도착한 이전 응답이 최신 데이터를 덮어쓰지 않도록 요청 번호로 구분
+  const fetchSeqRef = useRef(0);
+
   const fetchSupabaseData = async () => {
+    const seq = ++fetchSeqRef.current;
     try {
       // viewedFriend가 엮여 있으면 친구의 데이터를 로드하고, 아니면 본인 데이터 로드
       const targetUserId = viewedFriend ? viewedFriend.id : user.id;
 
-      const { data: bData } = await supabase.from('user_books').select('*').eq('user_id', targetUserId).order('created_at', { ascending: false });
-      const { data: nData } = await supabase.from('book_notes').select('*').eq('user_id', targetUserId).order('created_at', { ascending: false });
-      
-      // 독서 세션(타임라인)은 오직 본인 통계용이므로 친구 것은 불필요
-      const { data: sData } = await supabase.from('reading_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+      const [{ data: bData }, { data: nData }, { data: sData }] = await Promise.all([
+        supabase.from('user_books').select('*').eq('user_id', targetUserId).order('created_at', { ascending: false }),
+        supabase.from('book_notes').select('*').eq('user_id', targetUserId).order('created_at', { ascending: false }),
+        // 독서 세션(타임라인)은 오직 본인 통계용이므로 친구 것은 불필요
+        supabase.from('reading_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+      ]);
+
+      if (seq !== fetchSeqRef.current) return;
 
       if (bData) {
         const orderKey = `user_book_order_${targetUserId}`;
@@ -354,13 +362,25 @@ export default function App() {
       localStorage.setItem(`user_books_${user?.id || 'demo'}`, JSON.stringify(updated));
     } else if (user) {
       // pub_date 포함하여 insert 시도, 실패 시 pub_date 제외하고 재시도
-      const { error } = await supabase.from('user_books').insert([{ ...bookData, user_id: user.id }]);
+      let { data: inserted, error } = await supabase.from('user_books').insert([{ ...bookData, user_id: user.id }]).select().single();
       if (error) {
         console.warn('Insert 실패 (pub_date 컬럼 미존재 가능), pub_date 제외 재시도:', error.message);
-        const { pub_date, ...safeData } = bookData;
-        await supabase.from('user_books').insert([{ ...safeData, user_id: user.id }]);
+        const { pub_date: _pubDate, ...safeData } = bookData;
+        ({ data: inserted, error } = await supabase.from('user_books').insert([{ ...safeData, user_id: user.id }]).select().single());
       }
+      if (error) {
+        console.error('도서 추가 실패:', error.message);
+        return;
+      }
+      // 임시 id(b-...)를 DB가 발급한 실제 UUID로 교체해야 이후 수정/삭제가 DB에 반영된다
+      replaceTempId(setBooks, bookObj.id, inserted);
     }
+  };
+
+  // 낙관적 업데이트로 넣어둔 임시 id 항목을 DB가 반환한 실제 행으로 교체
+  const replaceTempId = (setter, tempId, dbRow) => {
+    if (!dbRow) return;
+    setter(prev => prev.map(item => item.id === tempId ? { ...item, ...dbRow } : item));
   };
 
   const handleUpdateStatus = async (bookId, newStatus, customCompletedAt = null) => {
@@ -465,7 +485,12 @@ export default function App() {
     if (!isSupabaseConfigured()) {
       localStorage.setItem(`user_notes_${user?.id || 'demo'}`, JSON.stringify(updated));
     } else if (user) {
-      await supabase.from('book_notes').insert([{ ...newNote, user_id: user.id }]);
+      const { data: inserted, error } = await supabase.from('book_notes').insert([{ ...newNote, user_id: user.id }]).select().single();
+      if (error) {
+        console.error('노트 저장 실패:', error.message);
+        return;
+      }
+      replaceTempId(setNotes, noteObj.id, inserted);
     }
   };
 
@@ -493,7 +518,18 @@ export default function App() {
     if (!isSupabaseConfigured()) {
       localStorage.setItem(`user_sessions_${user?.id || 'demo'}`, JSON.stringify(updated));
     } else if (user) {
-      await supabase.from('reading_sessions').insert([{ ...sessionData, user_id: user.id }]);
+      // cumulative_pages 는 진행률 갱신용 값이라 reading_sessions 에 컬럼이 없을 수 있다 → 실패 시 제외하고 재시도
+      let { data: inserted, error } = await supabase.from('reading_sessions').insert([{ ...sessionData, user_id: user.id }]).select().single();
+      if (error) {
+        console.warn('세션 Insert 실패 (cumulative_pages 컬럼 미존재 가능), 제외 후 재시도:', error.message);
+        const { cumulative_pages: _cumulative, ...safeSession } = sessionData;
+        ({ data: inserted, error } = await supabase.from('reading_sessions').insert([{ ...safeSession, user_id: user.id }]).select().single());
+      }
+      if (error) {
+        console.error('독서 세션 저장 실패:', error.message);
+      } else {
+        replaceTempId(setSessions, sessionObj.id, inserted);
+      }
     }
 
     // [핵심 기능] 몰입스튜디오에서 누적 읽은 페이지(cumulative_pages)를 입력하면 내 서재 도서의 current_pages와 % 진행률이 자동 갱신됨
