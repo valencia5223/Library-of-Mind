@@ -61,7 +61,11 @@ Python 프로젝트: `yuna_nutrition_tracker/requirements.txt`, 로컬 실행은
   2. 콘텐츠 데이터 배열: `REAL_ANIMALS`, `REAL_FRUITS`, `REAL_VEHICLES`, `RAINBOW_PAINTS`, `TRACING_TEMPLATES`, `STAMP_ITEMS`, `FEEDABLE_ANIMALS` 등. 항목 추가는 보통 여기에 객체 하나를 추가하는 것으로 끝난다.
   3. SVG 일러스트/서브뷰 컴포넌트(`XylophoneChoirView`, `BedtimeSleepView` 등).
   4. `export default function App()` — `activeTab` 으로 탭 전환: `animal`, `fruit`, `vehicle`, `ocean`, `puzzle`, `paint`, `song`, `xylophone`, `sleep`.
-- 음성 안내: 모든 문장은 `src/voiceLines.js` 의 `VOICE` 빌더로 만들고 `speakNaturalKorean()` 으로 재생한다. 남성 아나운서(Edge TTS `ko-KR-InJoonNeural`) MP3가 `public/voice/<해시>.mp3` 로 미리 생성돼 있고(목록: `src/voiceIndex.json`), 없으면 브라우저 TTS로 대체된다. 문장·동물·과일을 바꾸면 `npm run voices` 를 다시 실행할 것. 음성은 항상 하나만 재생(새 음성이 이전 음성을 끊음)하며, 화면을 떠난 뒤 실행되면 안 되는 음성 타이머는 `audioEngine.later()` 를 쓴다(`interruptVoice()`/`stopAllSounds()` 시 취소).
+- 음성 안내: 모든 문장은 `src/voiceLines.js` 의 `VOICE` 빌더로 만들고 `speakNaturalKorean()` 으로 재생한다. 남성 아나운서(Edge TTS `ko-KR-InJoonNeural`) MP3가 `public/voice/<해시>.mp3` 로 미리 생성돼 있고(목록: `src/voiceIndex.json`), 없으면 브라우저 TTS로 대체된다. 문장·동물·과일을 바꾸면 `npm run voices` 를 다시 실행할 것. **시스템 Node 18에서는 모든 문장이 실패하므로** 포터블 Node 20으로 실행한다: `..\node-portable\node-v20.15.0-win-x64\node.exe scripts/generate-voices.mjs`. 과일 하나를 추가하면 먹이기 게임 조합 때문에 음성이 수십 개 늘어난다. 음성은 항상 하나만 재생(새 음성이 이전 음성을 끊음)하며, 화면을 떠난 뒤 실행되면 안 되는 음성 타이머는 `audioEngine.later()` 를 쓴다(`interruptVoice()`/`stopAllSounds()` 시 취소).
 - 동요 목록은 `import.meta.glob('/public/music/*.mp3')` 로 자동 생성된다. 곡 추가 = `public/music/` 에 mp3 추가(파일명 앞 숫자는 정렬용이며 제목에서 제거됨). `public/songs_code.js`, `songs_data.json` 은 예전 방식의 산출물이다.
-- 이미지는 `src/assets/`(import) 또는 `public/`(URL 경로)에 둔다. 실제 사진을 쓸 때는 대상과 일치하는지 검증된 이미지를 사용한다(최근 커밋에서 차량 사진을 실사로 교체함).
+- 이미지는 `src/assets/`(과일, import) 또는 `public/`(`animals/`, `vehicles/`, URL 경로)에 둔다. 실제 사진을 쓸 때는 대상과 일치하는지 검증된 이미지를 사용하고, 외부 출처 사진은 `baby-play-studio/IMAGE_CREDITS.md` 에 작성자·라이선스를 기록한다.
+- 동물 항목에 `soundUrl`(울음소리 MP3)이 없으면 `soundText` 를 음성 안내로 읽는다(기린·공룡 등).
+- `ocean` 탭은 "물고기 어항"(`LivingAquariumView`)이다. 캔버스에 Boids 물고기 떼·햇살·해초·거품을 그리고, 그 위에 `OceanCreatureSVG` 생물 8마리(`pickOceanScene`, 찾을 대상 포함)를 띄워 매 프레임 ref 로 위치를 직접 갱신한다(React 리렌더 없음). 톡=흩어지기, 꾹 누르기=따라오기, 기울기 센서(iOS는 "기울여서 놀기" 버튼으로 권한 요청). 생물 터치 판정은 그림보다 넉넉하게 잡는다.
+  - 새 바다 생물은 `OCEAN_CREATURES` 데이터 + `OceanCreatureSVG` 의 `if (id === ...)` 분기를 함께 추가하고, 움직임 방식(`AQUA_MOTION`)·좌우 뒤집기(`AQUA_FLIP`, 그림이 오른쪽을 볼 때)·속도(`AQUA_SPEED`)를 지정한다. 분기가 없으면 물개 그림이 나온다.
+  - 느린 기기에서는 프레임이 계속 늦으면 해상도와 물고기 수를 자동으로 줄인다.
 - UI 텍스트와 음성은 모두 한국어이고, 대상은 영유아(큰 터치 영역, 모바일/태블릿 우선)다.

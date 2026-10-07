@@ -21,6 +21,12 @@ import potatoImg from './assets/potato.jpg';
 import tomatoImg from './assets/tomato.jpg';
 import cucumberImg from './assets/cucumber.jpg';
 import eggplantImg from './assets/eggplant.jpg';
+import pearImg from './assets/pear.jpg';
+import kiwiImg from './assets/kiwi.jpg';
+import lemonImg from './assets/lemon.jpg';
+import mangoImg from './assets/mango.jpg';
+import persimmonImg from './assets/persimmon.jpg';
+import plumImg from './assets/plum.jpg';
 import { VOICE, FEED_PRAISE_COUNT, attachJosa, formatSpokenKoreanText, voiceKey } from './voiceLines.js';
 import VOICE_INDEX from './voiceIndex.json';
 
@@ -102,7 +108,7 @@ class BabySoundEngine {
   // 앱 진입 시 모든 동물 울음소리를 백그라운드에서 사전 프리로드 및 메모리 캐싱 (딜레이 0초 달성)
   preloadItemSounds(items) {
     items.forEach(item => {
-      const url = item.soundUrl || `/sounds/${item.id}.mp3`;
+      const url = item.soundUrl;
       if (url && !this.audioCache.has(url)) {
         try {
           const audio = new Audio(url);
@@ -1091,7 +1097,7 @@ if (typeof window !== 'undefined') {
 }
 
 // =============================================================================
-// 20종 동물 – Pexels 실사 사진 + Mixkit 실제 동물 울음소리 MP3
+// 28종 동물 – 실사 사진 + 실제 동물 울음소리 MP3 (녹음 없는 동물은 음성 안내)
 // Pexels: 파일명에 동물명이 포함된 공인 사진  |  Mixkit: 브라우저 네트워크로 직접 검증한 실제 녹음 MP3
 // =============================================================================
 const REAL_ANIMALS = [
@@ -1233,6 +1239,56 @@ const REAL_ANIMALS = [
     img: 'https://images.pexels.com/photos/64219/dolphin-marine-mammals-water-sea-64219.jpeg?auto=compress&cs=tinysrgb&w=600',
     soundUrl: '/sounds/dolphin.mp3',
     color: '#0284c7', bg: '#e0f2fe', fitPos: 'center 20%'
+  },
+
+  // ── 울음소리 녹음이 없는 동물: soundUrl 없이 soundText 를 남성 아나운서 음성으로 읽어준다 ──
+  // 사진: Wikimedia Commons (출처·라이선스는 IMAGE_CREDITS.md)
+  {
+    id: 'giraffe', name: '기린', soundText: '쭈욱~ 목이 길어요!', icon: '🦒',
+    img: '/animals/giraffe.jpg',
+    color: '#d97706', bg: '#fef3c7', fitPos: 'center 25%'
+  },
+
+  {
+    id: 'zebra', name: '얼룩말', soundText: '따각따각! 줄무늬 옷!', icon: '🦓',
+    img: '/animals/zebra.jpg',
+    color: '#334155', bg: '#f1f5f9', fitPos: 'center 45%'
+  },
+
+  {
+    id: 'hippo', name: '하마', soundText: '하~암! 입이 아주 커요!', icon: '🦛',
+    img: '/animals/hippo.jpg',
+    color: '#7c3aed', bg: '#ede9fe', fitPos: 'center 50%'
+  },
+
+  {
+    id: 'crocodile', name: '악어', soundText: '쩍쩍! 이빨이 뾰족뾰족!', icon: '🐊',
+    img: '/animals/crocodile.jpg',
+    color: '#15803d', bg: '#dcfce7', fitPos: 'center 50%'
+  },
+
+  {
+    id: 'chipmunk', name: '다람쥐', soundText: '오물오물~ 도토리 냠냠!', icon: '🐿️',
+    img: '/animals/chipmunk.jpg',
+    color: '#b45309', bg: '#ffedd5', fitPos: 'center 35%'
+  },
+
+  {
+    id: 'hedgehog', name: '고슴도치', soundText: '뾰족뾰족! 가시가 따끔따끔!', icon: '🦔',
+    img: '/animals/hedgehog.jpg',
+    color: '#78716c', bg: '#f5f5f4', fitPos: 'center 50%'
+  },
+
+  {
+    id: 'turtle', name: '거북이', soundText: '엉금엉금~ 느릿느릿 걸어요!', icon: '🐢',
+    img: '/animals/turtle.jpg',
+    color: '#16a34a', bg: '#f0fdf4', fitPos: 'center 50%'
+  },
+
+  {
+    id: 'dinosaur', name: '공룡', soundText: '크아앙! 쿵쿵쿵!', icon: '🦖',
+    img: '/animals/dinosaur.jpg',
+    color: '#059669', bg: '#d1fae5', fitPos: 'center 30%'
   }
 ];
 
@@ -1296,6 +1352,36 @@ const REAL_FRUITS = [
     img: blueberryImg,
     color: '#4338ca', bg: '#e0e7ff', fitPos: 'center center'
   },
+  {
+    id: 'pear', name: '배', icon: '🍐', category: '과일',
+    img: pearImg,
+    color: '#a16207', bg: '#fef9c3', fitPos: 'center center'
+  },
+  {
+    id: 'kiwi', name: '키위', icon: '🥝', category: '과일',
+    img: kiwiImg,
+    color: '#65a30d', bg: '#ecfccb', fitPos: 'center center'
+  },
+  {
+    id: 'lemon', name: '레몬', icon: '🍋', category: '과일',
+    img: lemonImg,
+    color: '#ca8a04', bg: '#fef9c3', fitPos: 'center center'
+  },
+  {
+    id: 'mango', name: '망고', icon: '🥭', category: '과일',
+    img: mangoImg,
+    color: '#ea580c', bg: '#ffedd5', fitPos: 'center center'
+  },
+  {
+    id: 'persimmon', name: '감', icon: '🟠', category: '과일',
+    img: persimmonImg,
+    color: '#ea580c', bg: '#ffedd5', fitPos: 'center center'
+  },
+  {
+    id: 'plum', name: '자두', icon: '🟣', category: '과일',
+    img: plumImg,
+    color: '#be123c', bg: '#ffe4e6', fitPos: 'center center'
+  },
   // ── 채소 ──
   {
     id: 'carrot', name: '당근', icon: '🥕', category: '채소',
@@ -1340,7 +1426,7 @@ const REAL_FRUITS = [
 ];
 
 // =============================================================================
-// 15종 씽씽 탈것 – 렉서스 ES 350e 블랙 포함 100% 검증된 고화질 실사 사진
+// 21종 씽씽 탈것 – 렉서스 ES 350e 블랙 포함 검증된 실사 사진
 // =============================================================================
 const REAL_VEHICLES = [
   {
@@ -1432,6 +1518,43 @@ const REAL_VEHICLES = [
     img: '/vehicles/rocket.jpg',
     color: '#7c3aed', bg: '#faf5ff', fitPos: 'center 50%',
     category: 'vehicle', detail: '반짝이는 별들을 만나러 우주로 날아가는 로켓'
+  },
+  // 사진: Wikimedia Commons (출처·라이선스는 IMAGE_CREDITS.md)
+  {
+    id: 'garbage_truck', name: '청소차', soundText: '부릉부릉! 쓰레기를 치워요!', icon: '🚛',
+    img: '/vehicles/garbage_truck.jpg',
+    color: '#0284c7', bg: '#e0f2fe', fitPos: 'center 50%',
+    category: 'vehicle', detail: '동네를 깨끗하게 만들어 주는 고마운 청소차'
+  },
+  {
+    id: 'mixer_truck', name: '레미콘', soundText: '빙글빙글! 시멘트를 섞어요!', icon: '🏗️',
+    img: '/vehicles/mixer_truck.jpg',
+    color: '#dc2626', bg: '#fef2f2', fitPos: 'center 50%',
+    category: 'vehicle', detail: '커다란 통을 빙글빙글 돌리는 레미콘 트럭'
+  },
+  {
+    id: 'tow_truck', name: '견인차', soundText: '영차영차! 고장 난 차를 끌어요!', icon: '🛻',
+    img: '/vehicles/tow_truck.jpg',
+    color: '#334155', bg: '#f1f5f9', fitPos: 'center 50%',
+    category: 'vehicle', detail: '고장 난 자동차를 도와주는 든든한 견인차'
+  },
+  {
+    id: 'subway', name: '지하철', soundText: '덜컹덜컹! 땅속을 달려요!', icon: '🚇',
+    img: '/vehicles/subway.jpg',
+    color: '#16a34a', bg: '#f0fdf4', fitPos: 'center 50%',
+    category: 'vehicle', detail: '땅속 터널을 씽씽 달리는 지하철'
+  },
+  {
+    id: 'hot_air_balloon', name: '열기구', soundText: '두둥실~ 하늘 높이 날아요!', icon: '🎈',
+    img: '/vehicles/hot_air_balloon.jpg',
+    color: '#e11d48', bg: '#fff1f2', fitPos: 'center 35%',
+    category: 'vehicle', detail: '커다란 풍선을 타고 하늘을 나는 열기구'
+  },
+  {
+    id: 'submarine', name: '잠수함', soundText: '보글보글! 바닷속으로 쏙!', icon: '🌊',
+    img: '/vehicles/submarine.jpg',
+    color: '#1e3a8a', bg: '#eff6ff', fitPos: 'center 50%',
+    category: 'vehicle', detail: '깊은 바닷속을 헤엄치는 잠수함'
   }
 ];
 
@@ -2913,6 +3036,160 @@ function OceanCreatureSVG({ id, isTarget, isFound, isActive }) {
     );
   }
 
+  // 9. 🪼 말랑 해파리
+  if (id === 'jellyfish') {
+    return (
+      <svg viewBox="0 0 110 125" width="100%" height="100%" style={{ filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.35))', overflow: 'visible' }}>
+        {/* 하늘하늘 촉수 */}
+        <g stroke="#c084fc" strokeWidth="5" strokeLinecap="round" fill="none">
+          <path d="M 30 62 Q 22 80 32 94 Q 40 106 30 120" />
+          <path d="M 46 66 Q 40 84 48 98 Q 54 110 46 122" />
+          <path d="M 64 66 Q 70 84 62 98 Q 56 110 64 122" />
+          <path d="M 80 62 Q 88 80 78 94 Q 70 106 80 120" />
+        </g>
+        <g stroke="#f0abfc" strokeWidth="3" strokeLinecap="round" fill="none">
+          <path d="M 38 64 Q 34 78 40 88" />
+          <path d="M 72 64 Q 76 78 70 88" />
+        </g>
+
+        {/* 동그란 우산 몸통 */}
+        <path d="M 14 62 Q 14 12 55 12 Q 96 12 96 62 Q 88 70 80 62 Q 72 70 64 64 Q 55 72 46 64 Q 38 70 30 62 Q 22 70 14 62 Z" fill="#e9d5ff" stroke="#a855f7" strokeWidth="3.5" strokeLinejoin="round" />
+        <path d="M 26 40 Q 30 22 50 18" stroke="#ffffff" strokeWidth="5" strokeLinecap="round" fill="none" opacity="0.8" />
+        <circle cx="74" cy="26" r="4" fill="#ffffff" opacity="0.7" />
+
+        {/* 초롱초롱 눈 & 볼터치 & 미소 */}
+        <circle cx="42" cy="42" r="5" fill="#0f172a" /><circle cx="43.5" cy="40.5" r="1.8" fill="#ffffff" />
+        <circle cx="68" cy="42" r="5" fill="#0f172a" /><circle cx="69.5" cy="40.5" r="1.8" fill="#ffffff" />
+        <circle cx="34" cy="51" r="4.5" fill="#f43f5e" opacity="0.6" />
+        <circle cx="76" cy="51" r="4.5" fill="#f43f5e" opacity="0.6" />
+        <path d="M 49 50 Q 55 56 61 50" stroke="#7e22ce" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+      </svg>
+    );
+  }
+
+  // 10. ⭐ 반짝 불가사리
+  if (id === 'starfish') {
+    return (
+      <svg viewBox="0 0 120 115" width="100%" height="100%" style={{ filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.35))', overflow: 'visible' }}>
+        {/* 통통한 다섯 팔 별 몸통 */}
+        <path d="M 60 6 Q 67 6 71 30 Q 74 40 84 41 Q 112 42 113 49 Q 114 55 92 69 Q 84 75 87 85 Q 95 108 89 112 Q 83 115 66 98 Q 60 92 54 98 Q 37 115 31 112 Q 25 108 33 85 Q 36 75 28 69 Q 6 55 7 49 Q 8 42 36 41 Q 46 40 49 30 Q 53 6 60 6 Z" fill="#fb923c" stroke="#ea580c" strokeWidth="3.5" strokeLinejoin="round" />
+
+        {/* 오돌토돌 무늬 */}
+        <g fill="#fdba74">
+          <circle cx="60" cy="22" r="3" /><circle cx="60" cy="32" r="2.5" />
+          <circle cx="98" cy="49" r="3" /><circle cx="88" cy="52" r="2.5" />
+          <circle cx="80" cy="96" r="3" /><circle cx="76" cy="86" r="2.5" />
+          <circle cx="40" cy="96" r="3" /><circle cx="44" cy="86" r="2.5" />
+          <circle cx="22" cy="49" r="3" /><circle cx="32" cy="52" r="2.5" />
+        </g>
+
+        {/* 웃는 얼굴 */}
+        <circle cx="51" cy="56" r="4.5" fill="#0f172a" /><circle cx="52.5" cy="54.5" r="1.6" fill="#ffffff" />
+        <circle cx="69" cy="56" r="4.5" fill="#0f172a" /><circle cx="70.5" cy="54.5" r="1.6" fill="#ffffff" />
+        <circle cx="45" cy="65" r="4" fill="#f43f5e" opacity="0.65" />
+        <circle cx="75" cy="65" r="4" fill="#f43f5e" opacity="0.65" />
+        <path d="M 54 66 Q 60 72 66 66" stroke="#9a3412" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+      </svg>
+    );
+  }
+
+  // 11. 🐴 꼬리 말린 해마
+  if (id === 'seahorse') {
+    return (
+      <svg viewBox="0 0 100 130" width="100%" height="100%" style={{ filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.35))', overflow: 'visible' }}>
+        {/* 등지느러미 */}
+        <path d="M 30 56 Q 14 62 20 76 Q 26 70 34 70 Z" fill="#fde68a" stroke="#d97706" strokeWidth="2.5" strokeLinejoin="round" />
+
+        {/* 몸통 → 돌돌 말린 꼬리 */}
+        <path d="M 52 24 Q 30 30 32 56 Q 34 74 46 88 Q 56 100 50 112 Q 44 122 34 116 Q 26 110 34 104 Q 40 102 40 108"
+          stroke="#d97706" strokeWidth="21" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <path d="M 52 24 Q 30 30 32 56 Q 34 74 46 88 Q 56 100 50 112 Q 44 122 34 116 Q 26 110 34 104 Q 40 102 40 108"
+          stroke="#facc15" strokeWidth="15" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        {/* 배 줄무늬 */}
+        <g stroke="#d97706" strokeWidth="2" strokeLinecap="round">
+          <line x1="40" y1="48" x2="47" y2="46" /><line x1="40" y1="58" x2="47" y2="57" />
+          <line x1="42" y1="68" x2="49" y2="68" /><line x1="47" y1="78" x2="54" y2="77" />
+        </g>
+
+        {/* 머리 & 긴 주둥이 */}
+        <ellipse cx="56" cy="24" rx="16" ry="14" fill="#facc15" stroke="#d97706" strokeWidth="3" />
+        <path d="M 68 26 L 88 30 Q 92 32 88 35 L 68 34 Z" fill="#facc15" stroke="#d97706" strokeWidth="3" strokeLinejoin="round" />
+        {/* 왕관 볏 */}
+        <path d="M 46 12 L 50 2 L 56 10 L 62 2 L 64 12" fill="#fde68a" stroke="#d97706" strokeWidth="2.5" strokeLinejoin="round" />
+
+        {/* 눈 & 볼터치 */}
+        <circle cx="60" cy="21" r="5.5" fill="#ffffff" stroke="#d97706" strokeWidth="1.5" />
+        <circle cx="61" cy="21" r="3.3" fill="#0f172a" /><circle cx="62" cy="19.8" r="1.2" fill="#ffffff" />
+        <circle cx="54" cy="31" r="4" fill="#f43f5e" opacity="0.65" />
+      </svg>
+    );
+  }
+
+  // 12. 🦐 꼬부랑 새우
+  if (id === 'shrimp') {
+    return (
+      <svg viewBox="0 0 130 100" width="100%" height="100%" style={{ filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.35))', overflow: 'visible' }}>
+        {/* 긴 더듬이 */}
+        <g stroke="#f97316" strokeWidth="2.5" strokeLinecap="round" fill="none">
+          <path d="M 104 34 Q 118 12 128 8" />
+          <path d="M 100 32 Q 108 8 116 2" />
+        </g>
+
+        {/* 부채 꼬리 */}
+        <path d="M 22 70 L 4 60 Q 2 72 8 80 Z" fill="#fdba74" stroke="#ea580c" strokeWidth="2.5" strokeLinejoin="round" />
+        <path d="M 22 72 L 8 86 Q 18 92 26 86 Z" fill="#fdba74" stroke="#ea580c" strokeWidth="2.5" strokeLinejoin="round" />
+
+        {/* 꼬부라진 마디 몸통 */}
+        <path d="M 20 72 Q 24 40 58 32 Q 92 26 108 42 Q 112 54 100 58 Q 84 48 62 54 Q 42 60 36 78 Q 28 86 20 72 Z" fill="#fb923c" stroke="#ea580c" strokeWidth="3" strokeLinejoin="round" />
+        <g stroke="#ea580c" strokeWidth="2.5" strokeLinecap="round" fill="none">
+          <path d="M 38 46 Q 46 54 44 64" />
+          <path d="M 52 38 Q 58 46 56 56" />
+          <path d="M 68 34 Q 72 42 70 52" />
+          <path d="M 84 34 Q 86 42 84 50" />
+        </g>
+        <path d="M 40 50 Q 60 38 90 40" stroke="#ffedd5" strokeWidth="3" strokeLinecap="round" fill="none" opacity="0.7" />
+
+        {/* 꼬물꼬물 다리 */}
+        <g stroke="#ea580c" strokeWidth="2.5" strokeLinecap="round">
+          <line x1="58" y1="56" x2="56" y2="66" /><line x1="68" y1="54" x2="67" y2="64" />
+          <line x1="78" y1="52" x2="78" y2="62" /><line x1="88" y1="52" x2="90" y2="61" />
+        </g>
+
+        {/* 눈 & 볼터치 */}
+        <circle cx="100" cy="40" r="5.5" fill="#ffffff" stroke="#ea580c" strokeWidth="1.5" />
+        <circle cx="101" cy="40" r="3.3" fill="#0f172a" /><circle cx="102" cy="38.8" r="1.2" fill="#ffffff" />
+        <circle cx="94" cy="49" r="3.5" fill="#f43f5e" opacity="0.7" />
+      </svg>
+    );
+  }
+
+  // 13. 🐧 아기 펭귄
+  if (id === 'penguin') {
+    return (
+      <svg viewBox="0 0 110 125" width="100%" height="100%" style={{ filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.35))', overflow: 'visible' }}>
+        {/* 주황 발 */}
+        <ellipse cx="42" cy="116" rx="11" ry="5" fill="#fb923c" stroke="#ea580c" strokeWidth="2" />
+        <ellipse cx="68" cy="116" rx="11" ry="5" fill="#fb923c" stroke="#ea580c" strokeWidth="2" />
+
+        {/* 파닥파닥 날개 */}
+        <ellipse cx="18" cy="70" rx="9" ry="22" fill="#1e293b" stroke="#0f172a" strokeWidth="2.5" transform="rotate(25 18 70)" />
+        <ellipse cx="92" cy="70" rx="9" ry="22" fill="#1e293b" stroke="#0f172a" strokeWidth="2.5" transform="rotate(-25 92 70)" />
+
+        {/* 통통한 몸 & 하얀 배 */}
+        <ellipse cx="55" cy="66" rx="38" ry="50" fill="#1e293b" stroke="#0f172a" strokeWidth="3" />
+        <ellipse cx="55" cy="76" rx="27" ry="37" fill="#ffffff" />
+        <path d="M 30 48 Q 42 34 55 46 Q 68 34 80 48 Q 74 30 55 30 Q 36 30 30 48 Z" fill="#ffffff" />
+
+        {/* 눈 & 부리 & 볼터치 */}
+        <circle cx="45" cy="44" r="5" fill="#0f172a" /><circle cx="46.5" cy="42.5" r="1.8" fill="#ffffff" />
+        <circle cx="65" cy="44" r="5" fill="#0f172a" /><circle cx="66.5" cy="42.5" r="1.8" fill="#ffffff" />
+        <path d="M 48 52 L 62 52 L 55 61 Z" fill="#fb923c" stroke="#ea580c" strokeWidth="2" strokeLinejoin="round" />
+        <circle cx="38" cy="55" r="4.5" fill="#f43f5e" opacity="0.65" />
+        <circle cx="72" cy="55" r="4.5" fill="#f43f5e" opacity="0.65" />
+      </svg>
+    );
+  }
+
   // 8. 🦭 아기물개
   return (
     <svg viewBox="0 0 135 105" width="100%" height="100%" style={{ filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.35))', overflow: 'visible' }}>
@@ -2950,58 +3227,687 @@ function OceanCreatureSVG({ id, isTarget, isFound, isActive }) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// 🌊 신비한 바다속 탐험 데이터 (8종 바다 생물)
+// 🐠 살아있는 어항
+//  - 캔버스: 작은 물고기 떼(Boids 군집: 분리·정렬·응집, 무리별 색) + 햇살·해초·모래·거품·물결
+//  - 톡 치면 물고기가 흩어지고, 꾹 누르고 있으면 손가락을 따라온다
+//  - 태블릿을 기울이면 물고기·거품·해초·모래가 기울어진 쪽으로 쏠린다
+//  - 바다 생물(SVG)은 종류별 움직임(헤엄 / 모래 위 기어가기 / 해파리처럼 둥실)으로 돌아다닌다
+//    움직이는 대상을 아기가 맞히기 쉽도록 터치 판정은 그림보다 넉넉하게 잡는다
+//  - 위치는 매 프레임 ref 로 DOM/캔버스에 직접 반영한다(React 리렌더 없음)
+// ═════════════════════════════════════════════════════════════════════════════
+
+const AQUA_FISH_SCHOOLS = [
+  { body: '#fb923c', belly: '#fed7aa', fin: '#ea580c' },
+  { body: '#facc15', belly: '#fef9c3', fin: '#ca8a04' },
+  { body: '#38bdf8', belly: '#e0f2fe', fin: '#0369a1' },
+  { body: '#f472b6', belly: '#fce7f3', fin: '#db2777' }
+];
+
+// 생물별 움직임: swim(헤엄) / crawl(모래 위) / pulse(해파리처럼 둥실 떠올랐다 가라앉기)
+const AQUA_MOTION = { crab: 'crawl', starfish: 'crawl', jellyfish: 'pulse' };
+// 그림이 오른쪽을 보고 있어 진행 방향에 따라 좌우를 뒤집는 생물
+const AQUA_FLIP = new Set(['fish', 'turtle', 'whale', 'shark', 'seal', 'shrimp', 'seahorse']);
+// 느릿느릿 움직이는 생물 (기본 속도 배율)
+const AQUA_SPEED = { seahorse: 0.45, octopus: 0.6, turtle: 0.7, whale: 0.65, starfish: 0.35, crab: 1 };
+
+const AQUA_SAND = 64; // 모래 바닥 두께(px)
+const clampNum = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+function makeAquaFish(W, H) {
+  const a = Math.random() * Math.PI * 2;
+  return {
+    x: Math.random() * W, y: 30 + Math.random() * Math.max(40, H - AQUA_SAND - 80),
+    vx: Math.cos(a) * 60, vy: Math.sin(a) * 25,
+    school: Math.floor(Math.random() * AQUA_FISH_SCHOOLS.length),
+    len: 13 + Math.random() * 9, phase: Math.random() * 6, panic: 0
+  };
+}
+
+function LivingAquariumView({ creatures, targetId, found, onTapCreature }) {
+  const wrapRef = useRef(null);
+  const canvasRef = useRef(null);
+  const elsRef = useRef({});   // id → { outer, inner }
+  const simRef = useRef(null);
+  const latestRef = useRef(null);
+  latestRef.current = { creatures, targetId, found, onTapCreature };
+  const [tiltState, setTiltState] = useState('none'); // none(미지원) | ask(iOS 권한 필요) | on
+
+  const bindEl = (id, key) => (el) => {
+    const m = elsRef.current[id] || (elsRef.current[id] = {});
+    m[key] = el;
+  };
+
+  // ── 시뮬레이션 & 렌더 루프 ──
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const s = {
+      W: 0, H: 0, dpr: 1, t: 0, quality: 1, slow: 0,
+      fish: [], crit: {}, bubbles: [], ripples: [], motes: [], weeds: [], pebbles: [],
+      pointer: { down: false, x: 0, y: 0, downAt: 0 },
+      tilt: { x: 0, y: 0 }, tiltRaw: { x: 0, y: 0 }, tiltBase: null, sandTilt: 0,
+      bubbleTimer: 0, bg: null
+    };
+    simRef.current = s;
+
+    const groundY = (x) => s.H - AQUA_SAND + Math.sin(x * 0.012) * 6 + s.sandTilt * (x - s.W / 2) * 0.12;
+
+    const resize = () => {
+      const r = wrap.getBoundingClientRect();
+      s.W = Math.max(200, r.width);
+      s.H = Math.max(200, r.height);
+      s.dpr = Math.min(window.devicePixelRatio || 1, s.quality < 1 ? 1 : 2);
+      canvas.width = Math.round(s.W * s.dpr);
+      canvas.height = Math.round(s.H * s.dpr);
+      canvas.style.width = `${s.W}px`;
+      canvas.style.height = `${s.H}px`;
+
+      const target = Math.round(clampNum(s.W * s.H / 9000, 22, 55) * s.quality);
+      while (s.fish.length < target) s.fish.push(makeAquaFish(s.W, s.H));
+      s.fish.length = Math.min(s.fish.length, target);
+
+      const n = Math.max(4, Math.round(s.W / 130));
+      s.weeds = Array.from({ length: n }, (_, i) => ({
+        x: (i + 0.5) * s.W / n + (Math.random() - 0.5) * 50,
+        h: 60 + Math.random() * Math.min(120, s.H * 0.28), w: 8 + Math.random() * 5,
+        color: i % 2 ? '#10b981' : '#059669', phase: Math.random() * 6
+      }));
+      s.pebbles = Array.from({ length: Math.round(s.W / 45) }, () => ({
+        x: Math.random() * s.W, dy: 14 + Math.random() * 40, r: 3 + Math.random() * 6,
+        c: ['#d6d3d1', '#a8a29e', '#fda4af', '#fcd34d'][Math.floor(Math.random() * 4)]
+      }));
+      if (!s.motes.length) {
+        s.motes = Array.from({ length: 45 }, () => ({ x: Math.random(), y: Math.random(), r: 0.6 + Math.random() * 1.6, sp: 0.01 + Math.random() * 0.02 }));
+      }
+      s.bg = ctx.createLinearGradient(0, 0, 0, s.H);
+      s.bg.addColorStop(0, '#5fd3ff');
+      s.bg.addColorStop(0.3, '#0ea5e9');
+      s.bg.addColorStop(0.72, '#0369a1');
+      s.bg.addColorStop(1, '#0b3b5c');
+    };
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(wrap);
+
+    // ── 입력: 톡(흩어지기 / 생물 맞히기) · 꾹 누르기(따라오기) ──
+    const localPoint = (e) => {
+      const r = wrap.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+    const spawnBurst = (x, y, count) => {
+      for (let i = 0; i < count; i++) {
+        s.bubbles.push({ x: x + (Math.random() - 0.5) * 30, y: y + (Math.random() - 0.5) * 20, r: 3 + Math.random() * 7, wob: Math.random() * 6, vy: 60 + Math.random() * 60 });
+      }
+    };
+    const onDown = (e) => {
+      const { x, y } = localPoint(e);
+      s.pointer = { down: true, x, y, downAt: s.t };
+      s.ripples.push({ x, y, r: 8, life: 1 });
+
+      let best = null, bestD = Infinity;
+      Object.values(s.crit).forEach(c => {
+        const d = Math.hypot(c.x - x, c.y - y);
+        if (d < c.size * 0.62 + 16 && d < bestD) { best = c; bestD = d; }
+      });
+
+      if (best) {
+        best.boing = 1;
+        spawnBurst(best.x, best.y, 8);
+        const { creatures: list, onTapCreature: tap } = latestRef.current;
+        const creature = list.find(k => k.id === best.id);
+        if (creature) tap(creature);
+        return;
+      }
+
+      spawnBurst(x, y, 6);
+      audioEngine.playBubble();
+      // 손가락 주변 물고기는 깜짝 놀라 흩어진다
+      s.fish.forEach(f => {
+        const dx = f.x - x, dy = f.y - y, d = Math.hypot(dx, dy) || 1;
+        if (d < 210) {
+          const k = 420 * (1 - d / 210);
+          f.vx += dx / d * k; f.vy += dy / d * k; f.panic = 1;
+        }
+      });
+      Object.values(s.crit).forEach(c => {
+        if (Math.hypot(c.x - x, c.y - y) < 160) c.startle = 1;
+      });
+    };
+    const onMove = (e) => {
+      if (!s.pointer.down) return;
+      const p = localPoint(e);
+      s.pointer.x = p.x; s.pointer.y = p.y;
+    };
+    const onUp = () => { s.pointer.down = false; };
+    wrap.addEventListener('pointerdown', onDown);
+    wrap.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+
+    // ── 기울기 센서 (화면 회전 방향 보정 + 들고 있는 자세는 서서히 0으로 맞춤) ──
+    s.onOrient = (e) => {
+      if (e.beta == null || e.gamma == null) return;
+      const ang = (window.screen.orientation && window.screen.orientation.angle) ?? window.orientation ?? 0;
+      let x = e.gamma, y = e.beta;
+      if (ang === 90) { x = e.beta; y = -e.gamma; }
+      else if (ang === -90 || ang === 270) { x = -e.beta; y = e.gamma; }
+      else if (ang === 180) { x = -e.gamma; y = -e.beta; }
+      if (!s.tiltBase) s.tiltBase = { x, y };
+      s.tiltBase.x += (x - s.tiltBase.x) * 0.005;
+      s.tiltBase.y += (y - s.tiltBase.y) * 0.005;
+      s.tiltRaw.x = clampNum((x - s.tiltBase.x) / 28, -1, 1);
+      s.tiltRaw.y = clampNum((y - s.tiltBase.y) / 28, -1, 1);
+    };
+    const touchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (touchDevice && typeof window.DeviceOrientationEvent !== 'undefined') {
+      if (typeof window.DeviceOrientationEvent.requestPermission === 'function') {
+        setTiltState('ask');
+      } else {
+        window.addEventListener('deviceorientation', s.onOrient);
+        setTiltState('on');
+      }
+    }
+
+    // ── 물리 업데이트 ──
+    const updateFish = (dt) => {
+      const F = s.fish, n = F.length, p = s.pointer;
+      const following = p.down && s.t - p.downAt > 0.3;
+      const crits = Object.values(s.crit);
+      const floor = s.H - AQUA_SAND - 12;
+      for (let i = 0; i < n; i++) {
+        const f = F[i];
+        let sx = 0, sy = 0, ax = 0, ay = 0, cx = 0, cy = 0, cnt = 0;
+        for (let j = 0; j < n; j++) {
+          if (i === j) continue;
+          const o = F[j];
+          const dx = o.x - f.x, dy = o.y - f.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < 484 && d2 > 0.01) {          // 분리: 22px 안쪽은 밀어냄
+            const d = Math.sqrt(d2);
+            sx -= dx / d * (22 - d) * 7; sy -= dy / d * (22 - d) * 7;
+          }
+          if (o.school === f.school && d2 < 5600) { // 같은 무리: 정렬·응집
+            ax += o.vx; ay += o.vy; cx += o.x; cy += o.y; cnt++;
+          }
+        }
+        let fx = sx, fy = sy;
+        if (cnt) {
+          fx += (ax / cnt - f.vx) * 1.4 + (cx / cnt - f.x) * 0.9;
+          fy += (ay / cnt - f.vy) * 1.4 + (cy / cnt - f.y) * 0.9;
+        }
+        // 가장자리·모래 바닥 피하기
+        const m = 50;
+        if (f.x < m) fx += (m - f.x) * 5;
+        if (f.x > s.W - m) fx -= (f.x - (s.W - m)) * 5;
+        if (f.y < m) fy += (m - f.y) * 5;
+        if (f.y > floor - 20) fy -= (f.y - (floor - 20)) * 6;
+        // 바다 생물 피해 다니기
+        crits.forEach(c => {
+          const dx = f.x - c.x, dy = f.y - c.y, d = Math.hypot(dx, dy) || 1, rr = c.size * 0.55;
+          if (d < rr) { fx += dx / d * (rr - d) * 6; fy += dy / d * (rr - d) * 6; }
+        });
+        // 꾹 누르고 있으면 손가락을 따라온다 (가까우면 맴돈다)
+        if (following) {
+          const dx = p.x - f.x, dy = p.y - f.y, d = Math.hypot(dx, dy) || 1;
+          if (d < 460) {
+            const pull = d > 45 ? 380 : -140;
+            fx += dx / d * pull - dy / d * 60; fy += dy / d * pull + dx / d * 60;
+          }
+        }
+        // 기울기 → 물 흐름
+        fx += s.tilt.x * 150; fy += s.tilt.y * 90;
+        fx += (Math.random() - 0.5) * 40; fy += (Math.random() - 0.5) * 30;
+
+        f.vx += fx * dt; f.vy += fy * dt;
+        const sp = Math.hypot(f.vx, f.vy) || 1;
+        const maxSp = 95 * (1 + f.panic * 1.8), minSp = 35;
+        if (sp > maxSp) { f.vx *= maxSp / sp; f.vy *= maxSp / sp; }
+        else if (sp < minSp) { f.vx *= minSp / sp; f.vy *= minSp / sp; }
+        f.panic = Math.max(0, f.panic - dt * 1.1);
+        f.x += f.vx * dt; f.y += f.vy * dt;
+        f.x = clampNum(f.x, 4, s.W - 4); f.y = clampNum(f.y, 6, floor);
+        f.phase += dt * (7 + sp * 0.09);
+      }
+    };
+
+    const updateCreatures = (dt) => {
+      const { targetId: tid, found: fnd } = latestRef.current;
+      const list = Object.values(s.crit);
+      list.forEach(c => {
+        const r = c.size * 0.5;
+        const spMul = AQUA_SPEED[c.id] || 1;
+        c.alpha = Math.min(1, c.alpha + dt * 1.5);
+        c.boing = Math.max(0, c.boing - dt * 1.6);
+        c.startle = Math.max(0, c.startle - dt * 0.9);
+        const showOff = fnd && c.id === tid;
+
+        if (showOff) {
+          // 찾은 친구는 가운데로 헤엄쳐 와서 뽐낸다
+          c.vx += ((s.W / 2 - c.x) * 1.4 - c.vx) * Math.min(1, dt * 2.5);
+          c.vy += ((s.H * 0.42 - c.y) * 1.4 - c.vy) * Math.min(1, dt * 2.5);
+        } else if (c.motion === 'crawl') {
+          c.wander += (Math.random() - 0.5) * dt * 1.6;
+          const sp = 24 * spMul * (1 + c.startle * 2);
+          c.vx += (Math.cos(c.wander) * sp - c.vx) * Math.min(1, dt * 1.5);
+          c.vy = (groundY(c.x) + 6 - r * 0.55 - c.y) * 4;
+        } else if (c.motion === 'pulse') {
+          c.pulseT -= dt;
+          if (c.pulseT <= 0) {
+            c.pulseT = 2 + Math.random() * 1.6;
+            c.vy = -60; c.vx += (Math.random() - 0.5) * 36; c.squash = 1;
+          }
+          c.vy = Math.min(14, c.vy + 26 * dt);
+          c.vx *= 1 - dt * 0.6;
+          c.squash = Math.max(0, (c.squash || 0) - dt * 2.5);
+        } else {
+          c.wander += (Math.random() - 0.5) * dt * 1.8;
+          const sp = 36 * spMul * (1 + c.startle * 2.2);
+          c.vx += (Math.cos(c.wander) * sp - c.vx) * Math.min(1, dt * 1.2);
+          c.vy += (Math.sin(c.wander) * sp * 0.45 - c.vy) * Math.min(1, dt * 1.2);
+        }
+        if (c.motion !== 'crawl' && !showOff) { c.vx += s.tilt.x * 45 * dt; c.vy += s.tilt.y * 30 * dt; }
+
+        c.x += c.vx * dt; c.y += c.vy * dt;
+        const top = r * 0.8 + 6, bottom = s.H - AQUA_SAND - r * 0.35;
+        // 벽에 닿으면 안쪽으로 방향을 돌린다 (이미 안쪽을 향하고 있으면 그대로)
+        if (c.x < r) { c.x = r; c.vx = Math.abs(c.vx); if (Math.cos(c.wander) < 0) c.wander = Math.PI - c.wander; }
+        if (c.x > s.W - r) { c.x = s.W - r; c.vx = -Math.abs(c.vx); if (Math.cos(c.wander) > 0) c.wander = Math.PI - c.wander; }
+        if (c.motion !== 'crawl') {
+          if (c.y < top) { c.y = top; c.vy = Math.abs(c.vy) * 0.5; if (Math.sin(c.wander) < 0) c.wander = -c.wander; }
+          if (c.y > bottom) { c.y = bottom; c.vy = -Math.abs(c.vy) * 0.5; if (Math.sin(c.wander) > 0) c.wander = -c.wander; }
+        }
+        if (AQUA_FLIP.has(c.id)) {
+          if (c.vx > 6) c.heading = 1;
+          else if (c.vx < -6) c.heading = -1;
+        }
+      });
+      // 생물끼리 겹치지 않게 살짝 밀어내기
+      for (let i = 0; i < list.length; i++) {
+        for (let j = i + 1; j < list.length; j++) {
+          const a = list[i], b = list[j];
+          const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.01;
+          const min = (a.size + b.size) * 0.58;
+          if (d < min) {
+            const k = (min - d) / d * Math.min(1, dt * 3) * 0.5;
+            a.x -= dx * k; b.x += dx * k;
+            if (a.motion !== 'crawl') a.y -= dy * k;
+            if (b.motion !== 'crawl') b.y += dy * k;
+          }
+        }
+      }
+    };
+
+    const updateParticles = (dt) => {
+      s.bubbleTimer -= dt;
+      if (s.bubbleTimer <= 0 && s.weeds.length) {
+        s.bubbleTimer = 0.25 + Math.random() * 0.5;
+        const w = s.weeds[Math.floor(Math.random() * s.weeds.length)];
+        s.bubbles.push({ x: w.x + (Math.random() - 0.5) * 20, y: groundY(w.x) - 4, r: 2 + Math.random() * 5, wob: Math.random() * 6, vy: 35 + Math.random() * 30 });
+      }
+      s.bubbles.forEach(b => {
+        b.wob += dt * 3;
+        b.y -= (b.vy + b.r * 4) * dt;
+        b.x += (Math.sin(b.wob) * 18 - s.tilt.x * 40) * dt;
+      });
+      s.bubbles = s.bubbles.filter(b => b.y > -12).slice(-140);
+      s.ripples.forEach(r => { r.r += 170 * dt; r.life -= dt * 1.4; });
+      s.ripples = s.ripples.filter(r => r.life > 0);
+      s.motes.forEach(m => {
+        m.y -= m.sp * dt; m.x += (Math.sin(s.t * 0.3 + m.y * 9) * 0.004 + s.tilt.x * 0.01) * dt;
+        if (m.y < 0) m.y += 1; if (m.x < 0) m.x += 1; if (m.x > 1) m.x -= 1;
+      });
+    };
+
+    // ── 그리기 ──
+    const drawFish = (f) => {
+      const col = AQUA_FISH_SCHOOLS[f.school], L = f.len, wig = Math.sin(f.phase) * 0.35;
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.rotate(Math.atan2(f.vy, f.vx));
+      if (f.vx < 0) ctx.scale(1, -1);
+      ctx.fillStyle = col.fin;
+      ctx.beginPath();
+      ctx.moveTo(-L * 0.42, 0);
+      ctx.lineTo(-L * 0.95, -L * 0.36 + wig * L * 0.3);
+      ctx.lineTo(-L * 0.95, L * 0.36 + wig * L * 0.3);
+      ctx.closePath(); ctx.fill();
+      ctx.fillStyle = col.body;
+      ctx.beginPath(); ctx.ellipse(0, 0, L * 0.55, L * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = col.belly;
+      ctx.beginPath(); ctx.ellipse(L * 0.05, L * 0.1, L * 0.36, L * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath(); ctx.arc(L * 0.3, -L * 0.06, L * 0.07 + 0.7, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    };
+
+    const draw = () => {
+      const { W, H, t } = s;
+      ctx.setTransform(s.dpr, 0, 0, s.dpr, 0, 0);
+      ctx.fillStyle = s.bg; ctx.fillRect(0, 0, W, H);
+
+      // 햇살 기둥 (기울이면 같이 기울어짐)
+      for (let i = 0; i < 4; i++) {
+        const x0 = W * (0.12 + i * 0.26) + Math.sin(t * 0.25 + i) * 20;
+        const lean = 70 + s.tilt.x * 120;
+        const a = 0.1 + 0.06 * Math.sin(t * 0.7 + i * 1.7);
+        const g = ctx.createLinearGradient(0, 0, 0, H * 0.85);
+        g.addColorStop(0, `rgba(255,255,255,${a + 0.08})`);
+        g.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(x0 - 25 - i * 6, 0); ctx.lineTo(x0 + 25 + i * 6, 0);
+        ctx.lineTo(x0 + lean + 70, H * 0.85); ctx.lineTo(x0 + lean - 40, H * 0.85);
+        ctx.closePath(); ctx.fill();
+      }
+
+      // 수면 반짝임
+      ctx.fillStyle = 'rgba(255,255,255,0.22)';
+      ctx.beginPath(); ctx.moveTo(0, 0);
+      for (let x = 0; x <= W; x += 16) ctx.lineTo(x, 7 + Math.sin(x * 0.03 + t * 2) * 3 + s.tilt.x * (x - W / 2) * 0.05);
+      ctx.lineTo(W, 0); ctx.closePath(); ctx.fill();
+
+      // 플랑크톤 반짝이
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      s.motes.forEach(m => { ctx.beginPath(); ctx.arc(m.x * W, m.y * (H - AQUA_SAND), m.r, 0, Math.PI * 2); ctx.fill(); });
+
+      // 해초 (물결 + 기울기 + 손가락에 밀림)
+      s.weeds.forEach(w => {
+        const baseY = groundY(w.x) + 8, seg = 8;
+        let push = 0;
+        if (s.pointer.down) {
+          const dx = w.x - s.pointer.x;
+          if (Math.abs(dx) < 130 && s.pointer.y > baseY - w.h - 30) push = Math.sign(dx || 1) * (130 - Math.abs(dx)) * 0.12;
+        }
+        ctx.beginPath(); ctx.moveTo(w.x, baseY);
+        for (let i = 1; i <= seg; i++) {
+          const k = i / seg;
+          const sway = Math.sin(t * 1.3 + w.phase + i * 0.55) * 4 * k * 3 + (s.tilt.x * 26 + push) * k * k;
+          ctx.lineTo(w.x + sway, baseY - w.h * k);
+        }
+        ctx.strokeStyle = w.color; ctx.lineWidth = w.w; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+        ctx.strokeStyle = 'rgba(167,243,208,0.45)'; ctx.lineWidth = w.w * 0.3; ctx.stroke();
+      });
+
+      // 작은 물고기 떼
+      s.fish.forEach(drawFish);
+
+      // 모래 바닥 (기울이면 천천히 쏠림)
+      const sg = ctx.createLinearGradient(0, H - AQUA_SAND - 10, 0, H);
+      sg.addColorStop(0, '#fde68a'); sg.addColorStop(1, '#d97706');
+      ctx.fillStyle = sg;
+      ctx.beginPath(); ctx.moveTo(0, H);
+      for (let x = 0; x <= W; x += 12) ctx.lineTo(x, groundY(x));
+      ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+      s.pebbles.forEach(p => {
+        ctx.fillStyle = p.c;
+        ctx.beginPath(); ctx.ellipse(p.x, groundY(p.x) + p.dy, p.r * 1.3, p.r, 0, 0, Math.PI * 2); ctx.fill();
+      });
+
+      // 거품
+      s.bubbles.forEach(b => {
+        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.16)'; ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 1.2; ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.beginPath(); ctx.arc(b.x - b.r * 0.35, b.y - b.r * 0.35, b.r * 0.25, 0, Math.PI * 2); ctx.fill();
+      });
+
+      // 터치 물결
+      s.ripples.forEach(r => {
+        ctx.strokeStyle = `rgba(255,255,255,${r.life * 0.7})`; ctx.lineWidth = 3 * r.life + 1;
+        ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2); ctx.stroke();
+      });
+    };
+
+    const placeCreatures = () => {
+      const { targetId: tid, found: fnd } = latestRef.current;
+      Object.values(s.crit).forEach(c => {
+        const els = elsRef.current[c.id];
+        if (!els || !els.outer || !els.inner) return;
+        const w = c.size * 1.15, h = c.size * 1.05;
+        els.outer.style.transform = `translate3d(${(c.x - w / 2).toFixed(1)}px, ${(c.y - h * 0.375).toFixed(1)}px, 0)`;
+        els.outer.style.opacity = c.alpha.toFixed(2);
+        const bob = c.motion === 'crawl' ? 0 : Math.sin(s.t * 2 + c.phase) * 3;
+        const grow = (fnd && c.id === tid ? 1.25 : 1) * (1 + Math.sin(c.boing * Math.PI) * 0.22);
+        const sq = 1 - (c.squash || 0) * 0.14;
+        const ang = AQUA_FLIP.has(c.id) ? clampNum(Math.atan2(c.vy, Math.abs(c.vx) + 20) * 0.5, -0.35, 0.35) * 57.3 : Math.sin(s.t * 1.5 + c.phase) * 4;
+        els.inner.style.transform = `translateY(${bob.toFixed(1)}px) scale(${(c.heading * grow / sq).toFixed(3)}, ${(grow * sq).toFixed(3)}) rotate(${ang.toFixed(1)}deg)`;
+      });
+    };
+
+    let raf = 0;
+    let last = performance.now();
+    const frame = (now) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      s.t += dt;
+      // 느린 기기면 해상도·물고기 수를 낮춘다
+      if (s.quality === 1) {
+        s.slow = dt > 0.028 ? s.slow + 1 : Math.max(0, s.slow - 1);
+        if (s.slow > 90) { s.quality = 0.6; resize(); }
+      }
+      s.tilt.x += (s.tiltRaw.x - s.tilt.x) * Math.min(1, dt * 4);
+      s.tilt.y += (s.tiltRaw.y - s.tilt.y) * Math.min(1, dt * 4);
+      s.sandTilt += (s.tilt.x - s.sandTilt) * Math.min(1, dt * 0.6);
+
+      updateFish(dt);
+      updateCreatures(dt);
+      updateParticles(dt);
+      draw();
+      placeCreatures();
+      raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      wrap.removeEventListener('pointerdown', onDown);
+      wrap.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      window.removeEventListener('deviceorientation', s.onOrient);
+    };
+  }, []);
+
+  // ── 이번 판 생물 목록이 바뀌면: 남는 생물은 그대로, 새 생물은 화면 가장자리에서 헤엄쳐 들어온다 ──
+  useEffect(() => {
+    const s = simRef.current;
+    if (!s) return;
+    const ids = new Set(creatures.map(c => c.id));
+    Object.keys(s.crit).forEach(id => { if (!ids.has(id)) delete s.crit[id]; });
+    const firstFill = Object.keys(s.crit).length === 0;
+    creatures.forEach(c => {
+      if (s.crit[c.id]) return;
+      const motion = AQUA_MOTION[c.id] || 'swim';
+      const r = c.size * 0.5;
+      const fromLeft = Math.random() < 0.5;
+      const x = firstFill ? r + Math.random() * Math.max(1, s.W - 2 * r) : (fromLeft ? r : s.W - r);
+      const y = motion === 'crawl' ? s.H - AQUA_SAND : r + 10 + Math.random() * Math.max(1, s.H - AQUA_SAND - 2 * r - 20);
+      s.crit[c.id] = {
+        id: c.id, size: c.size, motion, x, y,
+        vx: fromLeft ? 30 : -30, vy: 0, heading: AQUA_FLIP.has(c.id) && !fromLeft ? -1 : 1, wander: fromLeft ? 0 : Math.PI,
+        pulseT: Math.random() * 2, squash: 0, boing: 0, startle: 0, alpha: 0, phase: Math.random() * 6
+      };
+    });
+  }, [creatures]);
+
+  const enableTilt = (e) => {
+    e.stopPropagation();
+    const s = simRef.current;
+    window.DeviceOrientationEvent.requestPermission()
+      .then(res => {
+        if (res === 'granted' && s) {
+          window.addEventListener('deviceorientation', s.onOrient);
+          setTiltState('on');
+        } else {
+          setTiltState('none');
+        }
+      })
+      .catch(() => setTiltState('none'));
+  };
+
+  return (
+    <div
+      ref={wrapRef}
+      style={{
+        flex: 1, minHeight: 0, borderRadius: '28px', position: 'relative', overflow: 'hidden',
+        border: '4px solid #0284c7', boxShadow: 'inset 0 0 50px rgba(0,0,0,0.25)',
+        touchAction: 'none', userSelect: 'none', WebkitUserSelect: 'none', background: '#0369a1'
+      }}
+    >
+      <canvas ref={canvasRef} style={{ position: 'absolute', left: 0, top: 0, display: 'block' }} />
+
+      {creatures.map(creature => {
+        const isFoundTarget = found && creature.id === targetId;
+        return (
+          <div
+            key={creature.id}
+            ref={bindEl(creature.id, 'outer')}
+            style={{
+              position: 'absolute', left: 0, top: 0, opacity: 0, pointerEvents: 'none',
+              width: `${creature.size * 1.15}px`, height: `${creature.size * 1.05}px`,
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              zIndex: isFoundTarget ? 4 : 2, willChange: 'transform'
+            }}
+          >
+            {isFoundTarget && (
+              <div style={{
+                position: 'absolute', inset: '-14px', borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(253, 224, 71, 0.75), rgba(245, 158, 11, 0.2) 70%, transparent 100%)',
+                animation: 'aqua-halo 0.9s ease-in-out infinite alternate', zIndex: -1
+              }} />
+            )}
+            <div ref={bindEl(creature.id, 'inner')} style={{ width: '100%', height: '75%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <OceanCreatureSVG id={creature.id} />
+            </div>
+            <div style={{
+              marginTop: '2px', fontSize: '0.85rem', fontWeight: 900, whiteSpace: 'nowrap',
+              color: isFoundTarget ? '#92400e' : '#0f172a',
+              background: isFoundTarget ? 'linear-gradient(135deg, #fef08a, #fde047)' : 'rgba(255, 255, 255, 0.85)',
+              padding: '3px 10px', borderRadius: '16px',
+              border: isFoundTarget ? '2px solid #ffffff' : `2px solid ${creature.color}`,
+              boxShadow: isFoundTarget ? '0 0 16px rgba(250, 204, 21, 0.9)' : '0 3px 8px rgba(0,0,0,0.18)'
+            }}>
+              {creature.name}
+            </div>
+          </div>
+        );
+      })}
+
+      {tiltState === 'ask' && (
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={enableTilt}
+          style={{
+            position: 'absolute', right: '14px', top: '14px', zIndex: 6,
+            background: 'rgba(255,255,255,0.92)', color: '#0369a1', border: 'none',
+            padding: '10px 16px', borderRadius: '18px', fontWeight: 900, fontSize: '0.95rem',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.2)', cursor: 'pointer'
+          }}
+        >
+          📱 기울여서 놀기
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 🌊 살아있는 어항 바다 생물 데이터 (13종)
 // ═════════════════════════════════════════════════════════════════════════════
 const OCEAN_CREATURES = [
   {
     id: 'fish', name: '물고기', icon: '🐟', title: '니모 열대어',
     color: '#f97316', bg: '#ffedd5',
     soundText: '뻐끔뻐끔~ 주황빛 귀여운 아기 물고기!',
-    left: 20, top: 40, size: 100, swimDelay: 0
+    size: 100
   },
   {
     id: 'octopus', name: '문어', icon: '🐙', title: '뽀글 문어',
     color: '#ec4899', bg: '#fce7f3',
     soundText: '뽀글뽀글~ 다리 여덟 개 말랑말랑 문어!',
-    left: 68, top: 58, size: 110, swimDelay: 1.2
+    size: 110
   },
   {
     id: 'crab', name: '게', icon: '🦀', title: '꽃게',
     color: '#ef4444', bg: '#fee2e2',
     soundText: '찰칵찰칵~ 옆으로 걷는 집게발 꽃게!',
-    left: 12, top: 82, size: 95, swimDelay: 0.6
+    size: 95
   },
   {
     id: 'turtle', name: '거북이', icon: '🐢', title: '바다거북',
     color: '#10b981', bg: '#d1fae5',
     soundText: '느릿느릿~ 푸른 바다를 둥실 헤엄치는 거북이!',
-    left: 45, top: 20, size: 115, swimDelay: 2.1
+    size: 115
   },
   {
     id: 'whale', name: '고래', icon: '🐳', title: '파랑고래',
     color: '#0284c7', bg: '#e0f2fe',
     soundText: '뿌우우~~ 등에서 시원한 물을 뿜는 거대 파랑고래!',
-    left: 78, top: 22, size: 135, swimDelay: 1.8
+    size: 135
   },
   {
     id: 'shark', name: '상어', icon: '🦈', title: '아기상어',
     color: '#3b82f6', bg: '#dbeafe',
     soundText: '뚜루루뚜루~ 멋진 지느러미 아기상어!',
-    left: 40, top: 62, size: 125, swimDelay: 0.9
+    size: 125
   },
   {
     id: 'squid', name: '오징어', icon: '🦑', title: '화살오징어',
     color: '#f43f5e', bg: '#ffe4e6',
     soundText: '슝슝~ 바다속을 재빠르게 헤엄치는 오징어!',
-    left: 88, top: 80, size: 95, swimDelay: 1.5
+    size: 95
   },
   {
     id: 'seal', name: '물개', icon: '🦭', title: '아기물개',
     color: '#64748b', bg: '#f1f5f9',
     soundText: '앙앙~! 짝짜꿍 박수 치는 귀여운 물개!',
-    left: 26, top: 16, size: 105, swimDelay: 2.4
+    size: 105
+  },
+  {
+    id: 'jellyfish', name: '해파리', icon: '🫧', title: '말랑 해파리',
+    color: '#a855f7', bg: '#f3e8ff',
+    soundText: '하늘하늘~ 말랑말랑 투명한 해파리!',
+    size: 100
+  },
+  {
+    id: 'starfish', name: '불가사리', icon: '⭐', title: '반짝 불가사리',
+    color: '#f97316', bg: '#ffedd5',
+    soundText: '반짝반짝~ 다섯 팔 별 모양 불가사리!',
+    size: 95
+  },
+  {
+    id: 'seahorse', name: '해마', icon: '✨', title: '꼬마 해마',
+    color: '#eab308', bg: '#fef9c3',
+    soundText: '돌돌~ 꼬리를 말고 꼿꼿이 서서 헤엄치는 해마!',
+    size: 100
+  },
+  {
+    id: 'shrimp', name: '새우', icon: '🦐', title: '꼬부랑 새우',
+    color: '#f97316', bg: '#ffedd5',
+    soundText: '톡톡~ 꼬리를 튕기며 헤엄치는 꼬부랑 새우!',
+    size: 100
+  },
+  {
+    id: 'penguin', name: '펭귄', icon: '🐧', title: '아기 펭귄',
+    color: '#1e293b', bg: '#e2e8f0',
+    soundText: '슝~ 바닷속을 날쌔게 헤엄치는 아기 펭귄!',
+    size: 100
   }
 ];
+
+// 한 판에 어항에 나오는 바다 생물 수 (찾을 대상 포함)
+const OCEAN_SCENE_SIZE = 8;
+
+// 이번 판에 보일 생물: 찾을 대상은 반드시 포함, 이전 판 생물 일부는 남겨 어항이 자연스럽게 이어지게 한다
+function pickOceanScene(target, prev = []) {
+  const keep = shuffleArray(prev.filter(c => c.id !== target.id)).slice(0, 4);
+  const used = new Set([target.id, ...keep.map(c => c.id)]);
+  const fresh = shuffleArray(OCEAN_CREATURES.filter(c => !used.has(c.id))).slice(0, OCEAN_SCENE_SIZE - 1 - keep.length);
+  return [target, ...keep, ...fresh];
+}
 
 // ═════════════════════════════════════════════════════════════════════════════
 // 🧩 4조각 아기 퍼즐 데이터 (8종 퍼즐 테마)
@@ -4845,10 +5751,8 @@ export default function App() {
 
   // 🌊 바다속 탐험 상태
   const [oceanTarget, setOceanTarget] = useState(() => OCEAN_CREATURES[1]); // 기본: 문어
+  const [oceanScene, setOceanScene] = useState(() => pickOceanScene(OCEAN_CREATURES[1]));
   const [oceanFound, setOceanFound] = useState(false);
-  const [activeOceanCreatureId, setActiveOceanCreatureId] = useState(null);
-  const [oceanBubbles, setOceanBubbles] = useState([]);
-  const [oceanScore, setOceanScore] = useState(0);
 
   // 🧩 4조각 아기 퍼즐 상태 (드래그 앤 드롭 지원)
   const [puzzleTheme, setPuzzleTheme] = useState(() => BABY_PUZZLES[0]); // 기본: 강아지
@@ -4949,37 +5853,17 @@ export default function App() {
     const nextList = OCEAN_CREATURES.filter(c => c.id !== oceanTarget.id);
     const nextTarget = nextList[Math.floor(Math.random() * nextList.length)];
     setOceanTarget(nextTarget);
+    setOceanScene(prev => pickOceanScene(nextTarget, prev));
     setOceanFound(false);
-    setActiveOceanCreatureId(null);
     speakOceanMission(nextTarget);
   };
 
-  const handleTapOceanCreature = (creature, e) => {
-    // 거품 팝핑 파티클 생성
-    const newBubbles = Array.from({ length: 8 }, (_, i) => ({
-      id: Date.now() + i + Math.random(),
-      x: (e.nativeEvent?.offsetX || 50) + (Math.random() - 0.5) * 50,
-      y: (e.nativeEvent?.offsetY || 50) + (Math.random() - 0.5) * 50,
-      size: 16 + Math.random() * 24
-    }));
-
-    setOceanBubbles(prev => [...prev.slice(-30), ...newBubbles]);
-    setTimeout(() => {
-      setOceanBubbles(prev => prev.filter(b => !newBubbles.includes(b)));
-    }, 1200);
-
-    // 액티브 애니메이션 & 사운드
-    setActiveOceanCreatureId(creature.id);
+  const handleTapOceanCreature = (creature) => {
     audioEngine.playBubble();
-
-    setTimeout(() => {
-      setActiveOceanCreatureId(null);
-    }, 900);
 
     // 정답 판정
     if (creature.id === oceanTarget.id && !oceanFound) {
       setOceanFound(true);
-      setOceanScore(prev => prev + 1);
       audioEngine.playFanfare();
 
       speakNaturalKorean(VOICE.oceanFound(creature));
@@ -4991,25 +5875,6 @@ export default function App() {
     } else if (creature.id !== oceanTarget.id) {
       speakNaturalKorean(VOICE.itemSound(creature));
     }
-  };
-
-  const handleOceanBackgroundClick = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    const newBubbles = Array.from({ length: 6 }, (_, i) => ({
-      id: Date.now() + i + Math.random(),
-      x: x + (Math.random() - 0.5) * 30,
-      y: y + (Math.random() - 0.5) * 30,
-      size: 14 + Math.random() * 20
-    }));
-
-    setOceanBubbles(prev => [...prev.slice(-30), ...newBubbles]);
-    audioEngine.playBubble();
-    setTimeout(() => {
-      setOceanBubbles(prev => prev.filter(b => !newBubbles.includes(b)));
-    }, 1200);
   };
 
   // 🧩 퍼즐 조작 핸들러
@@ -5139,7 +6004,7 @@ export default function App() {
     setTimeout(() => {
       if (item.soundUrl) {
         audioEngine.playItemSound(item);
-      } else if (item.category === 'vehicle') {
+      } else if (item.category === 'vehicle' || item.soundText) {
         speakNaturalKorean(VOICE.itemSound(item));
       } else {
         speakNaturalKorean(VOICE.tasty(item));
@@ -5190,6 +6055,9 @@ export default function App() {
         audioEngine.later(() => {
           audioEngine.playItemSound(quizQuestion.target);
         }, 300);
+      } else if (quizQuestion.target.soundText) {
+        const target = quizQuestion.target;
+        audioEngine.later(() => speakNaturalKorean(VOICE.itemSound(target)), 300);
       }
       audioEngine.later(() => {
         audioEngine.stopAllSounds();
@@ -5460,7 +6328,7 @@ export default function App() {
             { id: 'vehicle', label: '🚗 씽씽 탈것', sub: '출동! 자동차', color: '#0284c7' },
             { id: 'xylophone', label: '🎹 퐁퐁 실로폰', sub: '실로폰 · 드럼', color: '#f59e0b' },
             { id: 'sleep', label: '🌙 코 잘 시간', sub: '오르골 자장가', color: '#6366f1' },
-            { id: 'ocean', label: '🌊 신비 바다속', sub: '뽀글 생물 탐험', color: '#06b6d4' },
+            { id: 'ocean', label: '🐠 물고기 어항', sub: '살아있는 바다', color: '#06b6d4' },
             { id: 'puzzle', label: '🧩 아기 퍼즐', sub: '4조각 맞추기', color: '#8b5cf6' },
             { id: 'paint', label: '🎨 무지개 물감', sub: '터치 감각 미술', color: '#3b82f6' },
             { id: 'song', label: '🎵 동요 재생', sub: `한국 동요 (${LOCAL_NURSERY_SONGS.length}곡)`, color: '#ec4899' }
@@ -5526,7 +6394,7 @@ export default function App() {
           {/* ===== 모듈: 🌙 동물 친구들 코 잘 시간 (수면 유도) ===== */}
           {activeTab === 'sleep' && <BedtimeSleepView />}
 
-          {/* ===== 모듈 1: 20종 동물 실사 ===== */}
+          {/* ===== 모듈 1: 28종 동물 실사 ===== */}
           {activeTab === 'animal' && (
             <div>
               <div style={{
@@ -5575,6 +6443,11 @@ export default function App() {
                           background: item.color, color: '#ffffff', fontSize: '0.8rem', fontWeight: 900,
                           padding: '3px 10px', borderRadius: '12px', display: 'inline-block'
                         }}>🔊 {item.soundText}</span>
+                      ) : item.soundText ? (
+                        <span style={{
+                          background: item.color, color: '#ffffff', fontSize: '0.8rem', fontWeight: 900,
+                          padding: '3px 10px', borderRadius: '12px', display: 'inline-block'
+                        }}>🗣️ {item.soundText}</span>
                       ) : (
                         <span style={{
                           background: '#94a3b8', color: '#ffffff', fontSize: '0.8rem', fontWeight: 900,
@@ -5652,7 +6525,7 @@ export default function App() {
                       카드를 누르면 부릉부릉 씽씽 소리가 들려요!
                     </h2>
                     <span style={{ fontSize: '0.85rem', color: '#0284c7', fontWeight: 800 }}>
-                      ✨ 렉서스 ES 350e 블랙 자동차와 소방차, 경찰차, 비행기 등 15종 생생 탈것 탐험
+                      ✨ 렉서스 ES 350e 블랙 자동차와 소방차, 경찰차, 비행기 등 21종 생생 탈것 탐험
                     </span>
                   </div>
                 </div>
@@ -5735,13 +6608,13 @@ export default function App() {
                   <div>
                     <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#ffffff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                       {oceanFound ? (
-                        <span style={{ color: '#fef08a' }}>🎉 찾았다! {oceanTarget.name}를 찾았어요! 참 잘했어요! 🌟</span>
+                        <span style={{ color: '#fef08a' }}>🎉 찾았다! {attachJosa(oceanTarget.name, '을/를')} 찾았어요! 참 잘했어요! 🌟</span>
                       ) : (
-                        <span>"{oceanTarget.name}는 어디 있을까요?" {oceanTarget.icon}</span>
+                        <span>"{attachJosa(oceanTarget.name, '은/는')} 어디 있을까요?" {oceanTarget.icon}</span>
                       )}
                     </h2>
                     <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#bae6fd' }}>
-                      {oceanFound ? '잠시 후 다음 바다 친구를 찾으러 가요!' : '바다속 생물을 콕 터치해보세요! 뽀글뽀글 거품과 소리가 나요!'}
+                      {oceanFound ? '잠시 후 다음 바다 친구를 찾으러 가요!' : '톡! 치면 물고기가 흩어지고, 꾹 누르면 졸졸 따라와요!'}
                     </span>
                   </div>
                 </div>
@@ -5771,165 +6644,13 @@ export default function App() {
                 </div>
               </div>
 
-              {/* 바다속 인터랙티브 메인 뷰포트 (신비한 심해 그라데이션 + 햇살 + 거품 + 산호초 + 유영 생물들) */}
-              <div
-                onClick={handleOceanBackgroundClick}
-                style={{
-                  flex: 1, minHeight: 0, borderRadius: '28px', position: 'relative',
-                  background: 'linear-gradient(180deg, #38bdf8 0%, #0284c7 35%, #0369a1 70%, #082f49 100%)',
-                  overflow: 'hidden', border: '4px solid #0284c7', boxShadow: 'inset 0 0 50px rgba(0,0,0,0.25)',
-                  cursor: 'pointer'
-                }}
-              >
-                {/* 햇살 일렁임 (Sunrays) */}
-                <div className="sunray" style={{ position: 'absolute', top: 0, left: '15%', width: '90px', height: '100%', background: 'linear-gradient(180deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 80%)' }} />
-                <div className="sunray" style={{ position: 'absolute', top: 0, left: '48%', width: '120px', height: '100%', background: 'linear-gradient(180deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0) 85%)', animationDelay: '2s' }} />
-                <div className="sunray" style={{ position: 'absolute', top: 0, left: '75%', width: '80px', height: '100%', background: 'linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 75%)', animationDelay: '1s' }} />
-
-                {/* 배경 은은한 뽀글뽀글 거품들 (Floating ambient bubbles) */}
-                {[...Array(12)].map((_, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      position: 'absolute',
-                      bottom: '-20px',
-                      left: `${(i * 8.5 + 4)}%`,
-                      width: `${12 + (i % 4) * 8}px`,
-                      height: `${12 + (i % 4) * 8}px`,
-                      borderRadius: '50%',
-                      background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.85), rgba(255,255,255,0.2) 60%, rgba(255,255,255,0.6) 100%)',
-                      border: '1px solid rgba(255,255,255,0.7)',
-                      animation: `ambient-bubble-rise ${4 + (i % 5) * 1.5}s infinite ease-in`,
-                      animationDelay: `${i * 0.4}s`,
-                      pointerEvents: 'none'
-                    }}
-                  />
-                ))}
-
-                {/* 바닥 해초 및 산호초 실루엣 (Bottom Seaweed & Corals) */}
-                <svg viewBox="0 0 1000 200" preserveAspectRatio="none" style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: '130px', pointerEvents: 'none', zIndex: 1 }}>
-                  {/* 모래 바닥 */}
-                  <path d="M 0 160 Q 250 140 500 165 Q 750 190 1000 155 L 1000 200 L 0 200 Z" fill="#eab308" opacity="0.45" />
-                  <path d="M 0 175 Q 300 160 600 180 Q 850 165 1000 170 L 1000 200 L 0 200 Z" fill="#ca8a04" opacity="0.6" />
-                  {/* 좌측 흔들리는 해초 */}
-                  <g className="seaweed-left">
-                    <path d="M 60 200 Q 40 130 70 80 Q 50 40 65 10 Q 80 45 60 90 Q 85 140 75 200 Z" fill="#10b981" opacity="0.85" />
-                    <path d="M 90 200 Q 120 140 95 90 Q 115 50 105 20 Q 90 55 105 100 Q 80 150 100 200 Z" fill="#059669" opacity="0.9" />
-                  </g>
-                  {/* 중앙 산호초 */}
-                  <path d="M 320 200 C 310 160 290 140 315 120 C 330 110 340 130 350 120 C 365 105 385 130 375 160 C 390 150 405 170 395 200 Z" fill="#f43f5e" opacity="0.8" />
-                  {/* 우측 흔들리는 해초 */}
-                  <g className="seaweed-right">
-                    <path d="M 880 200 Q 860 130 890 80 Q 870 40 885 15 Q 900 50 880 95 Q 905 145 895 200 Z" fill="#10b981" opacity="0.85" />
-                    <path d="M 930 200 Q 960 140 935 90 Q 955 50 945 25 Q 930 60 945 105 Q 920 155 940 200 Z" fill="#059669" opacity="0.9" />
-                  </g>
-                  {/* 귀여운 불가사리 & 조개 */}
-                  <circle cx="210" cy="182" r="14" fill="#fb923c" stroke="#ea580c" strokeWidth="2" />
-                  <circle cx="780" cy="180" r="12" fill="#ec4899" stroke="#db2777" strokeWidth="2" />
-                </svg>
-
-                {/* 8종 바다 생물들 (자유 유영 & 터치 인터랙션) */}
-                {OCEAN_CREATURES.map(creature => {
-                  const isTarget = creature.id === oceanTarget.id;
-                  const isActive = activeOceanCreatureId === creature.id;
-                  const isFoundTarget = oceanFound && isTarget;
-
-                  return (
-                    <div
-                      key={creature.id}
-                      onClick={(e) => { e.stopPropagation(); handleTapOceanCreature(creature, e); }}
-                      className={isActive ? 'ocean-creature-active' : 'ocean-creature-swim'}
-                      style={{
-                        position: 'absolute',
-                        left: `${creature.left}%`,
-                        top: `${creature.top}%`,
-                        transform: 'translate(-50%, -50%)',
-                        animationDelay: `${creature.swimDelay}s`,
-                        cursor: 'pointer',
-                        zIndex: isFoundTarget ? 15 : 5,
-                        userSelect: 'none',
-                        transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        width: `${creature.size * 1.15}px`,
-                        height: `${creature.size * 1.05}px`
-                      }}
-                    >
-                      {/* 타겟 발견 시 화려한 골드 후광 이펙트 */}
-                      {isFoundTarget && (
-                        <div style={{
-                          position: 'absolute',
-                          inset: '-12px',
-                          borderRadius: '50%',
-                          background: 'radial-gradient(circle, rgba(253, 224, 71, 0.75), rgba(245, 158, 11, 0.2) 70%, transparent 100%)',
-                          animation: 'pulse 1.2s infinite alternate',
-                          pointerEvents: 'none',
-                          zIndex: -1
-                        }} />
-                      )}
-
-                      {/* 🌊 실제 생물 형태 SVG 벡터 아트 (배지 없이 바다를 유영) */}
-                      <div style={{
-                        width: '100%',
-                        height: '75%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        transform: isFoundTarget ? 'scale(1.22)' : isActive ? 'scale(1.15)' : 'scale(1)',
-                        transition: 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)'
-                      }}>
-                        <OceanCreatureSVG id={creature.id} isTarget={isTarget} isFound={isFoundTarget} isActive={isActive} />
-                      </div>
-
-                      {/* 🏷️ 하단 반투명 네임 캡슐 */}
-                      <div style={{
-                        marginTop: '2px',
-                        fontSize: '0.85rem',
-                        fontWeight: 900,
-                        color: isFoundTarget ? '#92400e' : '#0f172a',
-                        background: isFoundTarget
-                          ? 'linear-gradient(135deg, #fef08a, #fde047)'
-                          : 'rgba(255, 255, 255, 0.85)',
-                        backdropFilter: 'blur(4px)',
-                        padding: '3px 10px',
-                        borderRadius: '16px',
-                        boxShadow: isFoundTarget
-                          ? '0 0 16px rgba(250, 204, 21, 0.9), 0 3px 8px rgba(0,0,0,0.2)'
-                          : '0 3px 8px rgba(0,0,0,0.18)',
-                        border: isFoundTarget ? '2px solid #ffffff' : `2px solid ${creature.color}`,
-                        whiteSpace: 'nowrap',
-                        letterSpacing: '0.02em',
-                        transform: isFoundTarget ? 'scale(1.1)' : 'scale(1)',
-                        transition: 'all 0.25s ease'
-                      }}>
-                        {creature.name}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* 터치 시 솟구치는 뽀글뽀글 거품 파티클들 */}
-                {oceanBubbles.map(b => (
-                  <div
-                    key={b.id}
-                    className="bubble-particle"
-                    style={{
-                      position: 'absolute',
-                      left: `${b.x}px`,
-                      top: `${b.y}px`,
-                      width: `${b.size}px`,
-                      height: `${b.size}px`,
-                      borderRadius: '50%',
-                      background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95), rgba(255,255,255,0.4) 60%, rgba(56,189,248,0.7) 100%)',
-                      border: '1.5px solid rgba(255,255,255,0.9)',
-                      boxShadow: '0 0 10px rgba(255,255,255,0.6)',
-                      transform: 'translate(-50%, -50%)',
-                      zIndex: 20
-                    }}
-                  />
-                ))}
-              </div>
+              {/* 살아있는 어항: 물고기 떼(캔버스) + 헤엄치는 바다 생물 */}
+              <LivingAquariumView
+                creatures={oceanScene}
+                targetId={oceanTarget.id}
+                found={oceanFound}
+                onTapCreature={handleTapOceanCreature}
+              />
             </div>
           )}
 

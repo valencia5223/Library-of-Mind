@@ -219,77 +219,11 @@ button:active {
 }
 
 /* ============================== */
-/* 🌊 신비한 바다속 애니메이션 */
+/* 🐠 살아있는 어항 */
 /* ============================== */
-@keyframes bubble-rise {
-  0% { transform: translateY(0) translateX(0) scale(0.6); opacity: 0.8; }
-  50% { transform: translateY(-80px) translateX(12px) scale(1); opacity: 0.95; }
-  100% { transform: translateY(-180px) translateX(-8px) scale(1.2); opacity: 0; }
-}
-
-@keyframes ambient-bubble-rise {
-  0% { transform: translateY(110%) translateX(0); opacity: 0.2; }
-  25% { transform: translateY(75%) translateX(15px); opacity: 0.6; }
-  50% { transform: translateY(50%) translateX(-15px); opacity: 0.8; }
-  75% { transform: translateY(25%) translateX(10px); opacity: 0.5; }
-  100% { transform: translateY(-20%) translateX(-10px); opacity: 0; }
-}
-
-@keyframes swim-gentle {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  25% { transform: translateY(-6px) rotate(2deg); }
-  50% { transform: translateY(-12px) rotate(0deg); }
-  75% { transform: translateY(-5px) rotate(-2deg); }
-}
-
-@keyframes creature-jump-spin {
-  0% { transform: scale(1) rotate(0deg); }
-  30% { transform: scale(1.35) translateY(-25px) rotate(-15deg); }
-  60% { transform: scale(1.2) translateY(-10px) rotate(375deg); }
-  100% { transform: scale(1) translateY(0) rotate(360deg); }
-}
-
-@keyframes seaweed-sway-left {
-  0%, 100% { transform: rotate(-5deg) scaleY(1); }
-  50% { transform: rotate(10deg) scaleY(1.05); }
-}
-
-@keyframes seaweed-sway-right {
-  0%, 100% { transform: rotate(8deg) scaleY(1.03); }
-  50% { transform: rotate(-8deg) scaleY(0.97); }
-}
-
-@keyframes sunray-shimmer {
-  0%, 100% { opacity: 0.15; transform: skewX(-15deg) scaleX(1); }
-  50% { opacity: 0.35; transform: skewX(-12deg) scaleX(1.15); }
-}
-
-.ocean-creature-swim {
-  animation: swim-gentle 3.5s ease-in-out infinite;
-}
-
-.ocean-creature-active {
-  animation: creature-jump-spin 0.85s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-}
-
-.bubble-particle {
-  animation: bubble-rise 1.2s ease-out forwards;
-  pointer-events: none;
-}
-
-.seaweed-left {
-  transform-origin: bottom center;
-  animation: seaweed-sway-left 4s ease-in-out infinite;
-}
-
-.seaweed-right {
-  transform-origin: bottom center;
-  animation: seaweed-sway-right 3.2s ease-in-out infinite;
-}
-
-.sunray {
-  animation: sunray-shimmer 4.5s ease-in-out infinite;
-  pointer-events: none;
+@keyframes aqua-halo {
+  from { transform: scale(0.92); opacity: 0.7; }
+  to { transform: scale(1.12); opacity: 1; }
 }
 
 /* ============================== */
