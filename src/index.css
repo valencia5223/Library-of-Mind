@@ -846,10 +846,10 @@ input:focus, select:focus, textarea:focus {
   gap: 0.5rem;
 }
 
-/* 요일 헤더 - 7열 그리드 고정 */
+/* 요일 헤더 - 7열 그리드 고정 (일·토는 좁게, 평일은 같은 너비. 내용 길이와 무관) */
 .calendar-week-header {
   display: grid !important;
-  grid-template-columns: repeat(7, 1fr) !important;
+  grid-template-columns: minmax(0, 0.65fr) repeat(5, minmax(0, 1fr)) minmax(0, 0.65fr) !important;
   gap: 6px;
   background: #f8fafc;
   border-radius: 10px;
@@ -874,11 +874,14 @@ input:focus, select:focus, textarea:focus {
 /* 달력 그리드 - 7열 그리드 고정 (Month View) */
 .calendar-grid {
   display: grid !important;
-  grid-template-columns: repeat(7, 1fr) !important;
+  grid-template-columns: minmax(0, 0.65fr) repeat(5, minmax(0, 1fr)) minmax(0, 0.65fr) !important;
+  grid-auto-rows: 1fr; /* 모든 주의 높이를 같게 */
   gap: 8px;
 }
 
 .calendar-day-cell {
+  min-width: 0;
+  overflow: hidden;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -950,6 +953,18 @@ input:focus, select:focus, textarea:focus {
   opacity: 1;
   color: #0284c7;
   background: #e0f2fe;
+}
+
+/* 날짜 줄: 공휴일 이름이 길어도 칸을 넓히지 않고 … 로 줄임 */
+.day-cell-top > div {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.holiday-badge {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 스케줄 칩 목록 */
@@ -2447,7 +2462,7 @@ input:focus, select:focus, textarea:focus {
 
   .calendar-week-header,
   .calendar-grid {
-    grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+    grid-template-columns: minmax(0, 0.65fr) repeat(5, minmax(0, 1fr)) minmax(0, 0.65fr) !important;
     gap: 3px !important;
     width: 100% !important;
     box-sizing: border-box !important;

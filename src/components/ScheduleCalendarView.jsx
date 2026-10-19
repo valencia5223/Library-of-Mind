@@ -1020,8 +1020,8 @@ const getKoreanHoliday = (dateObj) => {
         </div>
       </div>
 
-      {/* 요일 헤더 - 7열 그리드 보장 */}
-      <div className="calendar-week-header" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: '6px' }}>
+      {/* 요일 헤더 - 7열 그리드 보장 (일·토 좁게, 평일 같은 너비) */}
+      <div className="calendar-week-header" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 0.65fr) repeat(5, minmax(0, 1fr)) minmax(0, 0.65fr)', gap: '6px' }}>
         <div className="week-cell sun">일</div>
         <div className="week-cell">월</div>
         <div className="week-cell">화</div>
@@ -1032,7 +1032,7 @@ const getKoreanHoliday = (dateObj) => {
       </div>
 
       {/* 달력 그리드 - 7열 그리드 보장 */}
-      <div className="calendar-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: '8px' }}>
+      <div className="calendar-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 0.65fr) repeat(5, minmax(0, 1fr)) minmax(0, 0.65fr)', gap: '8px' }}>
         {days.map((dateObj, idx) => {
           if (!dateObj) {
             return <div key={`empty-${idx}`} className="calendar-day-cell empty" />;
