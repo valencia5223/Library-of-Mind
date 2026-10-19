@@ -102,7 +102,7 @@ export const buildScheduleItem = async (page, { dateBasis = 'created', friendId 
     id: oneNoteScheduleId(page.id),
     title: page.title,
     date: titleDate || base.date,
-    time: base.time,
+    time: '', // OneNote 노트는 작성 시각이 의미 없어 시간 없이 넣음
     memo: text.length > MEMO_MAX ? `${text.slice(0, MEMO_MAX)}…` : text,
     shared_friend_id: friendId || null
   };

@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users, ExternalLink, Download, CheckSquare, NotebookText } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users, ExternalLink, Download, CheckSquare, NotebookText, Search } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 const OneNoteImportModal = lazy(() => import('./OneNoteImportModal'));
+const ScheduleNotesPanel = lazy(() => import('./ScheduleNotesPanel'));
+
+const isOneNoteId = (id = '') => id.replace(/^sh_/, '').startsWith('sch_onenote_');
 
 const ONENOTE_SYNC_MS = 5 * 60 * 1000;
 
@@ -131,6 +134,7 @@ export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard =
   const [memo, setMemo] = useState('');
   const [sharedFriendId, setSharedFriendId] = useState(''); // 공유할 친구 ID
   const [showOneNote, setShowOneNote] = useState(false);
+  const [showNotesPanel, setShowNotesPanel] = useState(false);
   const [oneNoteSyncState, setOneNoteSyncState] = useState(''); // '' | 'syncing' | 'needLogin' | 'error'
   const [oneNoteSyncError, setOneNoteSyncError] = useState('');
   const oneNoteSyncRef = useRef(null);
@@ -434,7 +438,7 @@ const getKoreanHoliday = (dateObj) => {
       setEditingSchedule(scheduleToEdit);
       setScheduleDate(scheduleToEdit.date || dateFormatted);
       setTitle(scheduleToEdit.title);
-      setTime(scheduleToEdit.time || '10:00');
+      setTime(scheduleToEdit.time ?? '10:00'); // OneNote 일정은 시간 없음('')
       setCategory(scheduleToEdit.category || 'WORK');
       setMemo(scheduleToEdit.memo || '');
       setSharedFriendId(scheduleToEdit.shared_friend_id || '');
@@ -546,12 +550,18 @@ const getKoreanHoliday = (dateObj) => {
     saveSchedulesToLocal([...schedules.filter(s => !importedIds.has(s.id)), ...imported]);
 
     if (isSupabaseConfigured() && userId) {
-      const payload = imported.map(s => ({
+      // OneNote 일정은 시간이 없음: DB 에는 null, 컬럼이 null 을 못 받으면 00:00 으로 (화면에는 시간을 보여 주지 않음)
+      let payload = imported.map(s => ({
         ...s,
+        time: s.time || null,
         title: encryptText(s.title, userId, s.is_shared),
         memo: encryptText(s.memo, userId, s.is_shared)
       }));
-      const { error } = await supabase.from('user_schedules').upsert(payload);
+      let { error } = await supabase.from('user_schedules').upsert(payload);
+      if (error) {
+        payload = payload.map(s => ({ ...s, time: s.time || '00:00' }));
+        ({ error } = await supabase.from('user_schedules').upsert(payload));
+      }
       if (error) console.warn('OneNote 일정 저장 실패 (로컬 유지됨):', error.message);
 
       // 친구 계정 기준 레코드도 시도 (handleSaveSchedule 과 같은 방식, RLS 로 막혀도 원본 레코드로 보임)
@@ -706,7 +716,16 @@ const getKoreanHoliday = (dateObj) => {
   };
 
   // 일정 모달의 입력 묶음 (OneNote 일정은 메모를 크게, 나머지는 접어서 보여 준다)
-  const isOneNoteSchedule = Boolean(editingSchedule?.id?.replace(/^sh_/, '').startsWith('sch_onenote_'));
+  const isOneNoteSchedule = isOneNoteId(editingSchedule?.id);
+
+  // 모아보기에서 고른 일정: 그 달로 이동하고 일정 창 열기
+  const handleOpenFromPanel = (sch) => {
+    const [y, m, d] = (sch.date || '').split('-').map(Number);
+    if (!y) return;
+    setShowNotesPanel(false);
+    setCurrentDate(new Date(y, m - 1, 1));
+    handleOpenAddModal(new Date(y, m - 1, d), sch);
+  };
 
   const scheduleMetaFields = (
     <>
@@ -937,6 +956,24 @@ const getKoreanHoliday = (dateObj) => {
           <button
             type="button"
             className="btn btn-sm font-bold flex align-center gap-1.5"
+            onClick={() => setShowNotesPanel(true)}
+            style={{
+              backgroundColor: 'rgba(14, 165, 233, 0.1)',
+              color: '#0369a1',
+              borderColor: 'rgba(14, 165, 233, 0.35)',
+              borderRadius: '10px',
+              padding: '0.4rem 0.85rem',
+              marginRight: '6px',
+              fontSize: '0.85rem'
+            }}
+            title="OneNote 노트·일정을 모아 보고 내용으로 찾기"
+          >
+            <Search size={16} /> 찾기·모아보기
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-sm font-bold flex align-center gap-1.5"
             onClick={() => setShowOneNote(true)}
             style={{
               backgroundColor: 'rgba(119, 25, 170, 0.1)',
@@ -1068,7 +1105,7 @@ const getKoreanHoliday = (dateObj) => {
                         e.stopPropagation();
                         handleOpenAddModal(dateObj, sch);
                       }}
-                      title={`${sch.time ? '[' + sch.time + '] ' : ''}${isSharedItem ? '[공유] ' : ''}${sch.title}${sch.memo ? ' - ' + sch.memo : ''}`}
+                      title={`${sch.time && !isOneNoteId(sch.id) ? '[' + sch.time + '] ' : ''}${isSharedItem ? '[공유] ' : ''}${sch.title}${sch.memo ? ' - ' + sch.memo : ''}`}
                     >
                       <button
                         className="check-toggle-btn"
@@ -1080,8 +1117,9 @@ const getKoreanHoliday = (dateObj) => {
                           <Circle size={12} style={{ opacity: 0.6 }} />
                         )}
                       </button>
-                      <span className="schedule-time">{sch.time}</span>
+                      {!isOneNoteId(sch.id) && <span className="schedule-time">{sch.time}</span>}
                       <span className="schedule-title">
+                        {isOneNoteId(sch.id) && <span style={{ marginRight: '3px' }} title="OneNote 노트">📓</span>}
                         {isSharedItem && <Users size={12} style={{ color: '#0284c7', marginRight: '4px', verticalAlign: 'middle', display: 'inline' }} title="공유 일정" />}
                         {sch.title}
                       </span>
@@ -1136,7 +1174,7 @@ const getKoreanHoliday = (dateObj) => {
                   {scheduleMemoField}
                   <details style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.6rem 0.85rem' }}>
                     <summary className="text-xs font-bold" style={{ cursor: 'pointer', color: '#475569' }}>
-                      일정 정보 · {scheduleDate} {time} · {getCategoryBadge(category).label} (눌러서 수정)
+                      일정 정보 · {scheduleDate} · {getCategoryBadge(category).label} (눌러서 수정)
                     </summary>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.9rem' }}>
                       {scheduleMetaFields}
@@ -1163,6 +1201,17 @@ const getKoreanHoliday = (dateObj) => {
             </form>
           </div>
         </div>
+      )}
+
+      {showNotesPanel && (
+        <Suspense fallback={null}>
+          <ScheduleNotesPanel
+            schedules={schedules}
+            onClose={() => setShowNotesPanel(false)}
+            onOpen={handleOpenFromPanel}
+            getCategoryBadge={getCategoryBadge}
+          />
+        </Suspense>
       )}
 
       {showOneNote && (
