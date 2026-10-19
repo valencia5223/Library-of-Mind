@@ -14,13 +14,17 @@ import {
   toLocalDateTime,
   loadShareMap,
   saveShareMap,
+  sectionFriendId,
+  withSectionFriend,
   loadAutoSync,
   saveAutoSync,
   buildScheduleItem,
   loadCache,
   saveCache,
   clearCache,
-  mapLimit
+  mapLimit,
+  runAutoSync,
+  SYNC_LOOKBACK_DAYS
 } from '../utils/oneNoteSync';
 
 // OneNote 페이지를 골라 일정으로 가져오는 창
@@ -37,18 +41,19 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
   const [nextLink, setNextLink] = useState(null);
   const pagesReq = useRef(0);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
   const [shareMap, setShareMap] = useState(() => loadShareMap(userId));
   const [autoSync, setAutoSync] = useState(() => loadAutoSync(userId));
 
   const section = sections.find(s => s.id === sectionId);
-  const notebookFriendId = section?.notebookShared ? (shareMap[section.notebookId] || '') : '';
-  const notebookFriend = friendsList.find(f => f.id === notebookFriendId);
+  const sectionFriend = section
+    ? friendsList.find(f => f.id === sectionFriendId(shareMap, section.id, section.notebookShared ? section.notebookId : null)) || null
+    : null;
 
-  const setNotebookFriend = (friendId) => {
+  // 섹션마다 공유할 친구를 기억 (가져오기·자동 동기화 모두 이 설정을 따름)
+  const setSectionFriend = (friendId) => {
     if (!section) return;
-    const next = { ...shareMap };
-    if (friendId) next[section.notebookId] = friendId;
-    else delete next[section.notebookId];
+    const next = withSectionFriend(shareMap, section.id, friendId);
     setShareMap(next);
     saveShareMap(userId, next);
   };
@@ -67,12 +72,22 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
         notebookId: section.notebookId,
         notebookShared: section.notebookShared,
         dateBasis,
-        lastSync: new Date().toISOString()
+        lastSync: null // 처음에는 최근 30일을 확인
       };
     }
     setAutoSync(next);
     saveAutoSync(userId, next);
+    if (next[section.id]) syncNow(section.id);
   };
+
+  // 이 섹션 최근 30일을 바로 다시 확인
+  const syncNow = (secId) => run('동기화 중…', async () => {
+    const count = await runAutoSync(userId, onImport, { sectionIds: [secId], full: true });
+    setAutoSync(loadAutoSync(userId));
+    setInfo(count > 0
+      ? `최근 ${SYNC_LOOKBACK_DAYS}일 안에 쓰거나 고친 페이지 ${count}개를 달력에 반영했습니다.`
+      : `최근 ${SYNC_LOOKBACK_DAYS}일 안에 쓰거나 고친 페이지가 없습니다.`);
+  });
 
   // 날짜 기준을 바꾸면 자동 동기화 설정에도 반영
   useEffect(() => {
@@ -85,6 +100,7 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
   const run = async (label, fn) => {
     setBusy(label);
     setError('');
+    setInfo('');
     try {
       await fn();
     } catch (e) {
@@ -215,7 +231,7 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
     const result = await mapLimit(
       targets,
       3,
-      page => buildScheduleItem(page, { dateBasis, friendId: notebookFriend?.id }),
+      page => buildScheduleItem(page, { dateBasis, friendId: sectionFriend?.id }),
       done => setBusy(`본문 가져오는 중… (${done}/${targets.length})`)
     );
     onImport(result);
@@ -267,20 +283,20 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
                 <label className="form-label font-bold text-xs">섹션</label>
                 <select className="input-field mt-1" value={sectionId} onChange={(e) => setSectionId(e.target.value)} disabled={Boolean(busy) || sections.length === 0}>
                   {sections.map(s => (
-                    <option key={s.id} value={s.id}>{autoSync[s.id] ? '🔄 ' : ''}{s.notebookShared ? '👥 ' : ''}{s.notebook ? `${s.notebook} › ${s.name}` : s.name}</option>
+                    <option key={s.id} value={s.id}>{autoSync[s.id] ? '🔄 ' : ''}{sectionFriendId(shareMap, s.id, s.notebookShared ? s.notebookId : null) ? '👥 ' : ''}{s.notebook ? `${s.notebook} › ${s.name}` : s.name}</option>
                   ))}
                 </select>
               </div>
 
-              {section?.notebookShared && (
-                <div style={{ border: '1px solid #bae6fd', backgroundColor: '#f0f9ff', borderRadius: '10px', padding: '0.7rem 0.85rem' }}>
+              {section && (
+                <div style={{ border: `1px solid ${sectionFriend ? '#7dd3fc' : '#e2e8f0'}`, backgroundColor: sectionFriend ? '#f0f9ff' : 'transparent', borderRadius: '10px', padding: '0.7rem 0.85rem' }}>
                   <label className="form-label font-bold text-xs flex align-center gap-1" style={{ color: '#0369a1' }}>
-                    <Users size={14} /> 공유 노트북 · 함께 볼 친구
+                    <Users size={14} /> 이 섹션을 함께 볼 친구{section.notebookShared ? ' · 공유 노트북' : ''}
                   </label>
                   <select
                     className="input-field mt-1 font-bold"
-                    value={notebookFriendId}
-                    onChange={(e) => setNotebookFriend(e.target.value)}
+                    value={sectionFriend?.id || ''}
+                    onChange={(e) => setSectionFriend(e.target.value)}
                     disabled={Boolean(busy)}
                   >
                     <option value="">🔒 공유 안함 (내 달력에만)</option>
@@ -293,7 +309,7 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
                   <p className="text-xs sub-text mt-1">
                     {friendsList.length === 0
                       ? '등록된 친구가 없습니다. 친구 탭에서 먼저 친구를 추가하세요.'
-                      : '이 노트북에서 가져오는 페이지는 고른 친구 달력에도 자동으로 공유됩니다. 노트북마다 한 번만 고르면 기억합니다.'}
+                      : '한 번 고르면 기억해서, 다음부터 이 섹션에서 가져오거나 자동 동기화되는 페이지는 고른 친구 달력에도 자동으로 공유됩니다.'}
                   </p>
                 </div>
               )}
@@ -309,18 +325,25 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
                     </div>
                     <div className="text-xs sub-text mt-1">
                       {sectionAutoSync
-                        ? '일정 탭을 열 때와 열어 둔 동안 5분마다, 새로 쓰거나 고친 페이지를 달력에 넣습니다.'
-                        : '켜면 앞으로 이 섹션에 새로 쓰는 노트가 달력에 저절로 들어갑니다. 지금 있는 페이지는 아래에서 골라 가져오세요.'}
+                        ? `일정 화면을 열 때와 열어 둔 동안 5분마다, 새로 쓰거나 고친 페이지를 달력에 넣습니다. 마지막 확인: ${sectionAutoSync.lastSync ? fmt(sectionAutoSync.lastSync) : '아직 없음'}`
+                        : `켜면 최근 ${SYNC_LOOKBACK_DAYS}일 안의 페이지부터, 앞으로 이 섹션에 쓰는 노트가 달력에 저절로 들어갑니다.`}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    className={`btn btn-sm ${sectionAutoSync ? 'btn-secondary' : 'btn-primary'}`}
-                    onClick={toggleAutoSync}
-                    style={{ flexShrink: 0 }}
-                  >
-                    {sectionAutoSync ? '끄기' : '켜기'}
-                  </button>
+                  <div className="flex gap-1" style={{ flexShrink: 0 }}>
+                    {sectionAutoSync && (
+                      <button type="button" className="btn btn-primary btn-sm" onClick={() => syncNow(section.id)} disabled={Boolean(busy)}>
+                        지금 동기화
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${sectionAutoSync ? 'btn-secondary' : 'btn-primary'}`}
+                      onClick={toggleAutoSync}
+                      disabled={Boolean(busy)}
+                    >
+                      {sectionAutoSync ? '끄기' : '켜기'}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -404,12 +427,13 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
             </p>
           )}
           {error && <p className="text-xs" style={{ color: '#be123c' }}>{error}</p>}
+          {info && <p className="text-xs" style={{ color: '#059669', fontWeight: 700 }}>{info}</p>}
 
           <div className="flex justify-end gap-2 pt-3 border-t">
             <button type="button" className="btn btn-secondary" onClick={onClose}>취소</button>
             {account && (
               <button type="button" className="btn btn-primary font-bold" onClick={handleImport} disabled={selected.size === 0 || Boolean(busy)}>
-                {selected.size}개 일정으로 가져오기{notebookFriend ? ` (${notebookFriend.name || notebookFriend.email.split('@')[0]}님과 공유)` : ''}
+                {selected.size}개 일정으로 가져오기{sectionFriend ? ` (${sectionFriend.name || sectionFriend.email.split('@')[0]}님과 공유)` : ''}
               </button>
             )}
           </div>

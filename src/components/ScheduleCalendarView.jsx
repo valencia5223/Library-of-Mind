@@ -131,7 +131,9 @@ export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard =
   const [memo, setMemo] = useState('');
   const [sharedFriendId, setSharedFriendId] = useState(''); // 공유할 친구 ID
   const [showOneNote, setShowOneNote] = useState(false);
-  const [oneNoteSyncState, setOneNoteSyncState] = useState(''); // '' | 'syncing' | 'needLogin'
+  const [oneNoteSyncState, setOneNoteSyncState] = useState(''); // '' | 'syncing' | 'needLogin' | 'error'
+  const [oneNoteSyncError, setOneNoteSyncError] = useState('');
+  const oneNoteSyncRef = useRef(null);
   const schedulesRef = useRef(schedules);
   schedulesRef.current = schedules;
   const importOneNoteRef = useRef(null);
@@ -150,8 +152,8 @@ export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard =
     let stopped = false;
     let running = false;
     let lastRun = 0;
-    const sync = async () => {
-      if (stopped || running || Date.now() - lastRun < 60 * 1000 || !hasOneNoteAutoSync(userId)) return;
+    const sync = async (force = false) => {
+      if (stopped || running || (!force && Date.now() - lastRun < 60 * 1000) || !hasOneNoteAutoSync(userId)) return;
       running = true;
       lastRun = Date.now();
       setOneNoteSyncState('syncing');
@@ -161,11 +163,15 @@ export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard =
         if (!stopped) setOneNoteSyncState('');
       } catch (e) {
         console.warn('OneNote 자동 동기화 실패:', e);
-        if (!stopped) setOneNoteSyncState(e?.code === 'ONENOTE_NEED_LOGIN' ? 'needLogin' : '');
+        if (!stopped) {
+          setOneNoteSyncState(e?.code === 'ONENOTE_NEED_LOGIN' ? 'needLogin' : 'error');
+          setOneNoteSyncError(e?.message || String(e));
+        }
       } finally {
         running = false;
       }
     };
+    oneNoteSyncRef.current = sync;
     const first = setTimeout(sync, 3000);
     const timer = setInterval(sync, ONENOTE_SYNC_MS);
     const onVisible = () => {
@@ -174,6 +180,7 @@ export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard =
     document.addEventListener('visibilitychange', onVisible);
     return () => {
       stopped = true;
+      oneNoteSyncRef.current = null;
       clearTimeout(first);
       clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);
@@ -940,11 +947,17 @@ const getKoreanHoliday = (dateObj) => {
               marginRight: '6px',
               fontSize: '0.85rem'
             }}
-            title={oneNoteSyncState === 'needLogin' ? 'OneNote 로그인이 만료되어 자동 동기화가 멈췄습니다. 눌러서 다시 로그인하세요.' : 'OneNote 페이지를 일정으로 가져오기'}
+            title={
+              oneNoteSyncState === 'needLogin' ? 'OneNote 로그인이 만료되어 자동 동기화가 멈췄습니다. 눌러서 다시 로그인하세요.'
+                : oneNoteSyncState === 'error' ? `OneNote 자동 동기화 오류: ${oneNoteSyncError}`
+                  : 'OneNote 페이지를 일정으로 가져오기'
+            }
           >
             <NotebookText size={16} />
-            {oneNoteSyncState === 'syncing' ? 'OneNote 동기화 중…' : oneNoteSyncState === 'needLogin' ? 'OneNote 다시 연결' : 'OneNote'}
-            {oneNoteSyncState === 'needLogin' && (
+            {oneNoteSyncState === 'syncing' ? 'OneNote 동기화 중…'
+              : oneNoteSyncState === 'needLogin' ? 'OneNote 다시 연결'
+                : oneNoteSyncState === 'error' ? 'OneNote 동기화 오류' : 'OneNote'}
+            {(oneNoteSyncState === 'needLogin' || oneNoteSyncState === 'error') && (
               <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#e11d48', display: 'inline-block' }} />
             )}
           </button>
@@ -1158,6 +1171,8 @@ const getKoreanHoliday = (dateObj) => {
             onClose={() => {
               setShowOneNote(false);
               setOneNoteSyncState('');
+              // 방금 켠 설정·다시 한 로그인으로 바로 한 번 확인
+              setTimeout(() => oneNoteSyncRef.current?.(true), 500);
             }}
             onImport={handleImportOneNote}
             importedIds={new Set(schedules.map(s => s.id))}

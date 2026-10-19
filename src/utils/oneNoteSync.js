@@ -33,6 +33,15 @@ const shareMapKey = (userId) => `onenote_notebook_share_${userId || 'demo'}`;
 export const loadShareMap = (userId) => readJson(shareMapKey(userId), {});
 export const saveShareMap = (userId, map) => writeJson(shareMapKey(userId), map);
 
+// 섹션마다 고른 친구 (map[섹션id]: 친구 id, 'none' = 공유 안함). 섹션 설정이 없으면 예전 노트북 설정을 따름
+const NO_SHARE = 'none';
+export const sectionFriendId = (map, sectionId, notebookId) => {
+  const v = map[sectionId];
+  if (v !== undefined) return v === NO_SHARE ? null : v;
+  return (notebookId && map[notebookId]) || null;
+};
+export const withSectionFriend = (map, sectionId, friendId) => ({ ...map, [sectionId]: friendId || NO_SHARE });
+
 // 자동 동기화 섹션: { [sectionId]: { name, notebook, notebookId, notebookShared, dateBasis, lastSync } }
 const autoSyncKey = (userId) => `onenote_autosync_${userId || 'demo'}`;
 export const loadAutoSync = (userId) => readJson(autoSyncKey(userId), {});
@@ -68,27 +77,53 @@ export const mapLimit = async (list, limit, fn, onProgress = null) => {
   return out;
 };
 
+// 제목에 날짜가 있으면 그 날짜: 2026-10-19 / 2026.10.19 / 10/19 / 10.19 / 10월 19일 (연도가 없으면 refIso 의 연도)
+export const parseTitleDate = (title, refIso) => {
+  if (!title) return null;
+  const pad = (n) => String(n).padStart(2, '0');
+  const valid = (y, m, d) => {
+    const dt = new Date(y, m - 1, d);
+    return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
+  };
+  let m = title.match(/(20\d{2})\s*[-./년]\s*(\d{1,2})\s*[-./월]\s*(\d{1,2})/);
+  if (m && valid(+m[1], +m[2], +m[3])) return `${m[1]}-${pad(m[2])}-${pad(m[3])}`;
+  const year = new Date(refIso || Date.now()).getFullYear();
+  m = title.match(/(?:^|[^\d])(\d{1,2})\s*월\s*(\d{1,2})\s*일/) || title.match(/(?:^|[^\d.:/])(\d{1,2})[/.](\d{1,2})(?![\d.:/])/);
+  if (m && valid(year, +m[1], +m[2])) return `${year}-${pad(m[1])}-${pad(m[2])}`;
+  return null;
+};
+
 // 페이지 하나 → 일정 항목 (본문을 받아 옴)
 export const buildScheduleItem = async (page, { dateBasis = 'created', friendId = null } = {}) => {
   const text = await getPageText(page.id);
-  const { date, time } = toLocalDateTime(dateBasis === 'created' ? page.created : page.modified);
+  const base = toLocalDateTime(dateBasis === 'created' ? page.created : page.modified);
+  const titleDate = parseTitleDate(page.title, page.created);
   return {
     id: oneNoteScheduleId(page.id),
     title: page.title,
-    date,
-    time,
+    date: titleDate || base.date,
+    time: base.time,
     memo: text.length > MEMO_MAX ? `${text.slice(0, MEMO_MAX)}…` : text,
     shared_friend_id: friendId || null
   };
 };
 
+// 자동 동기화를 켤 때·'지금 동기화' 때 거슬러 확인하는 기간
+export const SYNC_LOOKBACK_DAYS = 30;
+export const lookbackIso = () => new Date(Date.now() - SYNC_LOOKBACK_DAYS * 86400000).toISOString();
+
 // 자동 동기화 섹션들에서 마지막 동기화 뒤 새로 만들거나 고친 페이지를 일정으로
 // onImport(items) 는 달력 저장 함수. 반환: 가져온 개수
-export const runAutoSync = async (userId, onImport) => {
+// options.sectionIds: 이 섹션만, options.full: lastSync 를 무시하고 최근 30일을 다시 확인
+export const runAutoSync = async (userId, onImport, { sectionIds: only = null, full = false } = {}) => {
   const config = loadAutoSync(userId);
-  const sectionIds = Object.keys(config);
+  const sectionIds = Object.keys(config).filter(id => !only || only.includes(id));
   if (sectionIds.length === 0) return 0;
-  if (!(await getSignedInAccount())) return 0;
+  if (!(await getSignedInAccount())) {
+    const err = new Error('Microsoft 로그인이 필요합니다.');
+    err.code = 'ONENOTE_NEED_LOGIN';
+    throw err;
+  }
 
   const shareMap = loadShareMap(userId);
   const items = [];
@@ -97,8 +132,10 @@ export const runAutoSync = async (userId, onImport) => {
   for (const sectionId of sectionIds) {
     const sec = config[sectionId];
     const startedAt = new Date().toISOString();
-    const pages = await listPages(sectionId, sec.lastSync || null);
-    const friendId = sec.notebookShared ? (shareMap[sec.notebookId] || null) : null;
+    const since = full || !sec.lastSync ? lookbackIso() : sec.lastSync;
+    // 서버 반영이 몇 분 늦을 수 있어 10분 겹쳐서 확인 (같은 페이지는 덮어쓰기라 괜찮음)
+    const pages = await listPages(sectionId, new Date(new Date(since).getTime() - 10 * 60000).toISOString());
+    const friendId = sectionFriendId(shareMap, sectionId, sec.notebookShared ? sec.notebookId : null);
     items.push(...await mapLimit(pages, 3, page => buildScheduleItem(page, { dateBasis: sec.dateBasis, friendId })));
     nextConfig[sectionId] = { ...sec, lastSync: startedAt };
   }
