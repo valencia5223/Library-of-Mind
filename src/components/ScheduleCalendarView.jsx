@@ -600,6 +600,196 @@ const getKoreanHoliday = (dateObj) => {
     URL.revokeObjectURL(url);
   };
 
+  // 일정 모달의 입력 묶음 (OneNote 일정은 메모를 크게, 나머지는 접어서 보여 준다)
+  const isOneNoteSchedule = Boolean(editingSchedule?.id?.startsWith('sch_onenote_'));
+
+  const scheduleMetaFields = (
+    <>
+      <div className="grid grid-2 gap-3">
+        <div>
+          <label className="form-label font-bold text-xs flex align-center gap-1">
+            <CalendarIcon size={13} className="text-primary" /> 날짜 *
+          </label>
+          <input
+            type="date"
+            className="input-field mt-1 font-bold"
+            value={scheduleDate}
+            onChange={(e) => setScheduleDate(e.target.value)}
+            required
+            style={{
+              padding: '0.65rem 0.85rem',
+              fontSize: '0.9rem',
+              height: '42px'
+            }}
+          />
+        </div>
+        <div>
+          <label className="form-label font-bold text-xs flex align-center gap-1">
+            <Clock size={13} className="text-primary" /> 시간
+          </label>
+          <input
+            type="time"
+            className="input-field mt-1 font-bold"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            style={{
+              padding: '0.65rem 0.85rem',
+              fontSize: '0.9rem',
+              height: '42px'
+            }}
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="form-label font-bold text-xs flex align-center gap-1">
+          <Tag size={13} className="text-primary" /> 카테고리 태그
+        </label>
+        <select
+          className="input-field mt-1 font-bold"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          style={{
+            padding: '0.65rem 0.85rem',
+            fontSize: '0.9rem',
+            height: '42px'
+          }}
+        >
+          <option value="WORK">💼 업무</option>
+          <option value="READING">📖 독서</option>
+          <option value="PERSONAL">☕ 개인</option>
+          <option value="IMPORTANT">🔥 중요</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="form-label font-bold text-xs flex align-center gap-1">
+          <Users size={14} className="text-sky-600" /> 등록된 친구와 일정 공유 (선택)
+        </label>
+        <select
+          className="input-field mt-1 font-bold"
+          value={sharedFriendId}
+          onChange={(e) => setSharedFriendId(e.target.value)}
+          style={{
+            backgroundColor: sharedFriendId ? '#f0f9ff' : '#ffffff',
+            borderColor: sharedFriendId ? '#0284c7' : '#cbd5e1',
+            color: sharedFriendId ? '#0369a1' : '#334155'
+          }}
+        >
+          <option value="">🔒 공유 안함 (나만의 개인 일정)</option>
+          {friendsList.map(f => (
+            <option key={f.id} value={f.id}>
+              {f.name || f.email.split('@')[0]} 님과 공유 ({f.email})
+            </option>
+          ))}
+        </select>
+      </div>
+    </>
+  );
+
+  const scheduleMemoField = (
+    <div style={isOneNoteSchedule ? { display: 'flex', flexDirection: 'column' } : undefined}>
+      <label className="form-label font-bold text-xs flex align-center gap-1">
+        {isOneNoteSchedule && <NotebookText size={14} style={{ color: '#7719aa' }} />}
+        세부 메모
+      </label>
+      <textarea
+        className="input-field mt-1"
+        rows={isOneNoteSchedule ? undefined : 3}
+        placeholder="일정과 관련된 세부 내용이나 메모를 입력하세요."
+        value={memo}
+        onChange={(e) => setMemo(e.target.value)}
+        style={isOneNoteSchedule ? {
+          height: 'min(62vh, 680px)',
+          minHeight: '280px',
+          resize: 'vertical',
+          fontSize: '0.98rem',
+          lineHeight: 1.75,
+          padding: '1rem 1.1rem',
+          whiteSpace: 'pre-wrap',
+          backgroundColor: '#fdfcff'
+        } : undefined}
+      />
+    </div>
+  );
+
+  const scheduleExportButtons = (
+    <>
+      {/* 📅 외부 캘린더 내보내기 버튼 (수정 모드에서만 노출) */}
+      {editingSchedule && (
+        <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0', marginBottom: '4px' }}>
+          <button
+            type="button"
+            onClick={() => {
+              const currentScheduleData = {
+                ...editingSchedule,
+                date: scheduleDate || editingSchedule.date,
+                time: time,
+                title: title,
+                memo: memo,
+                category: category
+              };
+              const url = generateGoogleCalendarUrl(currentScheduleData);
+              window.open(url, '_blank');
+            }}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              background: 'linear-gradient(135deg, #4285f4 0%, #34a853 100%)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '8px 12px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(66,133,244,0.3)'
+            }}
+            title="이 일정을 Google 캘린더에 바로 등록합니다"
+          >
+            <ExternalLink size={14} /> Google 캘린더로 내보내기
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const currentScheduleData = {
+                ...editingSchedule,
+                date: scheduleDate || editingSchedule.date,
+                time: time,
+                title: title,
+                memo: memo,
+                category: category
+              };
+              downloadICSFile(currentScheduleData);
+            }}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '8px 12px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(99,102,241,0.3)'
+            }}
+            title="ICS 파일을 다운로드하여 아이폰/네이버/아웃룩 캘린더에 등록합니다"
+          >
+            <Download size={14} /> ICS 파일 (아이폰/네이버)
+          </button>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <div className="schedule-calendar-wrapper">
       {/* 상단 컨트롤 헤더 */}
@@ -799,11 +989,11 @@ const getKoreanHoliday = (dateObj) => {
       {/* 일정 추가 / 편집 모달 (화면 중앙 정렬) */}
       {showModal && (
         <div className="modal-overlay modal-backdrop" onClick={() => setShowModal(false)}>
-          <div className="modal-card calendar-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '460px', width: '92%' }}>
+          <div className="modal-card calendar-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: isOneNoteSchedule ? '880px' : '460px', width: isOneNoteSchedule ? '95%' : '92%' }}>
             <div className="modal-header">
               <h3 className="modal-title flex align-center gap-2">
-                <CalendarIcon size={20} className="text-primary" />
-                {editingSchedule ? '일정 수정하기' : '새 일정 추가'}
+                {isOneNoteSchedule ? <NotebookText size={20} style={{ color: '#7719aa' }} /> : <CalendarIcon size={20} className="text-primary" />}
+                {isOneNoteSchedule ? 'OneNote 노트' : editingSchedule ? '일정 수정하기' : '새 일정 추가'}
                 <span className="text-xs sub-text font-normal">({scheduleDate || formatDateString(selectedDate)})</span>
               </h3>
               <button className="modal-close" onClick={() => setShowModal(false)} title="닫기">
@@ -821,172 +1011,30 @@ const getKoreanHoliday = (dateObj) => {
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
-                  autoFocus
+                  autoFocus={!isOneNoteSchedule}
+                  style={isOneNoteSchedule ? { fontSize: '1.05rem', fontWeight: 700 } : undefined}
                 />
               </div>
 
-              <div className="grid grid-2 gap-3">
-                <div>
-                  <label className="form-label font-bold text-xs flex align-center gap-1">
-                    <CalendarIcon size={13} className="text-primary" /> 날짜 *
-                  </label>
-                  <input
-                    type="date"
-                    className="input-field mt-1 font-bold"
-                    value={scheduleDate}
-                    onChange={(e) => setScheduleDate(e.target.value)}
-                    required
-                    style={{
-                      padding: '0.65rem 0.85rem',
-                      fontSize: '0.9rem',
-                      height: '42px'
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="form-label font-bold text-xs flex align-center gap-1">
-                    <Clock size={13} className="text-primary" /> 시간
-                  </label>
-                  <input
-                    type="time"
-                    className="input-field mt-1 font-bold"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    style={{
-                      padding: '0.65rem 0.85rem',
-                      fontSize: '0.9rem',
-                      height: '42px'
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="form-label font-bold text-xs flex align-center gap-1">
-                  <Tag size={13} className="text-primary" /> 카테고리 태그
-                </label>
-                <select
-                  className="input-field mt-1 font-bold"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  style={{
-                    padding: '0.65rem 0.85rem',
-                    fontSize: '0.9rem',
-                    height: '42px'
-                  }}
-                >
-                  <option value="WORK">💼 업무</option>
-                  <option value="READING">📖 독서</option>
-                  <option value="PERSONAL">☕ 개인</option>
-                  <option value="IMPORTANT">🔥 중요</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="form-label font-bold text-xs flex align-center gap-1">
-                  <Users size={14} className="text-sky-600" /> 등록된 친구와 일정 공유 (선택)
-                </label>
-                <select
-                  className="input-field mt-1 font-bold"
-                  value={sharedFriendId}
-                  onChange={(e) => setSharedFriendId(e.target.value)}
-                  style={{
-                    backgroundColor: sharedFriendId ? '#f0f9ff' : '#ffffff',
-                    borderColor: sharedFriendId ? '#0284c7' : '#cbd5e1',
-                    color: sharedFriendId ? '#0369a1' : '#334155'
-                  }}
-                >
-                  <option value="">🔒 공유 안함 (나만의 개인 일정)</option>
-                  {friendsList.map(f => (
-                    <option key={f.id} value={f.id}>
-                      {f.name || f.email.split('@')[0]} 님과 공유 ({f.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="form-label font-bold text-xs">세부 메모</label>
-                <textarea
-                  className="input-field mt-1"
-                  rows={3}
-                  placeholder="일정과 관련된 세부 내용이나 메모를 입력하세요."
-                  value={memo}
-                  onChange={(e) => setMemo(e.target.value)}
-                />
-              </div>
-
-              {/* 📅 외부 캘린더 내보내기 버튼 (수정 모드에서만 노출) */}
-              {editingSchedule && (
-                <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0', marginBottom: '4px' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const currentScheduleData = {
-                        ...editingSchedule,
-                        date: scheduleDate || editingSchedule.date,
-                        time: time,
-                        title: title,
-                        memo: memo,
-                        category: category
-                      };
-                      const url = generateGoogleCalendarUrl(currentScheduleData);
-                      window.open(url, '_blank');
-                    }}
-                    style={{
-                      flex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      background: 'linear-gradient(135deg, #4285f4 0%, #34a853 100%)',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '8px 12px',
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(66,133,244,0.3)'
-                    }}
-                    title="이 일정을 Google 캘린더에 바로 등록합니다"
-                  >
-                    <ExternalLink size={14} /> Google 캘린더로 내보내기
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const currentScheduleData = {
-                        ...editingSchedule,
-                        date: scheduleDate || editingSchedule.date,
-                        time: time,
-                        title: title,
-                        memo: memo,
-                        category: category
-                      };
-                      downloadICSFile(currentScheduleData);
-                    }}
-                    style={{
-                      flex: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '8px 12px',
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(99,102,241,0.3)'
-                    }}
-                    title="ICS 파일을 다운로드하여 아이폰/네이버/아웃룩 캘린더에 등록합니다"
-                  >
-                    <Download size={14} /> ICS 파일 (아이폰/네이버)
-                  </button>
-                </div>
+              {isOneNoteSchedule ? (
+                <>
+                  {scheduleMemoField}
+                  <details style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.6rem 0.85rem' }}>
+                    <summary className="text-xs font-bold" style={{ cursor: 'pointer', color: '#475569' }}>
+                      일정 정보 · {scheduleDate} {time} · {getCategoryBadge(category).label} (눌러서 수정)
+                    </summary>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.9rem' }}>
+                      {scheduleMetaFields}
+                      {scheduleExportButtons}
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <>
+                  {scheduleMetaFields}
+                  {scheduleMemoField}
+                  {scheduleExportButtons}
+                </>
               )}
 
               <div className="flex justify-end gap-2 pt-3 border-t">
