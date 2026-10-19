@@ -43,18 +43,24 @@ export const signOutMicrosoft = async () => {
   if (account) await msal.clearCache({ account });
 };
 
+// 로그인이 만료돼 다시 로그인 버튼을 눌러야 할 때 던지는 오류 (자동 동기화는 팝업을 띄울 수 없음)
+export const NEED_LOGIN = 'ONENOTE_NEED_LOGIN';
+
+const needLoginError = () => {
+  const err = new Error('Microsoft 로그인이 만료되었습니다. 다시 로그인해 주세요.');
+  err.code = NEED_LOGIN;
+  return err;
+};
+
 const getToken = async () => {
   const msal = await getMsal();
   const account = msal.getAllAccounts()[0];
-  if (!account) throw new Error('Microsoft 로그인이 필요합니다.');
+  if (!account) throw needLoginError();
   try {
     const res = await msal.acquireTokenSilent({ scopes: SCOPES, account });
     return res.accessToken;
   } catch (e) {
-    if (e instanceof InteractionRequiredAuthError) {
-      const res = await msal.acquireTokenPopup({ scopes: SCOPES, account });
-      return res.accessToken;
-    }
+    if (e instanceof InteractionRequiredAuthError) throw needLoginError();
     throw e;
   }
 };
@@ -87,16 +93,24 @@ const graphFetchAll = async (url) => {
 // 모든 노트북의 섹션(섹션 그룹 안의 섹션 포함)을 평평한 목록으로
 export const listSections = async () => {
   const sections = await graphFetchAll(
-    '/me/onenote/sections?$select=id,displayName&$expand=parentNotebook($select=displayName)&$top=100'
+    '/me/onenote/sections?$select=id,displayName&$expand=parentNotebook($select=id,displayName,isShared)&$top=100'
   );
   return sections
-    .map(s => ({ id: s.id, name: s.displayName, notebook: s.parentNotebook?.displayName || '' }))
+    .map(s => ({
+      id: s.id,
+      name: s.displayName,
+      notebookId: s.parentNotebook?.id || '',
+      notebook: s.parentNotebook?.displayName || '',
+      notebookShared: Boolean(s.parentNotebook?.isShared)
+    }))
     .sort((a, b) => (a.notebook + a.name).localeCompare(b.notebook + b.name, 'ko'));
 };
 
-export const listPages = async (sectionId) => {
+// sinceIso 를 주면 그 뒤에 만들거나 고친 페이지만
+export const listPages = async (sectionId, sinceIso = null) => {
+  const filter = sinceIso ? `&$filter=lastModifiedDateTime ge ${sinceIso}` : '';
   const pages = await graphFetchAll(
-    `/me/onenote/sections/${encodeURIComponent(sectionId)}/pages?$select=id,title,createdDateTime,lastModifiedDateTime&$orderby=createdDateTime desc&$top=100`
+    `/me/onenote/sections/${encodeURIComponent(sectionId)}/pages?$select=id,title,createdDateTime,lastModifiedDateTime&$orderby=createdDateTime desc&$top=100${filter}`
   );
   return pages.map(p => ({
     id: p.id,

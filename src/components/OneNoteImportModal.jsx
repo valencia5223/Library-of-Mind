@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, NotebookText, LogOut, CheckSquare, Square, Loader2 } from 'lucide-react';
+import { X, NotebookText, LogOut, CheckSquare, Square, Loader2, Users, RefreshCw } from 'lucide-react';
 import {
   isOneNoteConfigured,
   getSignedInAccount,
@@ -7,25 +7,21 @@ import {
   signOutMicrosoft,
   listSections,
   listPages,
-  getPageText
+  NEED_LOGIN
 } from '../utils/oneNote';
-
-const MEMO_MAX = 3000;
-
-const oneNoteScheduleId = (pageId) => `sch_onenote_${pageId}`;
-
-const toLocalDateTime = (iso) => {
-  const d = new Date(iso);
-  const pad = (n) => String(n).padStart(2, '0');
-  return {
-    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`
-  };
-};
+import {
+  oneNoteScheduleId,
+  toLocalDateTime,
+  loadShareMap,
+  saveShareMap,
+  loadAutoSync,
+  saveAutoSync,
+  buildScheduleItem
+} from '../utils/oneNoteSync';
 
 // OneNote 페이지를 골라 일정으로 가져오는 창
-// onImport([{ id, title, date, time, memo }]) 로 넘기면 달력이 저장한다.
-export default function OneNoteImportModal({ onClose, onImport, importedIds = new Set() }) {
+// onImport([{ id, title, date, time, memo, shared_friend_id }]) 로 넘기면 달력이 저장한다.
+export default function OneNoteImportModal({ onClose, onImport, importedIds = new Set(), userId = null, friendsList = [] }) {
   const [account, setAccount] = useState(null);
   const [sections, setSections] = useState([]);
   const [sectionId, setSectionId] = useState('');
@@ -34,6 +30,50 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
   const [dateBasis, setDateBasis] = useState('created'); // 'created' | 'modified'
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
+  const [shareMap, setShareMap] = useState(() => loadShareMap(userId));
+  const [autoSync, setAutoSync] = useState(() => loadAutoSync(userId));
+
+  const section = sections.find(s => s.id === sectionId);
+  const notebookFriendId = section?.notebookShared ? (shareMap[section.notebookId] || '') : '';
+  const notebookFriend = friendsList.find(f => f.id === notebookFriendId);
+
+  const setNotebookFriend = (friendId) => {
+    if (!section) return;
+    const next = { ...shareMap };
+    if (friendId) next[section.notebookId] = friendId;
+    else delete next[section.notebookId];
+    setShareMap(next);
+    saveShareMap(userId, next);
+  };
+
+  // 이 섹션 자동 동기화: 켠 뒤에 새로 만들거나 고친 페이지가 달력에 저절로 들어감
+  const sectionAutoSync = section ? autoSync[section.id] : null;
+  const toggleAutoSync = () => {
+    if (!section) return;
+    const next = { ...autoSync };
+    if (next[section.id]) {
+      delete next[section.id];
+    } else {
+      next[section.id] = {
+        name: section.name,
+        notebook: section.notebook,
+        notebookId: section.notebookId,
+        notebookShared: section.notebookShared,
+        dateBasis,
+        lastSync: new Date().toISOString()
+      };
+    }
+    setAutoSync(next);
+    saveAutoSync(userId, next);
+  };
+
+  // 날짜 기준을 바꾸면 자동 동기화 설정에도 반영
+  useEffect(() => {
+    if (!section || !autoSync[section.id] || autoSync[section.id].dateBasis === dateBasis) return;
+    const next = { ...autoSync, [section.id]: { ...autoSync[section.id], dateBasis } };
+    setAutoSync(next);
+    saveAutoSync(userId, next);
+  }, [dateBasis]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const run = async (label, fn) => {
     setBusy(label);
@@ -42,6 +82,7 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
       await fn();
     } catch (e) {
       console.warn('OneNote 오류:', e);
+      if (e?.code === NEED_LOGIN) setAccount(null);
       if (e?.errorCode !== 'user_cancelled') setError(e.message || String(e));
     } finally {
       setBusy('');
@@ -103,17 +144,8 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
     const result = [];
     // Graph 요청 제한을 피하려고 한 페이지씩 순서대로
     for (let i = 0; i < targets.length; i++) {
-      const page = targets[i];
       setBusy(`본문 가져오는 중… (${i + 1}/${targets.length})`);
-      const text = await getPageText(page.id);
-      const { date, time } = toLocalDateTime(dateBasis === 'created' ? page.created : page.modified);
-      result.push({
-        id: oneNoteScheduleId(page.id),
-        title: page.title,
-        date,
-        time,
-        memo: text.length > MEMO_MAX ? `${text.slice(0, MEMO_MAX)}…` : text
-      });
+      result.push(await buildScheduleItem(targets[i], { dateBasis, friendId: notebookFriend?.id }));
     }
     onImport(result);
     onClose();
@@ -164,10 +196,62 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
                 <label className="form-label font-bold text-xs">섹션</label>
                 <select className="input-field mt-1" value={sectionId} onChange={(e) => setSectionId(e.target.value)} disabled={Boolean(busy)}>
                   {sections.map(s => (
-                    <option key={s.id} value={s.id}>{s.notebook ? `${s.notebook} › ${s.name}` : s.name}</option>
+                    <option key={s.id} value={s.id}>{autoSync[s.id] ? '🔄 ' : ''}{s.notebookShared ? '👥 ' : ''}{s.notebook ? `${s.notebook} › ${s.name}` : s.name}</option>
                   ))}
                 </select>
               </div>
+
+              {section?.notebookShared && (
+                <div style={{ border: '1px solid #bae6fd', backgroundColor: '#f0f9ff', borderRadius: '10px', padding: '0.7rem 0.85rem' }}>
+                  <label className="form-label font-bold text-xs flex align-center gap-1" style={{ color: '#0369a1' }}>
+                    <Users size={14} /> 공유 노트북 · 함께 볼 친구
+                  </label>
+                  <select
+                    className="input-field mt-1 font-bold"
+                    value={notebookFriendId}
+                    onChange={(e) => setNotebookFriend(e.target.value)}
+                    disabled={Boolean(busy)}
+                  >
+                    <option value="">🔒 공유 안함 (내 달력에만)</option>
+                    {friendsList.map(f => (
+                      <option key={f.id} value={f.id}>
+                        {f.name || f.email.split('@')[0]} 님과 공유 ({f.email})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs sub-text mt-1">
+                    {friendsList.length === 0
+                      ? '등록된 친구가 없습니다. 친구 탭에서 먼저 친구를 추가하세요.'
+                      : '이 노트북에서 가져오는 페이지는 고른 친구 달력에도 자동으로 공유됩니다. 노트북마다 한 번만 고르면 기억합니다.'}
+                  </p>
+                </div>
+              )}
+
+              {section && (
+                <div
+                  className="flex align-center justify-between gap-2"
+                  style={{ border: `1px solid ${sectionAutoSync ? '#c4b5fd' : '#e2e8f0'}`, backgroundColor: sectionAutoSync ? '#f5f3ff' : 'transparent', borderRadius: '10px', padding: '0.6rem 0.85rem' }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div className="text-xs font-bold flex align-center gap-1" style={{ color: '#7719aa' }}>
+                      <RefreshCw size={14} /> 이 섹션 자동 동기화 {sectionAutoSync ? '켜짐' : '꺼짐'}
+                    </div>
+                    <div className="text-xs sub-text mt-1">
+                      {sectionAutoSync
+                        ? '일정 탭을 열 때와 열어 둔 동안 5분마다, 새로 쓰거나 고친 페이지를 달력에 넣습니다.'
+                        : '켜면 앞으로 이 섹션에 새로 쓰는 노트가 달력에 저절로 들어갑니다. 지금 있는 페이지는 아래에서 골라 가져오세요.'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${sectionAutoSync ? 'btn-secondary' : 'btn-primary'}`}
+                    onClick={toggleAutoSync}
+                    style={{ flexShrink: 0 }}
+                  >
+                    {sectionAutoSync ? '끄기' : '켜기'}
+                  </button>
+                </div>
+              )}
 
               <div>
                 <label className="form-label font-bold text-xs">달력에 넣을 날짜</label>
@@ -236,7 +320,7 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
             <button type="button" className="btn btn-secondary" onClick={onClose}>취소</button>
             {account && (
               <button type="button" className="btn btn-primary font-bold" onClick={handleImport} disabled={selected.size === 0 || Boolean(busy)}>
-                {selected.size}개 일정으로 가져오기
+                {selected.size}개 일정으로 가져오기{notebookFriend ? ` (${notebookFriend.name || notebookFriend.email.split('@')[0]}님과 공유)` : ''}
               </button>
             )}
           </div>

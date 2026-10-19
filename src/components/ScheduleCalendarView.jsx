@@ -1,7 +1,18 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users, ExternalLink, Download, CheckSquare, NotebookText } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 const OneNoteImportModal = lazy(() => import('./OneNoteImportModal'));
+
+const ONENOTE_SYNC_MS = 5 * 60 * 1000;
+
+// 자동 동기화 섹션이 있는지 (MSAL 묶음을 불러오지 않고 localStorage 만 확인)
+const hasOneNoteAutoSync = (userId) => {
+  try {
+    return Object.keys(JSON.parse(localStorage.getItem(`onenote_autosync_${userId || 'demo'}`) || '{}')).length > 0;
+  } catch {
+    return false;
+  }
+};
 
 // 클라이언트 단 엔드투엔드(E2E) 암호화 / 복호화 헬퍼 (DB 관리자도 읽을 수 없도록 보안 보장)
 const SECRET_SALT = 'LIB_MIND_E2E_SEC_KEY_2026';
@@ -120,6 +131,10 @@ export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard =
   const [memo, setMemo] = useState('');
   const [sharedFriendId, setSharedFriendId] = useState(''); // 공유할 친구 ID
   const [showOneNote, setShowOneNote] = useState(false);
+  const [oneNoteSyncState, setOneNoteSyncState] = useState(''); // '' | 'syncing' | 'needLogin'
+  const schedulesRef = useRef(schedules);
+  schedulesRef.current = schedules;
+  const importOneNoteRef = useRef(null);
 
   const storageKey = `user_schedules_${userId || 'demo'}`;
 
@@ -127,6 +142,42 @@ export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard =
   useEffect(() => {
     loadSchedules();
     fetchFriends();
+  }, [userId]);
+
+  // OneNote 자동 동기화: 화면을 열 때(일정 로드 뒤), 열어 둔 동안 5분마다, 다시 볼 때
+  useEffect(() => {
+    if (!userId) return;
+    let stopped = false;
+    let running = false;
+    let lastRun = 0;
+    const sync = async () => {
+      if (stopped || running || Date.now() - lastRun < 60 * 1000 || !hasOneNoteAutoSync(userId)) return;
+      running = true;
+      lastRun = Date.now();
+      setOneNoteSyncState('syncing');
+      try {
+        const { runAutoSync } = await import('../utils/oneNoteSync');
+        await runAutoSync(userId, (items, opts) => importOneNoteRef.current(items, opts));
+        if (!stopped) setOneNoteSyncState('');
+      } catch (e) {
+        console.warn('OneNote 자동 동기화 실패:', e);
+        if (!stopped) setOneNoteSyncState(e?.code === 'ONENOTE_NEED_LOGIN' ? 'needLogin' : '');
+      } finally {
+        running = false;
+      }
+    };
+    const first = setTimeout(sync, 3000);
+    const timer = setInterval(sync, ONENOTE_SYNC_MS);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') sync();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      stopped = true;
+      clearTimeout(first);
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [userId]);
 
   // 친구 목록 조회
@@ -455,35 +506,82 @@ const getKoreanHoliday = (dateObj) => {
   };
 
   // OneNote 페이지 → 일정 (같은 페이지는 id 가 같아 다시 가져오면 덮어씀)
-  const handleImportOneNote = async (items) => {
-    if (items.length === 0) return;
+  // 공유 노트북에 친구가 연결돼 있으면 shared_friend_id 가 들어와 그 친구 달력에도 공유된다.
+  // silent: 자동 동기화에서 부를 때 알림 없이
+  const handleImportOneNote = async (items, { silent = false } = {}) => {
+    const schedules = schedulesRef.current;
     const prevById = new Map(schedules.map(s => [s.id, s]));
-    const imported = items.map(item => {
+    // 친구가 이미 나에게 공유한 같은 페이지는 내 달력에 보이므로 다시 만들지 않음
+    const sharedToMe = items.filter(item => {
       const prev = prevById.get(item.id);
-      return {
-        ...item,
-        user_id: userId,
-        shared_friend_id: null,
-        is_shared: false,
-        category: prev?.category || 'PERSONAL',
-        is_completed: prev ? prev.is_completed : false,
-        created_at: prev ? prev.created_at : new Date().toISOString()
-      };
+      return prev && prev.user_id && prev.user_id !== userId;
     });
+    const imported = items
+      .filter(item => !sharedToMe.includes(item))
+      .map(item => {
+        const prev = prevById.get(item.id);
+        return {
+          ...item,
+          user_id: userId,
+          shared_friend_id: item.shared_friend_id || null,
+          is_shared: Boolean(item.shared_friend_id),
+          category: prev?.category || 'PERSONAL',
+          is_completed: prev ? prev.is_completed : false,
+          created_at: prev ? prev.created_at : new Date().toISOString()
+        };
+      });
+    if (imported.length === 0) {
+      if (silent) return;
+      window.alert('선택한 페이지는 이미 친구가 공유해 준 일정이라 따로 가져오지 않았습니다.');
+      return;
+    }
     const importedIds = new Set(imported.map(s => s.id));
     saveSchedulesToLocal([...schedules.filter(s => !importedIds.has(s.id)), ...imported]);
 
     if (isSupabaseConfigured() && userId) {
       const payload = imported.map(s => ({
         ...s,
-        title: encryptText(s.title, userId, false),
-        memo: encryptText(s.memo, userId, false)
+        title: encryptText(s.title, userId, s.is_shared),
+        memo: encryptText(s.memo, userId, s.is_shared)
       }));
       const { error } = await supabase.from('user_schedules').upsert(payload);
       if (error) console.warn('OneNote 일정 저장 실패 (로컬 유지됨):', error.message);
+
+      // 친구 계정 기준 레코드도 시도 (handleSaveSchedule 과 같은 방식, RLS 로 막혀도 원본 레코드로 보임)
+      const friendPayload = payload
+        .filter(s => s.is_shared)
+        .map(s => ({ ...s, id: `sh_${s.id}`, user_id: s.shared_friend_id, shared_friend_id: userId }));
+      if (friendPayload.length > 0) {
+        const { error: fErr } = await supabase.from('user_schedules').upsert(friendPayload);
+        if (fErr) console.info('친구 레코드 직접 업서트는 RLS 정책으로 차단됨 (원본 공유 레코드로 보임):', fErr.message);
+      }
+
+      // 공유를 끊었거나 다른 친구로 바꾼 페이지는 예전 친구 쪽 레코드 정리
+      const staleFriendIds = imported
+        .filter(s => {
+          const prevFriend = prevById.get(s.id)?.shared_friend_id;
+          return prevFriend && prevFriend !== s.shared_friend_id;
+        })
+        .map(s => `sh_${s.id}`);
+      if (staleFriendIds.length > 0) {
+        await supabase.from('user_schedules').delete().in('id', staleFriendIds);
+      }
     }
-    window.alert(`OneNote 페이지 ${imported.length}개를 일정으로 가져왔습니다.`);
+
+    if (silent) return;
+    const sharedCount = imported.filter(s => s.is_shared).length;
+    const friendName = (id) => {
+      const f = friendsList.find(fr => fr.id === id);
+      return f ? (f.name || f.email.split('@')[0]) : '친구';
+    };
+    window.alert(
+      `OneNote 페이지 ${imported.length}개를 일정으로 가져왔습니다.` +
+      (sharedCount > 0 ? `\n그중 ${sharedCount}개는 ${friendName(imported.find(s => s.is_shared).shared_friend_id)}님 달력에도 공유됩니다.` : '') +
+      (sharedToMe.length > 0 ? `\n${sharedToMe.length}개는 이미 친구가 공유해 준 일정이라 건너뛰었습니다.` : '')
+    );
   };
+
+  importOneNoteRef.current = handleImportOneNote;
 
   // 일정 토글 완료
   const handleToggleComplete = async (scheduleId, e) => {
@@ -601,7 +699,7 @@ const getKoreanHoliday = (dateObj) => {
   };
 
   // 일정 모달의 입력 묶음 (OneNote 일정은 메모를 크게, 나머지는 접어서 보여 준다)
-  const isOneNoteSchedule = Boolean(editingSchedule?.id?.startsWith('sch_onenote_'));
+  const isOneNoteSchedule = Boolean(editingSchedule?.id?.replace(/^sh_/, '').startsWith('sch_onenote_'));
 
   const scheduleMetaFields = (
     <>
@@ -842,9 +940,13 @@ const getKoreanHoliday = (dateObj) => {
               marginRight: '6px',
               fontSize: '0.85rem'
             }}
-            title="OneNote 페이지를 일정으로 가져오기"
+            title={oneNoteSyncState === 'needLogin' ? 'OneNote 로그인이 만료되어 자동 동기화가 멈췄습니다. 눌러서 다시 로그인하세요.' : 'OneNote 페이지를 일정으로 가져오기'}
           >
-            <NotebookText size={16} /> OneNote
+            <NotebookText size={16} />
+            {oneNoteSyncState === 'syncing' ? 'OneNote 동기화 중…' : oneNoteSyncState === 'needLogin' ? 'OneNote 다시 연결' : 'OneNote'}
+            {oneNoteSyncState === 'needLogin' && (
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#e11d48', display: 'inline-block' }} />
+            )}
           </button>
 
           <button className="btn btn-secondary btn-sm" onClick={handlePrevMonth} title="이전달 이동">
@@ -1053,9 +1155,14 @@ const getKoreanHoliday = (dateObj) => {
       {showOneNote && (
         <Suspense fallback={null}>
           <OneNoteImportModal
-            onClose={() => setShowOneNote(false)}
+            onClose={() => {
+              setShowOneNote(false);
+              setOneNoteSyncState('');
+            }}
             onImport={handleImportOneNote}
             importedIds={new Set(schedules.map(s => s.id))}
+            userId={userId}
+            friendsList={friendsList}
           />
         </Suspense>
       )}
