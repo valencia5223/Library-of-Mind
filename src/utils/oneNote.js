@@ -65,11 +65,17 @@ const getToken = async () => {
   }
 };
 
-const graphFetch = async (url, asText = false) => {
+const graphFetch = async (url, asText = false, attempt = 0) => {
   const token = await getToken();
   const res = await fetch(url.startsWith('http') ? url : `${GRAPH}${url}`, {
     headers: { Authorization: `Bearer ${token}` }
   });
+  // 요청이 몰려 막히면(429/503) 알려 준 시간만큼 쉬었다가 다시
+  if ((res.status === 429 || res.status === 503) && attempt < 3) {
+    const wait = Math.min(Number(res.headers.get('Retry-After')) || 2 ** attempt, 10) * 1000;
+    await new Promise(r => setTimeout(r, wait));
+    return graphFetch(url, asText, attempt + 1);
+  }
   if (!res.ok) {
     let detail = '';
     try { detail = (await res.json())?.error?.message || ''; } catch { /* 본문 없음 */ }
@@ -106,18 +112,27 @@ export const listSections = async () => {
     .sort((a, b) => (a.notebook + a.name).localeCompare(b.notebook + b.name, 'ko'));
 };
 
-// sinceIso 를 주면 그 뒤에 만들거나 고친 페이지만
+const toPage = (p) => ({
+  id: p.id,
+  title: p.title || '(제목 없음)',
+  created: p.createdDateTime,
+  modified: p.lastModifiedDateTime
+});
+
+const pagesUrl = (sectionId, top, extra = '') =>
+  `/me/onenote/sections/${encodeURIComponent(sectionId)}/pages?$select=id,title,createdDateTime,lastModifiedDateTime&$orderby=createdDateTime desc&$top=${top}${extra}`;
+
+// sinceIso 를 주면 그 뒤에 만들거나 고친 페이지만 (전부 받음, 자동 동기화용)
 export const listPages = async (sectionId, sinceIso = null) => {
   const filter = sinceIso ? `&$filter=lastModifiedDateTime ge ${sinceIso}` : '';
-  const pages = await graphFetchAll(
-    `/me/onenote/sections/${encodeURIComponent(sectionId)}/pages?$select=id,title,createdDateTime,lastModifiedDateTime&$orderby=createdDateTime desc&$top=100${filter}`
-  );
-  return pages.map(p => ({
-    id: p.id,
-    title: p.title || '(제목 없음)',
-    created: p.createdDateTime,
-    modified: p.lastModifiedDateTime
-  }));
+  const pages = await graphFetchAll(pagesUrl(sectionId, 100, filter));
+  return pages.map(toPage);
+};
+
+// 화면용: 최근 페이지부터 조금씩. next 를 다시 넘기면 다음 묶음
+export const listPagesChunk = async (sectionId, next = null, top = 30) => {
+  const data = await graphFetch(next || pagesUrl(sectionId, top));
+  return { pages: (data.value || []).map(toPage), next: data['@odata.nextLink'] || null };
 };
 
 // 페이지 HTML 본문을 줄바꿈이 살아 있는 일반 텍스트로

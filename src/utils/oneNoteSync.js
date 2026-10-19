@@ -39,6 +39,35 @@ export const loadAutoSync = (userId) => readJson(autoSyncKey(userId), {});
 export const saveAutoSync = (userId, config) => writeJson(autoSyncKey(userId), config);
 export const hasAutoSync = (userId) => Object.keys(loadAutoSync(userId)).length > 0;
 
+// 섹션·페이지 목록 캐시 (계정별): 창을 열면 바로 보여 주고 뒤에서 새로 받음
+const cacheKey = (accountId, name) => `onenote_cache_${accountId}_${name}`;
+export const loadCache = (accountId, name) => readJson(cacheKey(accountId, name), null);
+export const saveCache = (accountId, name, value) => writeJson(cacheKey(accountId, name), value);
+export const clearCache = (accountId) => {
+  try {
+    Object.keys(localStorage)
+      .filter(k => k.startsWith(`onenote_cache_${accountId}_`))
+      .forEach(k => localStorage.removeItem(k));
+  } catch { /* 무시 */ }
+};
+
+// 최대 limit 개씩 동시에 처리 (순서 유지). onProgress(끝난 개수)
+export const mapLimit = async (list, limit, fn, onProgress = null) => {
+  const out = new Array(list.length);
+  let next = 0;
+  let done = 0;
+  const worker = async () => {
+    while (next < list.length) {
+      const i = next++;
+      out[i] = await fn(list[i], i);
+      done++;
+      if (onProgress) onProgress(done);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, list.length) }, worker));
+  return out;
+};
+
 // 페이지 하나 → 일정 항목 (본문을 받아 옴)
 export const buildScheduleItem = async (page, { dateBasis = 'created', friendId = null } = {}) => {
   const text = await getPageText(page.id);
@@ -70,9 +99,7 @@ export const runAutoSync = async (userId, onImport) => {
     const startedAt = new Date().toISOString();
     const pages = await listPages(sectionId, sec.lastSync || null);
     const friendId = sec.notebookShared ? (shareMap[sec.notebookId] || null) : null;
-    for (const page of pages) {
-      items.push(await buildScheduleItem(page, { dateBasis: sec.dateBasis, friendId }));
-    }
+    items.push(...await mapLimit(pages, 3, page => buildScheduleItem(page, { dateBasis: sec.dateBasis, friendId })));
     nextConfig[sectionId] = { ...sec, lastSync: startedAt };
   }
 

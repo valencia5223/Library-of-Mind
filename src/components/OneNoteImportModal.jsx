@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, NotebookText, LogOut, CheckSquare, Square, Loader2, Users, RefreshCw } from 'lucide-react';
 import {
   isOneNoteConfigured,
@@ -6,7 +6,7 @@ import {
   signInMicrosoft,
   signOutMicrosoft,
   listSections,
-  listPages,
+  listPagesChunk,
   NEED_LOGIN
 } from '../utils/oneNote';
 import {
@@ -16,7 +16,11 @@ import {
   saveShareMap,
   loadAutoSync,
   saveAutoSync,
-  buildScheduleItem
+  buildScheduleItem,
+  loadCache,
+  saveCache,
+  clearCache,
+  mapLimit
 } from '../utils/oneNoteSync';
 
 // OneNote 페이지를 골라 일정으로 가져오는 창
@@ -28,7 +32,10 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
   const [pages, setPages] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [dateBasis, setDateBasis] = useState('created'); // 'created' | 'modified'
-  const [busy, setBusy] = useState('');
+  const [busy, setBusy] = useState(''); // 로그인·가져오기처럼 창을 잠그는 작업
+  const [loading, setLoading] = useState(''); // 목록을 뒤에서 받는 중 (창은 그대로 쓸 수 있음)
+  const [nextLink, setNextLink] = useState(null);
+  const pagesReq = useRef(0);
   const [error, setError] = useState('');
   const [shareMap, setShareMap] = useState(() => loadShareMap(userId));
   const [autoSync, setAutoSync] = useState(() => loadAutoSync(userId));
@@ -81,45 +88,107 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
     try {
       await fn();
     } catch (e) {
-      console.warn('OneNote 오류:', e);
-      if (e?.code === NEED_LOGIN) setAccount(null);
-      if (e?.errorCode !== 'user_cancelled') setError(e.message || String(e));
+      handleError(e);
     } finally {
       setBusy('');
     }
   };
 
-  const loadSections = () => run('섹션 불러오는 중…', async () => {
-    const list = await listSections();
-    setSections(list);
-    if (list.length > 0) setSectionId(list[0].id);
-  });
+  const accountId = account?.homeAccountId || '';
+
+  // 섹션: 저장해 둔 목록을 바로 보여 주고 뒤에서 새로 받음. 마지막으로 본 섹션을 다시 고름
+  const loadSections = async (acc) => {
+    const accId = acc.homeAccountId;
+    const pick = (list) => {
+      const last = loadCache(accId, 'lastSection');
+      setSectionId(prev => (list.some(s => s.id === prev) ? prev : list.some(s => s.id === last) ? last : list[0]?.id || ''));
+    };
+    const cached = loadCache(accId, 'sections');
+    if (cached) {
+      setSections(cached);
+      pick(cached);
+    }
+    setLoading(cached ? '목록 새로 고치는 중…' : '섹션 불러오는 중…');
+    try {
+      const list = await listSections();
+      setSections(list);
+      pick(list);
+      saveCache(accId, 'sections', list);
+    } catch (e) {
+      handleError(e);
+    } finally {
+      setLoading('');
+    }
+  };
+
+  const handleError = (e) => {
+    console.warn('OneNote 오류:', e);
+    if (e?.code === NEED_LOGIN) setAccount(null);
+    if (e?.errorCode !== 'user_cancelled') setError(e.message || String(e));
+  };
 
   useEffect(() => {
     if (!isOneNoteConfigured()) return;
     getSignedInAccount().then(acc => {
       if (acc) {
         setAccount(acc);
-        loadSections();
+        loadSections(acc);
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 페이지: 저장해 둔 목록을 바로 보여 주고, 최근 30개를 새로 받음 (섹션을 빨리 바꾸면 늦게 온 응답은 버림)
   useEffect(() => {
-    if (!sectionId) return;
+    if (!sectionId || !accountId) return;
+    const req = ++pagesReq.current;
     setSelected(new Set());
-    run('페이지 불러오는 중…', async () => setPages(await listPages(sectionId)));
-  }, [sectionId]);
+    setError('');
+    saveCache(accountId, 'lastSection', sectionId);
+    const cached = loadCache(accountId, `pages_${sectionId}`);
+    setPages(cached || []);
+    setNextLink(null);
+    setLoading(cached ? '목록 새로 고치는 중…' : '페이지 불러오는 중…');
+    listPagesChunk(sectionId)
+      .then(({ pages: list, next }) => {
+        if (req !== pagesReq.current) return;
+        setPages(list);
+        setNextLink(next);
+        saveCache(accountId, `pages_${sectionId}`, list);
+      })
+      .catch(e => {
+        if (req === pagesReq.current) handleError(e);
+      })
+      .finally(() => {
+        if (req === pagesReq.current) setLoading('');
+      });
+  }, [sectionId, accountId]);
+
+  const loadMorePages = () => {
+    if (!nextLink) return;
+    const req = pagesReq.current;
+    setLoading('페이지 더 불러오는 중…');
+    listPagesChunk(sectionId, nextLink)
+      .then(({ pages: list, next }) => {
+        if (req !== pagesReq.current) return;
+        setPages(prev => [...prev, ...list.filter(p => !prev.some(q => q.id === p.id))]);
+        setNextLink(next);
+      })
+      .catch(e => {
+        if (req === pagesReq.current) handleError(e);
+      })
+      .finally(() => {
+        if (req === pagesReq.current) setLoading('');
+      });
+  };
 
   const handleSignIn = () => run('로그인 중…', async () => {
     const acc = await signInMicrosoft();
     setAccount(acc);
-    const list = await listSections();
-    setSections(list);
-    if (list.length > 0) setSectionId(list[0].id);
+    await loadSections(acc);
   });
 
   const handleSignOut = async () => {
+    clearCache(accountId);
     await signOutMicrosoft();
     setAccount(null);
     setSections([]);
@@ -141,12 +210,14 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
 
   const handleImport = () => run('본문 가져오는 중…', async () => {
     const targets = pages.filter(p => selected.has(p.id));
-    const result = [];
-    // Graph 요청 제한을 피하려고 한 페이지씩 순서대로
-    for (let i = 0; i < targets.length; i++) {
-      setBusy(`본문 가져오는 중… (${i + 1}/${targets.length})`);
-      result.push(await buildScheduleItem(targets[i], { dateBasis, friendId: notebookFriend?.id }));
-    }
+    setBusy(`본문 가져오는 중… (0/${targets.length})`);
+    // 3개씩 동시에 (너무 많이 보내면 OneNote 가 잠시 막음)
+    const result = await mapLimit(
+      targets,
+      3,
+      page => buildScheduleItem(page, { dateBasis, friendId: notebookFriend?.id }),
+      done => setBusy(`본문 가져오는 중… (${done}/${targets.length})`)
+    );
     onImport(result);
     onClose();
   });
@@ -194,7 +265,7 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
 
               <div>
                 <label className="form-label font-bold text-xs">섹션</label>
-                <select className="input-field mt-1" value={sectionId} onChange={(e) => setSectionId(e.target.value)} disabled={Boolean(busy)}>
+                <select className="input-field mt-1" value={sectionId} onChange={(e) => setSectionId(e.target.value)} disabled={Boolean(busy) || sections.length === 0}>
                   {sections.map(s => (
                     <option key={s.id} value={s.id}>{autoSync[s.id] ? '🔄 ' : ''}{s.notebookShared ? '👥 ' : ''}{s.notebook ? `${s.notebook} › ${s.name}` : s.name}</option>
                   ))}
@@ -279,8 +350,10 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
                   )}
                 </div>
                 <div style={{ maxHeight: '300px', overflowY: 'auto', marginTop: '6px', border: '1px solid #e2e8f0', borderRadius: '10px' }}>
-                  {pages.length === 0 && !busy && (
-                    <p className="text-xs sub-text" style={{ padding: '1rem', textAlign: 'center' }}>페이지가 없습니다.</p>
+                  {pages.length === 0 && (
+                    <p className="text-xs sub-text" style={{ padding: '1rem', textAlign: 'center' }}>
+                      {loading ? '불러오는 중…' : '페이지가 없습니다.'}
+                    </p>
                   )}
                   {pages.map(p => {
                     const checked = selected.has(p.id);
@@ -303,12 +376,28 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
                       </div>
                     );
                   })}
+                  {nextLink && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={loadMorePages}
+                      disabled={Boolean(loading)}
+                      style={{ width: '100%', borderRadius: 0, border: 'none' }}
+                    >
+                      {loading ? '불러오는 중…' : '이전 페이지 더 보기'}
+                    </button>
+                  )}
                 </div>
                 <p className="text-xs sub-text mt-1">이미 가져온 페이지를 다시 가져오면 최신 내용으로 덮어씁니다.</p>
               </div>
             </>
           )}
 
+          {!busy && loading && (
+            <p className="text-xs flex align-center gap-1" style={{ color: '#94a3b8' }}>
+              <Loader2 size={14} /> {loading}
+            </p>
+          )}
           {busy && (
             <p className="text-xs flex align-center gap-1" style={{ color: '#7719aa' }}>
               <Loader2 size={14} /> {busy}
