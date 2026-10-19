@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users, ExternalLink, Download, CheckSquare } from 'lucide-react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users, ExternalLink, Download, CheckSquare, NotebookText } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
+const OneNoteImportModal = lazy(() => import('./OneNoteImportModal'));
 
 // 클라이언트 단 엔드투엔드(E2E) 암호화 / 복호화 헬퍼 (DB 관리자도 읽을 수 없도록 보안 보장)
 const SECRET_SALT = 'LIB_MIND_E2E_SEC_KEY_2026';
@@ -118,6 +119,7 @@ export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard =
   const [category, setCategory] = useState('WORK'); // 기본값: WORK (💼 업무)
   const [memo, setMemo] = useState('');
   const [sharedFriendId, setSharedFriendId] = useState(''); // 공유할 친구 ID
+  const [showOneNote, setShowOneNote] = useState(false);
 
   const storageKey = `user_schedules_${userId || 'demo'}`;
 
@@ -452,6 +454,37 @@ const getKoreanHoliday = (dateObj) => {
     }
   };
 
+  // OneNote 페이지 → 일정 (같은 페이지는 id 가 같아 다시 가져오면 덮어씀)
+  const handleImportOneNote = async (items) => {
+    if (items.length === 0) return;
+    const prevById = new Map(schedules.map(s => [s.id, s]));
+    const imported = items.map(item => {
+      const prev = prevById.get(item.id);
+      return {
+        ...item,
+        user_id: userId,
+        shared_friend_id: null,
+        is_shared: false,
+        category: prev?.category || 'PERSONAL',
+        is_completed: prev ? prev.is_completed : false,
+        created_at: prev ? prev.created_at : new Date().toISOString()
+      };
+    });
+    const importedIds = new Set(imported.map(s => s.id));
+    saveSchedulesToLocal([...schedules.filter(s => !importedIds.has(s.id)), ...imported]);
+
+    if (isSupabaseConfigured() && userId) {
+      const payload = imported.map(s => ({
+        ...s,
+        title: encryptText(s.title, userId, false),
+        memo: encryptText(s.memo, userId, false)
+      }));
+      const { error } = await supabase.from('user_schedules').upsert(payload);
+      if (error) console.warn('OneNote 일정 저장 실패 (로컬 유지됨):', error.message);
+    }
+    window.alert(`OneNote 페이지 ${imported.length}개를 일정으로 가져왔습니다.`);
+  };
+
   // 일정 토글 완료
   const handleToggleComplete = async (scheduleId, e) => {
     e.stopPropagation();
@@ -605,6 +638,24 @@ const getKoreanHoliday = (dateObj) => {
               <CheckSquare size={16} /> ✅ 오늘의 할일
             </button>
           )}
+
+          <button
+            type="button"
+            className="btn btn-sm font-bold flex align-center gap-1.5"
+            onClick={() => setShowOneNote(true)}
+            style={{
+              backgroundColor: 'rgba(119, 25, 170, 0.1)',
+              color: '#7719aa',
+              borderColor: 'rgba(119, 25, 170, 0.35)',
+              borderRadius: '10px',
+              padding: '0.4rem 0.85rem',
+              marginRight: '6px',
+              fontSize: '0.85rem'
+            }}
+            title="OneNote 페이지를 일정으로 가져오기"
+          >
+            <NotebookText size={16} /> OneNote
+          </button>
 
           <button className="btn btn-secondary btn-sm" onClick={handlePrevMonth} title="이전달 이동">
             <ChevronLeft size={18} />
@@ -949,6 +1000,16 @@ const getKoreanHoliday = (dateObj) => {
             </form>
           </div>
         </div>
+      )}
+
+      {showOneNote && (
+        <Suspense fallback={null}>
+          <OneNoteImportModal
+            onClose={() => setShowOneNote(false)}
+            onImport={handleImportOneNote}
+            importedIds={new Set(schedules.map(s => s.id))}
+          />
+        </Suspense>
       )}
     </div>
   );

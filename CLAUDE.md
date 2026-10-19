@@ -46,7 +46,8 @@ Python 프로젝트: `yuna_nutrition_tracker/requirements.txt`, 로컬 실행은
 - Supabase 클라이언트는 `src/supabaseClient.js` (placeholder 대체값 + `isSupabaseConfigured()`)를 모든 코드가 사용한다. `isSupabaseConfigured()` 가 false면 데모 모드로 localStorage에만 저장한다. (`src/supabase.js`, `src/mockData.js` 는 어디서도 import하지 않는 미사용 파일)
 - 낙관적 업데이트로 임시 id(`b-`/`n-`/`s-` + timestamp)를 먼저 넣고, insert 후 `.select().single()` 결과로 실제 UUID로 교체한다(`replaceTempId`). 새 insert 흐름도 이 패턴을 따를 것.
 - 스키마 SQL 파일에 없는 테이블/RPC가 코드에서 쓰인다: `user_schedules`, `shared_restaurants`, `user_profiles`, RPC `get_pending_approval_users`, `approve_user_signup`. 실제 정의는 Supabase 대시보드에서 확인할 것.
-- 환경변수: `.env` 의 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
+- 환경변수: `.env` 의 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_MS_CLIENT_ID`(OneNote 연동용 Azure 앱 클라이언트 ID).
+- OneNote 가져오기: 일정 달력 헤더의 OneNote 버튼 → `OneNoteImportModal`(lazy 로딩) → `src/utils/oneNote.js`(MSAL 팝업 로그인, 개인 계정 `consumers`, 위임 권한 `Notes.Read`, Graph 호출). 팝업 리디렉트는 `public/onenote-redirect.html`. 페이지는 id `sch_onenote_<페이지id>` 일정으로 upsert 되므로 다시 가져오면 덮어쓴다.
 - 주요 테이블: `user_books`, `book_notes`, `reading_sessions`, `user_schedules`, `user_friends`, `shared_memos`, `shared_restaurants`, `profiles`, `push_subscriptions`. 스키마는 `supabase_schema.sql`, `supabase_bookshelf_schema.sql`.
 - `user_books` 업데이트는 DB에 없는 컬럼 때문에 실패할 수 있어, App.jsx 에서 "안전 필드"만 먼저 저장하고 추가 필드를 따로 저장하는 폴백 패턴을 쓴다. 컬럼을 추가할 때 이 흐름을 유지할 것.
 - 실시간 기능은 Supabase Realtime 채널 사용(예: `global_user_nudge:${user.id}`).
