@@ -26,8 +26,19 @@ import {
   runAutoSync,
   trackSection,
   markSeen,
+  loadSyncLog,
+  addSyncLog,
   SYNC_LOOKBACK_DAYS
 } from '../utils/oneNoteSync';
+
+const TRIGGER_LABEL = {
+  open: '화면 열 때',
+  interval: '3분 주기',
+  visible: '탭으로 돌아옴',
+  focus: '창 클릭',
+  close: '창 닫을 때',
+  manual: '지금 동기화'
+};
 
 // OneNote 페이지를 골라 일정으로 가져오는 창
 // onImport([{ id, title, date, time, memo, shared_friend_id }]) 로 넘기면 달력이 저장한다.
@@ -44,6 +55,7 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
   const pagesReq = useRef(0);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
+  const [syncLog, setSyncLog] = useState(() => loadSyncLog(userId));
   const [shareMap, setShareMap] = useState(() => loadShareMap(userId));
   const [autoSync, setAutoSync] = useState(() => loadAutoSync(userId));
 
@@ -84,7 +96,17 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
 
   // 이 섹션 최근 30일을 바로 다시 확인
   const syncNow = (secId) => run('동기화 중…', async () => {
-    const count = await runAutoSync(userId, onImport, { sectionIds: [secId], full: true });
+    let count = 0;
+    try {
+      const { changed, stats } = await runAutoSync(userId, onImport, { sectionIds: [secId], full: true });
+      count = changed;
+      if (stats) addSyncLog(userId, { trigger: 'manual', changed, ...stats });
+    } catch (e) {
+      addSyncLog(userId, { trigger: 'manual', error: e?.message || String(e) });
+      throw e;
+    } finally {
+      setSyncLog(loadSyncLog(userId));
+    }
     const latest = loadAutoSync(userId);
     setAutoSync(latest);
     if (latest[secId]?.blocked) {
@@ -337,7 +359,7 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
                       {sectionAutoSync
                         ? sectionAutoSync.blocked
                           ? '🔒 암호로 보호된 섹션이라 동기화할 수 없습니다. OneNote 에서 섹션 암호를 해제하거나 자동 동기화를 꺼 주세요.'
-                          : `일정 화면을 열 때와 열어 둔 동안 5분마다, 새로 쓰거나 고친 페이지를 달력에 넣습니다. 마지막 확인: ${sectionAutoSync.lastSync ? fmt(sectionAutoSync.lastSync) : '아직 없음'}`
+                          : `일정 화면을 열 때·열어 둔 동안 3분마다·브라우저 창을 다시 클릭할 때, 새로 쓰거나 고친 페이지를 달력에 넣습니다. 마지막 확인: ${sectionAutoSync.lastSync ? fmt(sectionAutoSync.lastSync) : '아직 없음'}`
                         : `켜면 최근 ${SYNC_LOOKBACK_DAYS}일 안의 페이지부터, 앞으로 이 섹션에 쓰는 노트가 달력에 저절로 들어갑니다.`}
                     </div>
                   </div>
@@ -440,6 +462,38 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
           )}
           {error && <p className="text-xs" style={{ color: '#be123c' }}>{error}</p>}
           {info && <p className="text-xs" style={{ color: '#059669', fontWeight: 700 }}>{info}</p>}
+
+          {account && (
+            <details style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.5rem 0.8rem' }}>
+              <summary className="text-xs font-bold" style={{ cursor: 'pointer', color: '#475569' }}>
+                동기화 기록 (최근 {syncLog.length}번)
+                {syncLog[0] && ` · 마지막 ${fmt(syncLog[0].at)} ${TRIGGER_LABEL[syncLog[0].trigger] || ''}`}
+              </summary>
+              <div style={{ maxHeight: '240px', overflowY: 'auto', marginTop: '0.5rem' }}>
+                {syncLog.length === 0 && <p className="text-xs sub-text">아직 기록이 없습니다.</p>}
+                {syncLog.map((log, i) => (
+                  <div key={i} className="text-xs" style={{ padding: '0.35rem 0', borderTop: i ? '1px solid #f1f5f9' : 'none' }}>
+                    <div style={{ color: log.error ? '#be123c' : '#334155', fontWeight: 600 }}>
+                      {fmt(log.at)} · {TRIGGER_LABEL[log.trigger] || log.trigger} ·{' '}
+                      {log.error
+                        ? `오류: ${log.error}`
+                        : `섹션 ${log.sections}개 · 노트 ${log.listed}개 확인 · 본문 ${log.pages?.length || 0}개 받음 · 바뀜 ${log.changed}개`}
+                    </div>
+                    {log.pages?.length > 0 && (
+                      <div className="sub-text" style={{ paddingLeft: '0.6rem' }}>
+                        {log.pages.slice(0, 8).map((p, j) => (
+                          <div key={j}>
+                            {p.changed ? '✅ 반영' : '— 같음'} · {p.title} (OneNote 수정 시각 {fmt(p.modified)})
+                          </div>
+                        ))}
+                        {log.pages.length > 8 && <div>… 외 {log.pages.length - 8}개</div>}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
 
           <div className="flex justify-end gap-2 pt-3 border-t">
             <button type="button" className="btn btn-secondary" onClick={onClose}>취소</button>

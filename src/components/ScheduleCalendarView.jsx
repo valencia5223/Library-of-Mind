@@ -6,7 +6,8 @@ const ScheduleNotesPanel = lazy(() => import('./ScheduleNotesPanel'));
 
 const isOneNoteId = (id = '') => id.replace(/^sh_/, '').startsWith('sch_onenote_');
 
-const ONENOTE_SYNC_MS = 5 * 60 * 1000;
+const ONENOTE_SYNC_MS = 3 * 60 * 1000; // 열어 둔 동안 확인 주기
+const ONENOTE_SYNC_GAP_MS = 30 * 1000; // 창 클릭·탭 전환으로 너무 자주 돌지 않게
 
 // 자동 동기화 섹션이 있거나 가져온 OneNote 노트가 있는지 (MSAL 묶음을 불러오지 않고 확인)
 const hasOneNoteAutoSync = (userId, schedules = []) => {
@@ -153,28 +154,32 @@ export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard =
     fetchFriends();
   }, [userId]);
 
-  // OneNote 자동 동기화: 화면을 열 때(일정 로드 뒤), 열어 둔 동안 5분마다, 다시 볼 때
+  // OneNote 자동 동기화: 화면을 열 때(일정 로드 뒤), 열어 둔 동안 3분마다,
+  // 탭으로 돌아오거나 브라우저 창을 다시 클릭할 때(OneNote 앱에서 고치고 돌아오는 경우)
   useEffect(() => {
     if (!userId) return;
     let stopped = false;
     let running = false;
     let lastRun = 0;
-    const sync = async (force = false) => {
-      if (stopped || running || (!force && Date.now() - lastRun < 60 * 1000) || !hasOneNoteAutoSync(userId, schedulesRef.current)) return;
+    const sync = async (trigger = 'interval', force = false) => {
+      if (stopped || running || (!force && Date.now() - lastRun < ONENOTE_SYNC_GAP_MS) || !hasOneNoteAutoSync(userId, schedulesRef.current)) return;
       running = true;
       lastRun = Date.now();
       setOneNoteSyncState('syncing');
+      let mod = null;
       try {
-        const { runAutoSync } = await import('../utils/oneNoteSync');
-        const count = await runAutoSync(userId, (items, opts) => importOneNoteRef.current(items, opts), {
+        mod = await import('../utils/oneNoteSync');
+        const { changed, stats } = await mod.runAutoSync(userId, (items, opts) => importOneNoteRef.current(items, opts), {
           existingIds: new Set(schedulesRef.current.filter(s => s.user_id === userId).map(s => s.id))
         });
+        if (stats) mod.addSyncLog(userId, { trigger, changed, ...stats });
         if (!stopped) {
           setOneNoteSyncState('');
-          setOneNoteLastCheck({ at: new Date(), count });
+          setOneNoteLastCheck({ at: new Date(), count: changed });
         }
       } catch (e) {
         console.warn('OneNote 자동 동기화 실패:', e);
+        mod?.addSyncLog(userId, { trigger, error: e?.message || String(e) });
         if (!stopped) {
           setOneNoteSyncState(e?.code === 'ONENOTE_NEED_LOGIN' ? 'needLogin' : 'error');
           setOneNoteSyncError(e?.message || String(e));
@@ -184,18 +189,21 @@ export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard =
       }
     };
     oneNoteSyncRef.current = sync;
-    const first = setTimeout(sync, 3000);
-    const timer = setInterval(sync, ONENOTE_SYNC_MS);
+    const first = setTimeout(() => sync('open'), 3000);
+    const timer = setInterval(() => sync('interval'), ONENOTE_SYNC_MS);
     const onVisible = () => {
-      if (document.visibilityState === 'visible') sync();
+      if (document.visibilityState === 'visible') sync('visible');
     };
+    const onFocus = () => sync('focus');
     document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
     return () => {
       stopped = true;
       oneNoteSyncRef.current = null;
       clearTimeout(first);
       clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
     };
   }, [userId]);
 
@@ -558,7 +566,7 @@ const getKoreanHoliday = (dateObj) => {
       });
     }
     if (imported.length === 0) {
-      if (silent) return 0;
+      if (silent) return [];
       window.alert('선택한 페이지는 이미 친구가 공유해 준 일정이라 따로 가져오지 않았습니다.');
       return;
     }
@@ -601,7 +609,7 @@ const getKoreanHoliday = (dateObj) => {
       }
     }
 
-    if (silent) return imported.length;
+    if (silent) return imported.map(s => s.id); // 실제로 바뀐 일정 id
     const sharedCount = imported.filter(s => s.is_shared).length;
     const friendName = (id) => {
       const f = friendsList.find(fr => fr.id === id);
@@ -1239,7 +1247,7 @@ const getKoreanHoliday = (dateObj) => {
               setShowOneNote(false);
               setOneNoteSyncState('');
               // 방금 켠 설정·다시 한 로그인으로 바로 한 번 확인
-              setTimeout(() => oneNoteSyncRef.current?.(true), 500);
+              setTimeout(() => oneNoteSyncRef.current?.('close', true), 500);
             }}
             onImport={handleImportOneNote}
             importedIds={new Set(schedules.map(s => s.id))}

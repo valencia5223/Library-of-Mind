@@ -1,7 +1,8 @@
 // OneNote → 일정 변환과 자동 동기화 (설정은 브라우저 localStorage 에 사용자별로 저장)
 import { getSignedInAccount, listSections, listPages, listPageIds, getPageText } from './oneNote';
 
-const MEMO_MAX = 3000;
+// 메모 최대 길이 (긴 노트 뒷부분을 고쳐도 반영되도록 넉넉하게)
+const MEMO_MAX = 50000;
 
 export const oneNoteScheduleId = (pageId) => `sch_onenote_${pageId}`;
 
@@ -167,6 +168,13 @@ export const markSeen = (userId, pages) => {
   writeJson(seenKey(userId), seen);
 };
 
+// 동기화 기록 (최근 20번): 자동 동기화가 실제로 언제·무엇을 했는지 창에서 확인용
+const logKey = (userId) => `onenote_synclog_${userId || 'demo'}`;
+export const loadSyncLog = (userId) => readJson(logKey(userId), []);
+export const addSyncLog = (userId, entry) => {
+  writeJson(logKey(userId), [{ at: new Date().toISOString(), ...entry }, ...loadSyncLog(userId)].slice(0, 20));
+};
+
 // 자동 확인 때 다시 훑는 기간 (이 안에서 수정 시각이 바뀐 페이지만 본문을 받음)
 const RECHECK_DAYS = 7;
 // OneNote 목록의 수정 시각은 캐시돼 늦게 바뀔 수 있어, 최근에 고친 페이지는 수정 시각과 상관없이 본문을 다시 받아 비교
@@ -179,17 +187,17 @@ export const lookbackIso = () => new Date(Date.now() - SYNC_LOOKBACK_DAYS * 8640
 
 // 1) 자동 동기화 섹션: 마지막 확인 뒤 새로 만들거나 고친 페이지를 모두 일정으로
 // 2) 손으로 가져온 노트가 있는 섹션: 고친 페이지 중 이미 달력에 있는 것만 갱신
-// onImport(items) 는 달력 저장 함수. 반환: 반영한 개수
+// onImport(items) 는 달력 저장 함수. 반환: { changed: 실제로 바뀐 개수, stats: 기록용 요약 }
 // options.sectionIds: 이 섹션만, options.full: lastSync 를 무시하고 최근 30일을 다시 확인,
 // options.existingIds: 달력에 있는 일정 id (2번 판단용)
 export const runAutoSync = async (userId, onImport, { sectionIds: only = null, full = false, existingIds = null } = {}) => {
   const config = loadAutoSync(userId);
   const syncIds = Object.keys(config).filter(id => !only || only.includes(id));
   const hasImported = existingIds && [...existingIds].some(id => id.replace(/^sh_/, '').startsWith('sch_onenote_'));
-  if (syncIds.length === 0 && !hasImported) return 0;
+  if (syncIds.length === 0 && !hasImported) return { changed: 0, stats: null };
   if (!(await getSignedInAccount())) {
     // 자동 동기화를 켠 적 없이 이 기기에서 로그인 안 했을 뿐이면 조용히 넘어감
-    if (syncIds.length === 0) return 0;
+    if (syncIds.length === 0) return { changed: 0, stats: null };
     const err = new Error('Microsoft 로그인이 필요합니다.');
     err.code = 'ONENOTE_NEED_LOGIN';
     throw err;
@@ -208,6 +216,7 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
   const recentMs = Date.now() - RECENT_DAYS * 86400000;
   const isImported = (pageId) => existingIds.has(oneNoteScheduleId(pageId)) || existingIds.has(`sh_${oneNoteScheduleId(pageId)}`);
 
+  const stats = { sections: 0, listed: 0, fetched: [], changed: [] }; // 기록용
   const blocked = {}; // 암호로 보호된 섹션 (다음부터 건너뜀)
   const failures = [];
   for (const sectionId of [...syncIds, ...trackIds]) {
@@ -218,6 +227,8 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
     const firstOrFull = full || !sec.lastSync;
     try {
       let pages = await listPages(sectionId, firstOrFull ? lookbackIso() : recheckIso);
+      stats.sections++;
+      stats.listed += pages.length;
       if (!firstOrFull) {
         // 수정 시각이 달라진 페이지 + 최근 3일 안에 고친 페이지(최대 15개)
         const recent = pages
@@ -231,6 +242,7 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
       const friendId = sectionFriendId(shareMap, sectionId, sec.notebookShared ? sec.notebookId : null);
       items.push(...await mapLimit(pages, 3, page => buildScheduleItem(page, { dateBasis: sec.dateBasis, friendId })));
       synced.push(...pages);
+      stats.fetched.push(...pages.map(p => ({ id: p.id, title: p.title, modified: p.modified })));
       (isSync ? syncDone : trackDone)[sectionId] = startedAt;
     } catch (e) {
       // 한 섹션이 실패해도 나머지 섹션은 계속
@@ -241,11 +253,13 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
     }
   }
 
-  // onImport 는 실제로 바뀐 개수를 돌려줌 (내용이 같으면 저장하지 않음)
+  // onImport 는 실제로 바뀐 일정 id 목록을 돌려줌 (내용이 같으면 저장하지 않음)
   let changed = 0;
   if (items.length > 0) {
     const res = await onImport(items, { silent: true });
-    changed = typeof res === 'number' ? res : items.length;
+    const changedIds = Array.isArray(res) ? res : items.map(i => i.id);
+    changed = changedIds.length;
+    stats.changed = changedIds;
   }
   if (synced.length > 0) markSeen(userId, synced);
 
@@ -272,5 +286,15 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
   saveTracked(userId, latestTracked);
   // 모든 섹션이 다른 이유로 실패했을 때만 오류로 알림 (보호된 섹션은 오류로 치지 않음)
   if (failures.length > 0 && Object.keys(syncDone).length + Object.keys(trackDone).length === 0) throw failures[0];
-  return changed;
+  return {
+    changed,
+    // 기록용 요약 (호출한 쪽이 addSyncLog 로 남김)
+    stats: {
+      sections: stats.sections,
+      listed: stats.listed,
+      pages: stats.fetched.map(p => ({ title: p.title, modified: p.modified, changed: stats.changed.includes(oneNoteScheduleId(p.id)) })),
+      blocked: Object.keys(blocked).length,
+      failed: failures.length
+    }
+  };
 };
