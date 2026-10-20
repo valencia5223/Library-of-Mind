@@ -75,7 +75,13 @@ const scanTrackedOnce = async (userId, existingIds) => {
     const map = loadTracked(userId);
     for (const sec of await listSections()) {
       if (map[sec.id]) continue;
-      const ids = await listPageIds(sec.id);
+      let ids = [];
+      try {
+        ids = await listPageIds(sec.id);
+      } catch (e) {
+        if (e?.status === 403) continue; // 암호로 보호된 섹션은 건너뜀
+        throw e;
+      }
       if (ids.some(pid => wanted.has(oneNoteScheduleId(pid)))) {
         map[sec.id] = { notebookId: sec.notebookId, notebookShared: sec.notebookShared, dateBasis: 'created', lastSync: null };
       }
@@ -181,29 +187,43 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
   const overlap = (iso) => new Date(new Date(iso).getTime() - 10 * 60000).toISOString();
   const isImported = (pageId) => existingIds.has(oneNoteScheduleId(pageId)) || existingIds.has(`sh_${oneNoteScheduleId(pageId)}`);
 
+  const blocked = {}; // 암호로 보호된 섹션 (다음부터 건너뜀)
+  const failures = [];
   for (const sectionId of [...syncIds, ...trackIds]) {
     const isSync = Boolean(config[sectionId]);
     const sec = isSync ? config[sectionId] : tracked[sectionId];
     const startedAt = new Date().toISOString();
     const since = full || !sec.lastSync ? lookbackIso() : sec.lastSync;
-    let pages = await listPages(sectionId, overlap(since));
-    if (!isSync) pages = pages.filter(p => isImported(p.id));
-    const friendId = sectionFriendId(shareMap, sectionId, sec.notebookShared ? sec.notebookId : null);
-    items.push(...await mapLimit(pages, 3, page => buildScheduleItem(page, { dateBasis: sec.dateBasis, friendId })));
-    (isSync ? syncDone : trackDone)[sectionId] = startedAt;
+    try {
+      let pages = await listPages(sectionId, overlap(since));
+      if (!isSync) pages = pages.filter(p => isImported(p.id));
+      const friendId = sectionFriendId(shareMap, sectionId, sec.notebookShared ? sec.notebookId : null);
+      items.push(...await mapLimit(pages, 3, page => buildScheduleItem(page, { dateBasis: sec.dateBasis, friendId })));
+      (isSync ? syncDone : trackDone)[sectionId] = startedAt;
+    } catch (e) {
+      // 한 섹션이 실패해도 나머지 섹션은 계속
+      if (e?.code === 'ONENOTE_NEED_LOGIN') throw e;
+      if (e?.status === 403) blocked[sectionId] = true;
+      else failures.push(e);
+      console.warn('OneNote 섹션 동기화 실패:', sectionId, e);
+    }
   }
 
   if (items.length > 0) await onImport(items, { silent: true });
   // 설정이 그사이 바뀌었을 수 있으니 lastSync 만 덮어씀
   const latest = loadAutoSync(userId);
-  Object.keys(syncDone).forEach(id => {
-    if (latest[id]) latest[id] = { ...latest[id], lastSync: syncDone[id] };
+  Object.keys(latest).forEach(id => {
+    if (syncDone[id]) latest[id] = { ...latest[id], lastSync: syncDone[id], blocked: false };
+    else if (blocked[id]) latest[id] = { ...latest[id], blocked: true };
   });
   saveAutoSync(userId, latest);
   const latestTracked = loadTracked(userId);
   Object.keys(trackDone).forEach(id => {
     if (latestTracked[id]) latestTracked[id] = { ...latestTracked[id], lastSync: trackDone[id] };
   });
+  Object.keys(blocked).forEach(id => delete latestTracked[id]); // 보호된 섹션은 수정 확인 대상에서 뺌
   saveTracked(userId, latestTracked);
+  // 모든 섹션이 다른 이유로 실패했을 때만 오류로 알림 (보호된 섹션은 오류로 치지 않음)
+  if (failures.length > 0 && Object.keys(syncDone).length + Object.keys(trackDone).length === 0) throw failures[0];
   return items.length;
 };

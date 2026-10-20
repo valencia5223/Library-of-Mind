@@ -79,7 +79,13 @@ const graphFetch = async (url, asText = false, attempt = 0) => {
   if (!res.ok) {
     let detail = '';
     try { detail = (await res.json())?.error?.message || ''; } catch { /* 본문 없음 */ }
-    throw new Error(`OneNote 요청 실패 (${res.status}) ${detail}`.trim());
+    // 403: 암호로 보호된 섹션 등 Microsoft 가 외부 앱에 열어 주지 않는 곳
+    const err = new Error(res.status === 403
+      ? '암호로 보호된 섹션이라 OneNote 가 내용을 열어 주지 않습니다. OneNote 에서 섹션 암호를 해제해야 가져올 수 있습니다.'
+      : `OneNote 요청 실패 (${res.status}) ${detail}`.trim());
+    err.status = res.status;
+    err.detail = detail;
+    throw err;
   }
   return asText ? res.text() : res.json();
 };

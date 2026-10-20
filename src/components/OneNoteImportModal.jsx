@@ -84,7 +84,12 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
   // 이 섹션 최근 30일을 바로 다시 확인
   const syncNow = (secId) => run('동기화 중…', async () => {
     const count = await runAutoSync(userId, onImport, { sectionIds: [secId], full: true });
-    setAutoSync(loadAutoSync(userId));
+    const latest = loadAutoSync(userId);
+    setAutoSync(latest);
+    if (latest[secId]?.blocked) {
+      setError('암호로 보호된 섹션이라 OneNote 가 내용을 열어 주지 않습니다. OneNote 에서 섹션 암호를 해제해야 동기화할 수 있습니다.');
+      return;
+    }
     setInfo(count > 0
       ? `최근 ${SYNC_LOOKBACK_DAYS}일 안에 쓰거나 고친 페이지 ${count}개를 달력에 반영했습니다.`
       : `최근 ${SYNC_LOOKBACK_DAYS}일 안에 쓰거나 고친 페이지가 없습니다.`);
@@ -286,7 +291,7 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
                 <label className="form-label font-bold text-xs">섹션</label>
                 <select className="input-field mt-1" value={sectionId} onChange={(e) => setSectionId(e.target.value)} disabled={Boolean(busy) || sections.length === 0}>
                   {sections.map(s => (
-                    <option key={s.id} value={s.id}>{autoSync[s.id] ? '🔄 ' : ''}{sectionFriendId(shareMap, s.id, s.notebookShared ? s.notebookId : null) ? '👥 ' : ''}{s.notebook ? `${s.notebook} › ${s.name}` : s.name}</option>
+                    <option key={s.id} value={s.id}>{autoSync[s.id]?.blocked ? '🔒 ' : autoSync[s.id] ? '🔄 ' : ''}{sectionFriendId(shareMap, s.id, s.notebookShared ? s.notebookId : null) ? '👥 ' : ''}{s.notebook ? `${s.notebook} › ${s.name}` : s.name}</option>
                   ))}
                 </select>
               </div>
@@ -328,7 +333,9 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
                     </div>
                     <div className="text-xs sub-text mt-1">
                       {sectionAutoSync
-                        ? `일정 화면을 열 때와 열어 둔 동안 5분마다, 새로 쓰거나 고친 페이지를 달력에 넣습니다. 마지막 확인: ${sectionAutoSync.lastSync ? fmt(sectionAutoSync.lastSync) : '아직 없음'}`
+                        ? sectionAutoSync.blocked
+                          ? '🔒 암호로 보호된 섹션이라 동기화할 수 없습니다. OneNote 에서 섹션 암호를 해제하거나 자동 동기화를 꺼 주세요.'
+                          : `일정 화면을 열 때와 열어 둔 동안 5분마다, 새로 쓰거나 고친 페이지를 달력에 넣습니다. 마지막 확인: ${sectionAutoSync.lastSync ? fmt(sectionAutoSync.lastSync) : '아직 없음'}`
                         : `켜면 최근 ${SYNC_LOOKBACK_DAYS}일 안의 페이지부터, 앞으로 이 섹션에 쓰는 노트가 달력에 저절로 들어갑니다.`}
                     </div>
                   </div>
