@@ -153,6 +153,23 @@ export const buildScheduleItem = async (page, { dateBasis = 'created', friendId 
   };
 };
 
+// 페이지마다 마지막으로 달력에 반영한 수정 시각 { [pageId]: modifiedIso }
+// OneNote 앱이 수정을 서버에 늦게 올려도(수정 시각은 고친 때로 찍힘) 놓치지 않으려고 시각 비교 대신 이 값과 비교
+const seenKey = (userId) => `onenote_seen_${userId || 'demo'}`;
+const loadSeen = (userId) => readJson(seenKey(userId), {});
+export const markSeen = (userId, pages) => {
+  const seen = loadSeen(userId);
+  const cutoff = Date.now() - 40 * 86400000;
+  pages.forEach(p => { seen[p.id] = p.modified; });
+  Object.keys(seen).forEach(id => {
+    if (new Date(seen[id]).getTime() < cutoff) delete seen[id];
+  });
+  writeJson(seenKey(userId), seen);
+};
+
+// 자동 확인 때 다시 훑는 기간 (이 안에서 수정 시각이 바뀐 페이지만 본문을 받음)
+const RECHECK_DAYS = 7;
+
 // 자동 동기화를 켤 때·'지금 동기화' 때 거슬러 확인하는 기간
 export const SYNC_LOOKBACK_DAYS = 30;
 export const lookbackIso = () => new Date(Date.now() - SYNC_LOOKBACK_DAYS * 86400000).toISOString();
@@ -183,8 +200,9 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
   const items = [];
   const syncDone = {};
   const trackDone = {};
-  // 서버 반영이 몇 분 늦을 수 있어 10분 겹쳐서 확인 (같은 페이지는 덮어쓰기라 괜찮음)
-  const overlap = (iso) => new Date(new Date(iso).getTime() - 10 * 60000).toISOString();
+  const seen = loadSeen(userId);
+  const synced = [];
+  const recheckIso = new Date(Date.now() - RECHECK_DAYS * 86400000).toISOString();
   const isImported = (pageId) => existingIds.has(oneNoteScheduleId(pageId)) || existingIds.has(`sh_${oneNoteScheduleId(pageId)}`);
 
   const blocked = {}; // 암호로 보호된 섹션 (다음부터 건너뜀)
@@ -193,12 +211,15 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
     const isSync = Boolean(config[sectionId]);
     const sec = isSync ? config[sectionId] : tracked[sectionId];
     const startedAt = new Date().toISOString();
-    const since = full || !sec.lastSync ? lookbackIso() : sec.lastSync;
+    // 처음·'지금 동기화'는 최근 30일 전부, 평소에는 최근 7일 중 지난번과 수정 시각이 다른 페이지만
+    const firstOrFull = full || !sec.lastSync;
     try {
-      let pages = await listPages(sectionId, overlap(since));
+      let pages = await listPages(sectionId, firstOrFull ? lookbackIso() : recheckIso);
+      if (!firstOrFull) pages = pages.filter(p => seen[p.id] !== p.modified);
       if (!isSync) pages = pages.filter(p => isImported(p.id));
       const friendId = sectionFriendId(shareMap, sectionId, sec.notebookShared ? sec.notebookId : null);
       items.push(...await mapLimit(pages, 3, page => buildScheduleItem(page, { dateBasis: sec.dateBasis, friendId })));
+      synced.push(...pages);
       (isSync ? syncDone : trackDone)[sectionId] = startedAt;
     } catch (e) {
       // 한 섹션이 실패해도 나머지 섹션은 계속
@@ -210,6 +231,7 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
   }
 
   if (items.length > 0) await onImport(items, { silent: true });
+  if (synced.length > 0) markSeen(userId, synced);
   // 설정이 그사이 바뀌었을 수 있으니 lastSync 만 덮어씀
   const latest = loadAutoSync(userId);
   Object.keys(latest).forEach(id => {

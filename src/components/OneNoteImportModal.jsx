@@ -25,6 +25,7 @@ import {
   mapLimit,
   runAutoSync,
   trackSection,
+  markSeen,
   SYNC_LOOKBACK_DAYS
 } from '../utils/oneNoteSync';
 
@@ -242,6 +243,7 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
     );
     // 이 섹션의 가져온 노트는 OneNote 에서 고치면 자동으로 다시 반영
     if (section) trackSection(userId, section, dateBasis);
+    markSeen(userId, targets);
     onImport(result);
     onClose();
   });

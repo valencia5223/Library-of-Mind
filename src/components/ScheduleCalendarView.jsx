@@ -139,6 +139,7 @@ export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard =
   const [showNotesPanel, setShowNotesPanel] = useState(false);
   const [oneNoteSyncState, setOneNoteSyncState] = useState(''); // '' | 'syncing' | 'needLogin' | 'error'
   const [oneNoteSyncError, setOneNoteSyncError] = useState('');
+  const [oneNoteLastCheck, setOneNoteLastCheck] = useState(null); // 마지막 자동 확인 시각·반영 개수
   const oneNoteSyncRef = useRef(null);
   const schedulesRef = useRef(schedules);
   schedulesRef.current = schedules;
@@ -165,10 +166,13 @@ export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard =
       setOneNoteSyncState('syncing');
       try {
         const { runAutoSync } = await import('../utils/oneNoteSync');
-        await runAutoSync(userId, (items, opts) => importOneNoteRef.current(items, opts), {
+        const count = await runAutoSync(userId, (items, opts) => importOneNoteRef.current(items, opts), {
           existingIds: new Set(schedulesRef.current.filter(s => s.user_id === userId).map(s => s.id))
         });
-        if (!stopped) setOneNoteSyncState('');
+        if (!stopped) {
+          setOneNoteSyncState('');
+          setOneNoteLastCheck({ at: new Date(), count });
+        }
       } catch (e) {
         console.warn('OneNote 자동 동기화 실패:', e);
         if (!stopped) {
@@ -991,7 +995,9 @@ const getKoreanHoliday = (dateObj) => {
             title={
               oneNoteSyncState === 'needLogin' ? 'OneNote 로그인이 만료되어 자동 동기화가 멈췄습니다. 눌러서 다시 로그인하세요.'
                 : oneNoteSyncState === 'error' ? `OneNote 자동 동기화 오류: ${oneNoteSyncError}`
-                  : 'OneNote 페이지를 일정으로 가져오기'
+                  : `OneNote 페이지를 일정으로 가져오기${oneNoteLastCheck
+                    ? ` (마지막 자동 확인 ${String(oneNoteLastCheck.at.getHours()).padStart(2, '0')}:${String(oneNoteLastCheck.at.getMinutes()).padStart(2, '0')}, ${oneNoteLastCheck.count}개 반영)`
+                    : ''}`
             }
           >
             <NotebookText size={16} />
