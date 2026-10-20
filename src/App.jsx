@@ -10,7 +10,6 @@ import FriendManager from './components/FriendManager';
 import AdminApprovalModal from './components/AdminApprovalModal';
 import ScheduleCalendarView from './components/ScheduleCalendarView';
 import PdfLibraryModal from './components/PdfLibraryModal';
-import DailyHabitBoardModal from './components/DailyHabitBoardModal';
 import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon, FileText, CheckSquare, Zap } from 'lucide-react';
 import NewsTicker from './components/NewsTicker';
 import WeatherWidget from './components/WeatherWidget';
@@ -25,7 +24,6 @@ export default function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState('login'); // 'login' | 'signup' | 'forgot' | 'reset'
   const [showPdfLibrary, setShowPdfLibrary] = useState(false);
-  const [showHabitBoardModal, setShowHabitBoardModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // 알림 클릭 시 바로 열리는 1:1 채팅 룸 친구 상태
@@ -674,7 +672,7 @@ export default function App() {
         /* 로그인 후 접속 허용 메인 뷰 */
         <main className="main-content">
           {activeTab === 'schedule' && (
-            <ScheduleCalendarView userId={user?.id} onOpenHabitBoard={() => setShowHabitBoardModal(true)} />
+            <ScheduleCalendarView userId={user?.id} />
           )}
 
           {activeTab === 'bookshelf' && (
@@ -755,12 +753,6 @@ export default function App() {
       {showPdfLibrary && (
         <PdfLibraryModal onClose={() => setShowPdfLibrary(false)} />
       )}
-
-      {/* 3D 포스트잇 오늘의 할 일 & 루틴 체크리스트 모달 */}
-      <DailyHabitBoardModal
-        isOpen={showHabitBoardModal}
-        onClose={() => setShowHabitBoardModal(false)}
-      />
 
       {/* 알림 바로가기 클릭 시 전역 자동 오픈되는 1:1 메모 모달 */}
       {activeMemoFriend && (

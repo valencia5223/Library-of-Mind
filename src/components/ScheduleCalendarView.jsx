@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users, ExternalLink, Download, CheckSquare, NotebookText, Search } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users, ExternalLink, Download, NotebookText, Search } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 const OneNoteImportModal = lazy(() => import('./OneNoteImportModal'));
 const ScheduleNotesPanel = lazy(() => import('./ScheduleNotesPanel'));
@@ -147,7 +147,7 @@ const decryptText = (cipherText, userSecret = 'default') => {
   return cipherText;
 };
 
-export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard = null }) {
+export default function ScheduleCalendarView({ userId = null }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [schedules, setSchedules] = useState([]);
   const [friendsList, setFriendsList] = useState([]);
@@ -1027,16 +1027,6 @@ const getKoreanHoliday = (dateObj) => {
         </div>
 
         <div className="calendar-nav-controls">
-          {onOpenHabitBoard && (
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={onOpenHabitBoard}
-              title="오늘의 할일 / 해빗 트래커 보드 열기"
-            >
-              <CheckSquare size={15} /> 오늘의 할일
-            </button>
-          )}
 
           <button
             type="button"
