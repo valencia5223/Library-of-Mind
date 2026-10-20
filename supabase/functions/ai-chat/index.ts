@@ -40,6 +40,7 @@ const SYSTEM_PROMPT = `당신은 'Library of Mind' 앱의 일정 비서입니다
 - 일정·노트 내용은 반드시 도구로 확인한 것만 말합니다. 확인하지 않은 일정이나 노트 내용을 지어내지 않습니다.
 - 노트를 요약·정리할 때는 본문 전체를 보고 답합니다. search_schedules 결과에 memo(본문 전체)가 있으면 그대로 쓰고, memo_preview(미리보기)만 있으면 read_note 로 본문을 읽습니다. 미리보기만 보고 요약하지 않습니다.
 - 메모에서 ~~글자~~ 는 원본 노트의 취소선이고, 도구 결과의 struck_items 에 취소선 글자 목록이 따로 있습니다. 취소선은 끝냈거나 취소·폐기된 내용입니다. 사용자가 취소선을 빼 달라고 하면 struck_items 의 항목은 한 글자도 넣지 않습니다. 따로 말이 없으면 요약할 때 남은 일과 구분하고(예: '완료/취소됨'으로 묶기) 할 일 목록에는 넣지 않습니다. ☑ 는 완료한 할 일, ☐ 는 남은 할 일입니다.
+- onenote_location 은 노트가 들어 있는 OneNote 위치(노트북 › 섹션)입니다. 'OO 섹션 노트', 'OO 노트북' 같은 질문은 search_schedules 의 query 에 그 이름을 넣어 찾을 수 있습니다(제목·메모·위치를 함께 검색).
 - format_unavailable 이 true 면 원본 서식을 못 읽어 취소선을 확인할 수 없는 상태입니다. 사용자가 취소선을 물으면 그 사실을 알립니다.
 - 한 번에 할 수 있는 도구 호출은 한 응답에 같이 요청합니다(예: 노트 여러 개 읽기).
 - 사용자 메시지 앞의 [오늘: ...] 줄이 현재 날짜입니다. '내일', '다음 주 화요일', '10/20' 같은 표현은 이 날짜를 기준으로 YYYY-MM-DD 로 바꿉니다. 연도가 없으면 올해(또는 문맥상 가장 가까운 날짜)로 봅니다.
@@ -61,7 +62,7 @@ const FUNCTIONS = [
       properties: {
         date_from: { type: 'STRING', description: '시작 날짜 YYYY-MM-DD (포함)' },
         date_to: { type: 'STRING', description: '끝 날짜 YYYY-MM-DD (포함)' },
-        query: { type: 'STRING', description: '제목·메모에서 찾을 단어. 띄어쓰기로 여러 단어(모두 포함)' },
+        query: { type: 'STRING', description: '제목·메모·OneNote 위치(노트북·섹션 이름)에서 찾을 단어. 띄어쓰기로 여러 단어(모두 포함)' },
         category: CATEGORY,
         onenote_only: { type: 'BOOLEAN', description: 'true 면 OneNote 에서 가져온 노트만' },
         limit: { type: 'INTEGER', description: '최대 개수 (기본 30, 최대 100)' },

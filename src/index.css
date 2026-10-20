@@ -3205,3 +3205,16 @@ input[type="date"], input[type="search"] {
 @keyframes ai-spin {
   to { transform: rotate(360deg); }
 }
+
+/* OneNote 노트 위치 (노트북 › 섹션) */
+.onenote-path {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  min-width: 0;
+}
+.onenote-path svg { flex-shrink: 0; color: #7719aa; }
+.onenote-path span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

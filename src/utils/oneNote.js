@@ -104,14 +104,25 @@ const graphFetchAll = async (url) => {
 };
 
 // 모든 노트북의 섹션(섹션 그룹 안의 섹션 포함)을 평평한 목록으로
+const SECTIONS_URL = '/me/onenote/sections?$select=id,displayName&$expand=parentNotebook($select=id,displayName,isShared)';
+let groupExpandUnsupported = false;
 export const listSections = async () => {
-  const sections = await graphFetchAll(
-    '/me/onenote/sections?$select=id,displayName&$expand=parentNotebook($select=id,displayName,isShared)&$top=100'
-  );
+  let sections;
+  try {
+    // 섹션 그룹 이름도 같이 (노트 위치 표시용). 거부되면 그룹 없이
+    sections = groupExpandUnsupported
+      ? await graphFetchAll(`${SECTIONS_URL}&$top=100`)
+      : await graphFetchAll(`${SECTIONS_URL},parentSectionGroup($select=displayName)&$top=100`);
+  } catch (e) {
+    if (groupExpandUnsupported || e?.status !== 400) throw e;
+    groupExpandUnsupported = true;
+    sections = await graphFetchAll(`${SECTIONS_URL}&$top=100`);
+  }
   return sections
     .map(s => ({
       id: s.id,
       name: s.displayName,
+      group: s.parentSectionGroup?.displayName || '', // 섹션 그룹 안에 있으면 그 이름
       notebookId: s.parentNotebook?.id || '',
       notebook: s.parentNotebook?.displayName || '',
       notebookShared: Boolean(s.parentNotebook?.isShared)

@@ -58,6 +58,7 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
     title: s.title,
     category: s.category || 'PERSONAL',
     is_onenote: isOneNoteId(s.id),
+    ...(s.onenote_path ? { onenote_location: s.onenote_path } : {}),
     shared: Boolean(s.is_shared || s.shared_friend_id),
     completed: Boolean(s.is_completed)
   });
@@ -72,7 +73,7 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
         .filter(s => !onenote_only || isOneNoteId(s.id))
         .filter(s => {
           if (terms.length === 0) return true;
-          const hay = `${s.title || ''}\n${s.memo || ''}`.toLowerCase();
+          const hay = `${s.title || ''}\n${s.memo || ''}\n${s.onenote_path || ''}`.toLowerCase();
           return terms.every(t => hay.includes(t));
         })
         .sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.time || '').localeCompare(b.time || ''));

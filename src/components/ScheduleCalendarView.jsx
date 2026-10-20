@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users, ExternalLink, Download, NotebookText, Search, Sparkles } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users, ExternalLink, Download, NotebookText, Search, Sparkles, FolderOpen } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { createScheduleTools } from '../utils/aiAssistant';
 const OneNoteImportModal = lazy(() => import('./OneNoteImportModal'));
@@ -32,6 +32,23 @@ const omit = (obj, ...keys) => {
 
 // DB 에 memo_html 칸이 없으면 이번 세션에서는 다시 시도하지 않음
 let memoHtmlColumnMissing = false;
+// OneNote 노트 위치(노트북 › 섹션) 칸 user_schedules.onenote_path 가 없으면 이 브라우저에만 기억
+let onenotePathColumnMissing = false;
+const pathMapKey = (userId) => `onenote_paths_${userId || 'demo'}`;
+const loadPathMap = (userId) => {
+  try {
+    return JSON.parse(localStorage.getItem(pathMapKey(userId)) || '{}') || {};
+  } catch {
+    return {};
+  }
+};
+const rememberPaths = (userId, entries) => {
+  const map = loadPathMap(userId);
+  Object.entries(entries).forEach(([id, path]) => { if (path) map[id] = path; });
+  try {
+    localStorage.setItem(pathMapKey(userId), JSON.stringify(map));
+  } catch { /* 무시 */ }
+};
 const isMissingColumnError = (error, column) => Boolean(error && `${error.message} ${error.details || ''}`.includes(column));
 
 const ONENOTE_SYNC_MS = 3 * 60 * 1000; // 열어 둔 동안 확인 주기
@@ -214,8 +231,11 @@ export default function ScheduleCalendarView({ userId = null }) {
       let mod = null;
       try {
         mod = await import('../utils/oneNoteSync');
+        const mine = schedulesRef.current.filter(s => s.user_id === userId);
         const { changed, stats } = await mod.runAutoSync(userId, (items, opts) => importOneNoteRef.current(items, opts), {
-          existingIds: new Set(schedulesRef.current.filter(s => s.user_id === userId).map(s => s.id))
+          existingIds: new Set(mine.map(s => s.id)),
+          missingPathIds: new Set(mine.filter(s => isOneNoteId(s.id) && !s.onenote_path).map(s => s.id)),
+          onPaths: (paths) => savePathsRef.current(paths)
         });
         if (stats) mod.addSyncLog(userId, { trigger, changed, ...stats });
         if (!stopped) {
@@ -345,10 +365,14 @@ export default function ScheduleCalendarView({ userId = null }) {
         if (uniqueData && uniqueData.length > 0) {
           // DB에서 불러온 암호화된 title, memo 데이터를 복호화
           // memo_html(OneNote 서식)은 크기 때문에 목록에 두지 않고 일정 창을 열 때 따로 읽음
+          const pathMap = loadPathMap(userId);
           const decryptedList = uniqueData.map(row => omit(row, 'memo_html')).map(s => ({
             ...s,
             title: decryptText(s.title, userId),
-            memo: decryptText(s.memo, userId)
+            memo: decryptText(s.memo, userId),
+            ...(isOneNoteId(s.id)
+              ? { onenote_path: (s.onenote_path && decryptText(s.onenote_path, userId)) || pathMap[s.id] || pathMap[s.id.replace(/^sh_/, '')] || '' }
+              : {})
           }));
           setSchedules(decryptedList);
           localStorage.setItem(storageKey, JSON.stringify(decryptedList));
@@ -527,12 +551,20 @@ const getKoreanHoliday = (dateObj) => {
       const isShared = Boolean(newSchedule.shared_friend_id);
       try {
         // 1) 내 계정 레코드 DB 업서트 (E2E 암호화)
-        const dbSchedulePayload = {
-          ...newSchedule,
+        let dbSchedulePayload = {
+          ...omit(newSchedule, 'onenote_path'),
           title: encryptText(newSchedule.title, userId, isShared),
-          memo: encryptText(newSchedule.memo, userId, isShared)
+          memo: encryptText(newSchedule.memo, userId, isShared),
+          ...(newSchedule.onenote_path && !onenotePathColumnMissing
+            ? { onenote_path: encryptText(newSchedule.onenote_path, userId, isShared) }
+            : {})
         };
-        await supabase.from('user_schedules').upsert(dbSchedulePayload);
+        const { error: saveError } = await supabase.from('user_schedules').upsert(dbSchedulePayload);
+        if (isMissingColumnError(saveError, 'onenote_path')) {
+          onenotePathColumnMissing = true;
+          dbSchedulePayload = omit(dbSchedulePayload, 'onenote_path');
+          await supabase.from('user_schedules').upsert(dbSchedulePayload);
+        }
 
         // 2) 친구와 공유 시, 상대방 계정 기준 레코드도 듀얼 업서트 시도 (실패 시에도 위의 shared_friend_id 쿼리로 노출 보장)
         if (isShared) {
@@ -563,6 +595,28 @@ const getKoreanHoliday = (dateObj) => {
       await supabase.from('user_schedules').delete().in('id', [scheduleId, altId]);
     }
   };
+
+  // 예전에 가져온 OneNote 노트에 위치(노트북 › 섹션)만 채워 저장 { [일정 id]: 위치 }
+  const savePaths = async (paths) => {
+    rememberPaths(userId, paths);
+    saveSchedulesToLocal(schedulesRef.current.map(s => (paths[s.id] ? { ...s, onenote_path: paths[s.id] } : s)));
+    if (!isSupabaseConfigured() || !userId || onenotePathColumnMissing) return;
+    const byId = new Map(schedulesRef.current.map(s => [s.id, s]));
+    for (const [id, path] of Object.entries(paths)) {
+      const sch = byId.get(id);
+      if (!sch || sch.user_id !== userId) continue;
+      const { error } = await supabase
+        .from('user_schedules')
+        .update({ onenote_path: encryptText(path, userId, Boolean(sch.shared_friend_id)) })
+        .eq('id', id);
+      if (isMissingColumnError(error, 'onenote_path')) {
+        onenotePathColumnMissing = true;
+        return;
+      }
+    }
+  };
+  const savePathsRef = useRef(savePaths);
+  savePathsRef.current = savePaths;
 
   // AI 비서가 쓰는 도구 (저장·삭제 함수는 매 렌더 새로 만들어지므로 ref 로 최신 것을 부름)
   const persistRef = useRef(persistSchedule);
@@ -640,7 +694,8 @@ const getKoreanHoliday = (dateObj) => {
         const prev = prevById.get(item.id);
         return !prev || prev.title !== item.title || (prev.memo || '') !== (item.memo || '') ||
           (!memoHtmlColumnMissing && (htmlHashes[item.id] || '') !== (item.html_hash || '')) ||
-          prev.date !== item.date || (prev.shared_friend_id || null) !== item.shared_friend_id;
+          prev.date !== item.date || (prev.shared_friend_id || null) !== item.shared_friend_id ||
+          Boolean(item.onenote_path && (prev.onenote_path || '') !== item.onenote_path);
       });
     }
     if (imported.length === 0) {
@@ -660,13 +715,20 @@ const getKoreanHoliday = (dateObj) => {
         time: s.time || null,
         title: encryptText(s.title, userId, s.is_shared),
         memo: encryptText(s.memo, userId, s.is_shared),
-        ...(memoHtmlColumnMissing ? {} : { memo_html: s.memo_html ? encryptText(s.memo_html, userId, s.is_shared) : null })
+        ...(memoHtmlColumnMissing ? {} : { memo_html: s.memo_html ? encryptText(s.memo_html, userId, s.is_shared) : null }),
+        ...(onenotePathColumnMissing ? {} : { onenote_path: s.onenote_path ? encryptText(s.onenote_path, userId, s.is_shared) : null })
       }));
+      rememberPaths(userId, Object.fromEntries(imported.map(s => [s.id, s.onenote_path])));
       let { error } = await supabase.from('user_schedules').upsert(payload);
-      // memo_html 칸이 아직 없으면 서식 없이 저장 (Supabase 에 칸을 추가하면 다음 동기화부터 서식 저장)
-      if (isMissingColumnError(error, 'memo_html')) {
-        memoHtmlColumnMissing = true;
-        payload = payload.map(s => omit(s, 'memo_html'));
+      // 추가 칸(memo_html, onenote_path)이 아직 없으면 그 칸 없이 다시 (Supabase 에 칸을 추가하면 다음부터 저장)
+      for (let i = 0; i < 2; i++) {
+        if (isMissingColumnError(error, 'memo_html')) {
+          memoHtmlColumnMissing = true;
+          payload = payload.map(s => omit(s, 'memo_html'));
+        } else if (isMissingColumnError(error, 'onenote_path')) {
+          onenotePathColumnMissing = true;
+          payload = payload.map(s => omit(s, 'onenote_path'));
+        } else break;
         ({ error } = await supabase.from('user_schedules').upsert(payload));
       }
       if (error) {
@@ -1196,7 +1258,7 @@ const getKoreanHoliday = (dateObj) => {
                         e.stopPropagation();
                         handleOpenAddModal(dateObj, sch);
                       }}
-                      title={`${sch.time && !isOneNoteId(sch.id) ? '[' + sch.time + '] ' : ''}${isSharedItem ? '[공유] ' : ''}${sch.title}${sch.memo ? ' - ' + sch.memo : ''}`}
+                      title={`${sch.onenote_path ? sch.onenote_path + ' › ' : ''}${sch.time && !isOneNoteId(sch.id) ? '[' + sch.time + '] ' : ''}${isSharedItem ? '[공유] ' : ''}${sch.title}${sch.memo ? ' - ' + sch.memo : ''}`}
                     >
                       <button
                         className="check-toggle-btn"
@@ -1235,11 +1297,18 @@ const getKoreanHoliday = (dateObj) => {
         <div className="modal-overlay modal-backdrop" onClick={() => setShowModal(false)}>
           <div className="modal-card calendar-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: isOneNoteSchedule ? '880px' : '460px', width: isOneNoteSchedule ? '95%' : '92%' }}>
             <div className="modal-header">
-              <h3 className="modal-title flex align-center gap-2">
-                {isOneNoteSchedule ? <NotebookText size={20} style={{ color: '#7719aa' }} /> : <CalendarIcon size={20} className="text-primary" />}
-                {isOneNoteSchedule ? 'OneNote 노트' : editingSchedule ? '일정 수정하기' : '새 일정 추가'}
-                <span className="text-xs sub-text font-normal">({scheduleDate || formatDateString(selectedDate)})</span>
-              </h3>
+              <div style={{ minWidth: 0 }}>
+                <h3 className="modal-title flex align-center gap-2">
+                  {isOneNoteSchedule ? <NotebookText size={20} style={{ color: '#7719aa' }} /> : <CalendarIcon size={20} className="text-primary" />}
+                  {isOneNoteSchedule ? 'OneNote 노트' : editingSchedule ? '일정 수정하기' : '새 일정 추가'}
+                  <span className="text-xs sub-text font-normal">({scheduleDate || formatDateString(selectedDate)})</span>
+                </h3>
+                {isOneNoteSchedule && editingSchedule?.onenote_path && (
+                  <div className="onenote-path" title={editingSchedule.onenote_path}>
+                    <FolderOpen size={13} /> <span>{editingSchedule.onenote_path}</span>
+                  </div>
+                )}
+              </div>
               <button className="modal-close" onClick={() => setShowModal(false)} title="닫기">
                 <X size={18} />
               </button>

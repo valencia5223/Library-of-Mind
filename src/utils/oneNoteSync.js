@@ -6,6 +6,20 @@ const MEMO_MAX = 50000;
 
 export const oneNoteScheduleId = (pageId) => `sch_onenote_${pageId}`;
 
+// 노트가 들어 있는 위치: 노트북 › (섹션 그룹 ›) 섹션
+export const sectionPath = (sec) => [sec?.notebook, sec?.group, sec?.name].filter(Boolean).join(' › ');
+
+// 섹션 id → 위치 (자동 동기화마다 목록을 받지 않게 10분 동안 기억)
+let pathCache = { at: 0, map: null };
+const PATH_CACHE_MS = 10 * 60 * 1000;
+const loadSectionPaths = async () => {
+  if (pathCache.map && Date.now() - pathCache.at < PATH_CACHE_MS) return pathCache.map;
+  const map = {};
+  (await listSections()).forEach(sec => { map[sec.id] = sectionPath(sec); });
+  pathCache = { at: Date.now(), map };
+  return map;
+};
+
 export const toLocalDateTime = (iso) => {
   const d = new Date(iso);
   const pad = (n) => String(n).padStart(2, '0');
@@ -94,6 +108,32 @@ const scanTrackedOnce = async (userId, existingIds) => {
   } catch { /* 무시 */ }
 };
 
+// 위치(노트북 › 섹션)가 없는 예전 노트: 한 번만 모든 섹션을 훑어 채움. onPaths({ [일정 id]: 위치 }) 로 저장
+const pathsFilledKey = (userId) => `onenote_paths_filled_${userId || 'demo'}`;
+const fillPathsOnce = async (userId, missingIds, onPaths) => {
+  if (localStorage.getItem(pathsFilledKey(userId))) return;
+  if (missingIds.size > 0) {
+    const found = {};
+    for (const sec of await listSections()) {
+      let ids = [];
+      try {
+        ids = await listPageIds(sec.id);
+      } catch (e) {
+        if (e?.status === 403) continue; // 암호로 보호된 섹션은 건너뜀
+        throw e;
+      }
+      ids.forEach(pid => {
+        const id = oneNoteScheduleId(pid);
+        if (missingIds.has(id)) found[id] = sectionPath(sec);
+      });
+    }
+    if (Object.keys(found).length > 0) await onPaths(found);
+  }
+  try {
+    localStorage.setItem(pathsFilledKey(userId), '1');
+  } catch { /* 무시 */ }
+};
+
 // 섹션·페이지 목록 캐시 (계정별): 창을 열면 바로 보여 주고 뒤에서 새로 받음
 const cacheKey = (accountId, name) => `onenote_cache_${accountId}_${name}`;
 export const loadCache = (accountId, name) => readJson(cacheKey(accountId, name), null);
@@ -147,7 +187,7 @@ const hashText = (str) => {
 };
 
 // 페이지 하나 → 일정 항목 (본문을 받아 옴). memo_html 은 서식, html_hash 는 바뀜 비교용(DB 에 저장 안 함)
-export const buildScheduleItem = async (page, { dateBasis = 'created', friendId = null } = {}) => {
+export const buildScheduleItem = async (page, { dateBasis = 'created', friendId = null, path = '' } = {}) => {
   const { text, html } = await getPageContent(page.id);
   const base = toLocalDateTime(dateBasis === 'created' ? page.created : page.modified);
   const titleDate = parseTitleDate(page.title, page.created);
@@ -159,6 +199,7 @@ export const buildScheduleItem = async (page, { dateBasis = 'created', friendId 
     memo: text.length > MEMO_MAX ? `${text.slice(0, MEMO_MAX)}…` : text,
     memo_html: html,
     html_hash: html ? hashText(html) : '',
+    onenote_path: path || '',
     shared_friend_id: friendId || null
   };
 };
@@ -199,7 +240,8 @@ export const lookbackIso = () => new Date(Date.now() - SYNC_LOOKBACK_DAYS * 8640
 // onImport(items) 는 달력 저장 함수. 반환: { changed: 실제로 바뀐 개수, stats: 기록용 요약 }
 // options.sectionIds: 이 섹션만, options.full: lastSync 를 무시하고 최근 30일을 다시 확인,
 // options.existingIds: 달력에 있는 일정 id (2번 판단용)
-export const runAutoSync = async (userId, onImport, { sectionIds: only = null, full = false, existingIds = null } = {}) => {
+// options.missingPathIds·onPaths: 위치가 없는 예전 노트를 한 번 채울 때
+export const runAutoSync = async (userId, onImport, { sectionIds: only = null, full = false, existingIds = null, missingPathIds = null, onPaths = null } = {}) => {
   const config = loadAutoSync(userId);
   const syncIds = Object.keys(config).filter(id => !only || only.includes(id));
   const hasImported = existingIds && [...existingIds].some(id => id.replace(/^sh_/, '').startsWith('sch_onenote_'));
@@ -225,6 +267,12 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
   const recentMs = Date.now() - RECENT_DAYS * 86400000;
   const isImported = (pageId) => existingIds.has(oneNoteScheduleId(pageId)) || existingIds.has(`sh_${oneNoteScheduleId(pageId)}`);
 
+  let paths = {};
+  try {
+    paths = await loadSectionPaths();
+  } catch (e) {
+    console.warn('OneNote 섹션 위치 확인 실패 (위치 없이 진행):', e);
+  }
   const stats = { sections: 0, listed: 0, fetched: [], changed: [] }; // 기록용
   const blocked = {}; // 암호로 보호된 섹션 (다음부터 건너뜀)
   const failures = [];
@@ -249,7 +297,8 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
       }
       if (!isSync) pages = pages.filter(p => isImported(p.id));
       const friendId = sectionFriendId(shareMap, sectionId, sec.notebookShared ? sec.notebookId : null);
-      items.push(...await mapLimit(pages, 3, page => buildScheduleItem(page, { dateBasis: sec.dateBasis, friendId })));
+      const path = paths[sectionId] || sectionPath(sec);
+      items.push(...await mapLimit(pages, 3, page => buildScheduleItem(page, { dateBasis: sec.dateBasis, friendId, path })));
       synced.push(...pages);
       stats.fetched.push(...pages.map(p => ({ id: p.id, title: p.title, modified: p.modified })));
       (isSync ? syncDone : trackDone)[sectionId] = startedAt;
@@ -278,6 +327,13 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
       await scanTrackedOnce(userId, existingIds);
     } catch (e) {
       console.warn('OneNote 섹션 훑기 실패 (다음에 다시 시도):', e);
+    }
+  }
+  if (missingPathIds && onPaths && !only) {
+    try {
+      await fillPathsOnce(userId, missingPathIds, onPaths);
+    } catch (e) {
+      console.warn('OneNote 노트 위치 채우기 실패 (다음에 다시 시도):', e);
     }
   }
   // 설정이 그사이 바뀌었을 수 있으니 lastSync 만 덮어씀

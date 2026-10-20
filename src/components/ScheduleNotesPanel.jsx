@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Search, NotebookText, Users, CalendarDays } from 'lucide-react';
+import { X, Search, NotebookText, Users, CalendarDays, FolderOpen } from 'lucide-react';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -45,7 +45,7 @@ export default function ScheduleNotesPanel({ schedules = [], onClose, onOpen, ge
       .filter(s => scope === 'all' || isOneNoteId(s.id))
       .filter(s => {
         if (terms.length === 0) return true;
-        const hay = `${s.title || ''}\n${s.memo || ''}`.toLowerCase();
+        const hay = `${s.title || ''}\n${s.memo || ''}\n${s.onenote_path || ''}`.toLowerCase();
         return terms.every(t => hay.includes(t));
       })
       .sort((a, b) => {
@@ -185,6 +185,11 @@ export default function ScheduleNotesPanel({ schedules = [], onClose, onOpen, ge
                           </span>
                         )}
                       </div>
+                      {oneNote && s.onenote_path && (
+                        <div className="onenote-path" title={s.onenote_path}>
+                          <FolderOpen size={12} /> <span><Highlight text={s.onenote_path} terms={terms} /></span>
+                        </div>
+                      )}
                       {s.memo && (
                         <div className="text-xs" style={{ color: '#52525b', marginTop: '0.35rem', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                           <Highlight text={snippetOf(s.memo, terms)} terms={terms} />
