@@ -33,14 +33,23 @@ const errorMessage = async (error) => {
 // loadNoteText(id): OneNote 노트를 원본 서식에서 다시 뽑은 텍스트(취소선 ~~ ~~ 포함). 없으면 null → 저장된 메모를 씀
 export const createScheduleTools = ({ getSchedules, persistSchedule, removeSchedule, loadNoteText, userId }) => {
   const find = (id) => getSchedules().find(s => s.id === id);
-  const fullText = async (s) => {
+  // 노트 본문 + 취소선 정보. OneNote 노트인데 원본 서식을 못 읽으면 format_unavailable
+  const noteBody = async (s) => {
+    let text = null;
     if (loadNoteText && isOneNoteId(s.id)) {
       try {
-        const text = await loadNoteText(s.id);
-        if (text) return text;
-      } catch { /* 저장된 메모로 */ }
+        text = await loadNoteText(s.id);
+      } catch (e) {
+        console.warn('AI 비서: 원본 서식 읽기 실패', e);
+      }
     }
-    return s.memo || '';
+    const memo = text || s.memo || '';
+    const struck = [...memo.matchAll(/~~([^~\n]+)~~/g)].map(m => m[1].trim()).filter(Boolean);
+    return {
+      memo,
+      ...(struck.length ? { struck_items: struck } : {}),
+      ...(isOneNoteId(s.id) && !text ? { format_unavailable: true } : {})
+    };
   };
   const summary = (s) => ({
     id: s.id,
@@ -72,11 +81,11 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
       // 결과가 적으면 본문 전체를 같이 줘서 read_note 왕복을 줄임
       const fullMemo = items.length <= FULL_MEMO_ITEMS &&
         items.reduce((n, s) => n + (s.memo || '').length, 0) <= FULL_MEMO_CHARS;
-      const memos = fullMemo ? await Promise.all(items.map(fullText)) : [];
+      const bodies = fullMemo ? await Promise.all(items.map(noteBody)) : [];
       return {
         total_matched: matched.length,
         items: items.map((s, i) => fullMemo
-          ? { ...summary(s), memo: memos[i] }
+          ? { ...summary(s), ...bodies[i] }
           : {
             ...summary(s),
             memo_preview: (s.memo || '').replace(/\s*\n\s*/g, ' / ').slice(0, 150),
@@ -88,7 +97,7 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
     read_note: async ({ id }) => {
       const s = find(id);
       if (!s) throw new Error(`id 가 ${id} 인 일정을 찾을 수 없습니다.`);
-      return { ...summary(s), memo: await fullText(s) };
+      return { ...summary(s), ...(await noteBody(s)) };
     },
 
     add_schedule: async ({ date, title, time, category, memo }) => {
@@ -161,6 +170,16 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
       if (!fn) throw new Error(`알 수 없는 도구: ${name}`);
       return fn(input || {});
     },
+    // 도구 실행 뒤 덧붙일 문구 (취소선 확인 결과)
+    note: (name, result) => {
+      if (name !== 'read_note' && name !== 'search_schedules') return null;
+      const list = name === 'read_note' ? [result] : (result?.items || []).filter(i => 'memo' in i);
+      if (list.length === 0) return null;
+      const struck = list.reduce((n, i) => n + (i?.struck_items?.length || 0), 0);
+      if (list.some(i => i?.format_unavailable)) return '↳ 원본 서식을 못 읽어 취소선은 확인하지 못했어요';
+      if (struck) return `↳ 취소선 ${struck}곳 확인`;
+      return list.some(i => i?.is_onenote) ? '↳ 원본 서식에 취소선 없음' : null;
+    },
     // 진행 표시용 문구
     label: (name, input = {}) => {
       if (name === 'search_schedules') return `🔎 일정 찾는 중${input.query ? ` · "${input.query}"` : ''}`;
@@ -205,7 +224,10 @@ export const runAssistantTurn = async ({ history, userText, tools, onEvent }) =>
       onEvent({ type: 'tool', text: tools.label(call.name, call.args || {}) });
       let response;
       try {
-        response = { result: await tools.run(call.name, call.args || {}) };
+        const result = await tools.run(call.name, call.args || {});
+        response = { result };
+        const extra = tools.note?.(call.name, result);
+        if (extra) onEvent({ type: 'tool', text: extra });
       } catch (e) {
         response = { error: e.message || String(e) };
       }

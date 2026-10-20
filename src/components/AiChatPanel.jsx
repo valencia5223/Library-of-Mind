@@ -10,7 +10,7 @@ const SUGGESTIONS = [
 ];
 
 // **굵게** 와 줄바꿈만 살려서 보여 줌 (HTML 로 넣지 않음)
-const RichText = ({ text }) => (
+const Inline = ({ text }) => (
   <>
     {text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
       part.startsWith('**') && part.endsWith('**') && part.length > 4
@@ -19,6 +19,24 @@ const RichText = ({ text }) => (
     )}
   </>
 );
+
+// '### 제목' 은 굵은 줄로, '---' 구분선은 숨김, '`코드`' 는 따옴표 없이
+const RichText = ({ text }) => {
+  const lines = text.replace(/`([^`\n]+)`/g, '$1').split('\n').filter(line => !/^\s*(-{3,}|\*{3,})\s*$/.test(line));
+  return (
+    <>
+      {lines.map((line, i) => {
+        const heading = line.match(/^\s*#{1,6}\s+(.*)$/);
+        return (
+          <React.Fragment key={i}>
+            {heading ? <strong><Inline text={heading[1].replace(/\*\*/g, '')} /></strong> : <Inline text={line} />}
+            {i < lines.length - 1 && '\n'}
+          </React.Fragment>
+        );
+      })}
+    </>
+  );
+};
 
 // 달력 옆에 열리는 일정 비서 채팅 (tools: createScheduleTools 결과)
 export default function AiChatPanel({ open, onClose, tools }) {
