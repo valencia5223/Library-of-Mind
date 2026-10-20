@@ -129,6 +129,12 @@ export const listPages = async (sectionId, sinceIso = null) => {
   return pages.map(toPage);
 };
 
+// 섹션의 모든 페이지 id (가져온 노트가 어느 섹션에 있는지 찾을 때)
+export const listPageIds = async (sectionId) => {
+  const pages = await graphFetchAll(`/me/onenote/sections/${encodeURIComponent(sectionId)}/pages?$select=id&$top=100`);
+  return pages.map(p => p.id);
+};
+
 // 화면용: 최근 페이지부터 조금씩. next 를 다시 넘기면 다음 묶음
 export const listPagesChunk = async (sectionId, next = null, top = 30) => {
   const data = await graphFetch(next || pagesUrl(sectionId, top));

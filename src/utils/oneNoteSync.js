@@ -1,5 +1,5 @@
 // OneNote → 일정 변환과 자동 동기화 (설정은 브라우저 localStorage 에 사용자별로 저장)
-import { getSignedInAccount, listPages, getPageText } from './oneNote';
+import { getSignedInAccount, listSections, listPages, listPageIds, getPageText } from './oneNote';
 
 const MEMO_MAX = 3000;
 
@@ -47,6 +47,45 @@ const autoSyncKey = (userId) => `onenote_autosync_${userId || 'demo'}`;
 export const loadAutoSync = (userId) => readJson(autoSyncKey(userId), {});
 export const saveAutoSync = (userId, config) => writeJson(autoSyncKey(userId), config);
 export const hasAutoSync = (userId) => Object.keys(loadAutoSync(userId)).length > 0;
+
+// 손으로 가져온 노트가 있는 섹션: 새 노트는 안 가져오고, 이미 가져온 노트의 수정만 반영
+// { [sectionId]: { notebookId, notebookShared, dateBasis, lastSync } }
+const trackedKey = (userId) => `onenote_tracked_${userId || 'demo'}`;
+const loadTracked = (userId) => readJson(trackedKey(userId), {});
+const saveTracked = (userId, map) => writeJson(trackedKey(userId), map);
+const trackScanKey = (userId) => `onenote_tracked_scanned_${userId || 'demo'}`;
+
+export const trackSection = (userId, section, dateBasis) => {
+  const map = loadTracked(userId);
+  map[section.id] = {
+    notebookId: section.notebookId,
+    notebookShared: section.notebookShared,
+    dateBasis,
+    lastSync: map[section.id]?.lastSync || new Date().toISOString()
+  };
+  saveTracked(userId, map);
+};
+
+// 이 기능 전에 가져온 노트: 한 번만 모든 섹션을 훑어 어느 섹션에 있는지 기록
+const scanTrackedOnce = async (userId, existingIds) => {
+  if (localStorage.getItem(trackScanKey(userId))) return;
+  const imported = [...existingIds].filter(id => id.replace(/^sh_/, '').startsWith('sch_onenote_'));
+  if (imported.length > 0) {
+    const wanted = new Set(imported.map(id => id.replace(/^sh_/, '')));
+    const map = loadTracked(userId);
+    for (const sec of await listSections()) {
+      if (map[sec.id]) continue;
+      const ids = await listPageIds(sec.id);
+      if (ids.some(pid => wanted.has(oneNoteScheduleId(pid)))) {
+        map[sec.id] = { notebookId: sec.notebookId, notebookShared: sec.notebookShared, dateBasis: 'created', lastSync: null };
+      }
+    }
+    saveTracked(userId, map);
+  }
+  try {
+    localStorage.setItem(trackScanKey(userId), '1');
+  } catch { /* 무시 */ }
+};
 
 // 섹션·페이지 목록 캐시 (계정별): 창을 열면 바로 보여 주고 뒤에서 새로 받음
 const cacheKey = (accountId, name) => `onenote_cache_${accountId}_${name}`;
@@ -112,40 +151,59 @@ export const buildScheduleItem = async (page, { dateBasis = 'created', friendId 
 export const SYNC_LOOKBACK_DAYS = 30;
 export const lookbackIso = () => new Date(Date.now() - SYNC_LOOKBACK_DAYS * 86400000).toISOString();
 
-// 자동 동기화 섹션들에서 마지막 동기화 뒤 새로 만들거나 고친 페이지를 일정으로
-// onImport(items) 는 달력 저장 함수. 반환: 가져온 개수
-// options.sectionIds: 이 섹션만, options.full: lastSync 를 무시하고 최근 30일을 다시 확인
-export const runAutoSync = async (userId, onImport, { sectionIds: only = null, full = false } = {}) => {
+// 1) 자동 동기화 섹션: 마지막 확인 뒤 새로 만들거나 고친 페이지를 모두 일정으로
+// 2) 손으로 가져온 노트가 있는 섹션: 고친 페이지 중 이미 달력에 있는 것만 갱신
+// onImport(items) 는 달력 저장 함수. 반환: 반영한 개수
+// options.sectionIds: 이 섹션만, options.full: lastSync 를 무시하고 최근 30일을 다시 확인,
+// options.existingIds: 달력에 있는 일정 id (2번 판단용)
+export const runAutoSync = async (userId, onImport, { sectionIds: only = null, full = false, existingIds = null } = {}) => {
   const config = loadAutoSync(userId);
-  const sectionIds = Object.keys(config).filter(id => !only || only.includes(id));
-  if (sectionIds.length === 0) return 0;
+  const syncIds = Object.keys(config).filter(id => !only || only.includes(id));
+  const hasImported = existingIds && [...existingIds].some(id => id.replace(/^sh_/, '').startsWith('sch_onenote_'));
+  if (syncIds.length === 0 && !hasImported) return 0;
   if (!(await getSignedInAccount())) {
+    // 자동 동기화를 켠 적 없이 이 기기에서 로그인 안 했을 뿐이면 조용히 넘어감
+    if (syncIds.length === 0) return 0;
     const err = new Error('Microsoft 로그인이 필요합니다.');
     err.code = 'ONENOTE_NEED_LOGIN';
     throw err;
   }
 
+  if (hasImported && !only) await scanTrackedOnce(userId, existingIds);
+  const tracked = loadTracked(userId);
+  const trackIds = hasImported && !only ? Object.keys(tracked).filter(id => !config[id]) : [];
+
   const shareMap = loadShareMap(userId);
   const items = [];
-  const nextConfig = { ...config };
+  const syncDone = {};
+  const trackDone = {};
+  // 서버 반영이 몇 분 늦을 수 있어 10분 겹쳐서 확인 (같은 페이지는 덮어쓰기라 괜찮음)
+  const overlap = (iso) => new Date(new Date(iso).getTime() - 10 * 60000).toISOString();
+  const isImported = (pageId) => existingIds.has(oneNoteScheduleId(pageId)) || existingIds.has(`sh_${oneNoteScheduleId(pageId)}`);
 
-  for (const sectionId of sectionIds) {
-    const sec = config[sectionId];
+  for (const sectionId of [...syncIds, ...trackIds]) {
+    const isSync = Boolean(config[sectionId]);
+    const sec = isSync ? config[sectionId] : tracked[sectionId];
     const startedAt = new Date().toISOString();
     const since = full || !sec.lastSync ? lookbackIso() : sec.lastSync;
-    // 서버 반영이 몇 분 늦을 수 있어 10분 겹쳐서 확인 (같은 페이지는 덮어쓰기라 괜찮음)
-    const pages = await listPages(sectionId, new Date(new Date(since).getTime() - 10 * 60000).toISOString());
+    let pages = await listPages(sectionId, overlap(since));
+    if (!isSync) pages = pages.filter(p => isImported(p.id));
     const friendId = sectionFriendId(shareMap, sectionId, sec.notebookShared ? sec.notebookId : null);
     items.push(...await mapLimit(pages, 3, page => buildScheduleItem(page, { dateBasis: sec.dateBasis, friendId })));
-    nextConfig[sectionId] = { ...sec, lastSync: startedAt };
+    (isSync ? syncDone : trackDone)[sectionId] = startedAt;
   }
 
   if (items.length > 0) await onImport(items, { silent: true });
   // 설정이 그사이 바뀌었을 수 있으니 lastSync 만 덮어씀
   const latest = loadAutoSync(userId);
-  Object.keys(latest).forEach(id => {
-    if (nextConfig[id]) latest[id] = { ...latest[id], lastSync: nextConfig[id].lastSync };
+  Object.keys(syncDone).forEach(id => {
+    if (latest[id]) latest[id] = { ...latest[id], lastSync: syncDone[id] };
   });
   saveAutoSync(userId, latest);
+  const latestTracked = loadTracked(userId);
+  Object.keys(trackDone).forEach(id => {
+    if (latestTracked[id]) latestTracked[id] = { ...latestTracked[id], lastSync: trackDone[id] };
+  });
+  saveTracked(userId, latestTracked);
   return items.length;
 };

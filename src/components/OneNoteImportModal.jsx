@@ -24,6 +24,7 @@ import {
   clearCache,
   mapLimit,
   runAutoSync,
+  trackSection,
   SYNC_LOOKBACK_DAYS
 } from '../utils/oneNoteSync';
 
@@ -234,6 +235,8 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
       page => buildScheduleItem(page, { dateBasis, friendId: sectionFriend?.id }),
       done => setBusy(`본문 가져오는 중… (${done}/${targets.length})`)
     );
+    // 이 섹션의 가져온 노트는 OneNote 에서 고치면 자동으로 다시 반영
+    if (section) trackSection(userId, section, dateBasis);
     onImport(result);
     onClose();
   });

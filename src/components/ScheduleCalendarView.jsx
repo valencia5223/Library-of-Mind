@@ -8,8 +8,10 @@ const isOneNoteId = (id = '') => id.replace(/^sh_/, '').startsWith('sch_onenote_
 
 const ONENOTE_SYNC_MS = 5 * 60 * 1000;
 
-// 자동 동기화 섹션이 있는지 (MSAL 묶음을 불러오지 않고 localStorage 만 확인)
-const hasOneNoteAutoSync = (userId) => {
+// 자동 동기화 섹션이 있거나 가져온 OneNote 노트가 있는지 (MSAL 묶음을 불러오지 않고 확인)
+const hasOneNoteAutoSync = (userId, schedules = []) => {
+  // 친구가 공유해 준 노트는 내가 OneNote 를 연결하지 않았을 수 있으니 내 것만
+  if (schedules.some(s => s.user_id === userId && isOneNoteId(s.id))) return true;
   try {
     return Object.keys(JSON.parse(localStorage.getItem(`onenote_autosync_${userId || 'demo'}`) || '{}')).length > 0;
   } catch {
@@ -157,13 +159,15 @@ export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard =
     let running = false;
     let lastRun = 0;
     const sync = async (force = false) => {
-      if (stopped || running || (!force && Date.now() - lastRun < 60 * 1000) || !hasOneNoteAutoSync(userId)) return;
+      if (stopped || running || (!force && Date.now() - lastRun < 60 * 1000) || !hasOneNoteAutoSync(userId, schedulesRef.current)) return;
       running = true;
       lastRun = Date.now();
       setOneNoteSyncState('syncing');
       try {
         const { runAutoSync } = await import('../utils/oneNoteSync');
-        await runAutoSync(userId, (items, opts) => importOneNoteRef.current(items, opts));
+        await runAutoSync(userId, (items, opts) => importOneNoteRef.current(items, opts), {
+          existingIds: new Set(schedulesRef.current.filter(s => s.user_id === userId).map(s => s.id))
+        });
         if (!stopped) setOneNoteSyncState('');
       } catch (e) {
         console.warn('OneNote 자동 동기화 실패:', e);
