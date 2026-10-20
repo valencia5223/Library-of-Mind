@@ -14,7 +14,24 @@ const corsHeaders = {
 
 // -latest/preview 모델은 무료 등급에서 몹시 붐벼 1분 넘게 걸리기도 해서 안정판 이름을 쓴다
 const DEFAULT_MODEL = 'gemini-3.5-flash';
-const BUSY_FALLBACK_MODEL = 'gemini-3.5-flash-lite'; // 기본 모델이 붐빌 때(503 등) 한 번 더 시도
+// 기본 모델이 한도(429)에 걸리거나 붐빌 때(5xx) 차례로 시도. 무료 한도는 모델마다 따로라 이어서 쓸 수 있다
+const FALLBACK_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-flash-lite-latest'];
+const RETRY_STATUS = [429, 500, 503, 504];
+
+// 429 응답에서 하루 한도인지, 몇 초 뒤 풀리는지
+const quotaInfo = (data: any) => {
+  const details: any[] = data?.error?.details || [];
+  const ids = details.flatMap(d => (d.violations || []).map((v: any) => `${v.quotaId || ''} ${v.quotaMetric || ''}`)).join(' ');
+  const retry = details.find(d => String(d['@type'] || '').includes('RetryInfo'))?.retryDelay;
+  return { daily: /PerDay/i.test(ids), retrySec: retry ? Math.ceil(parseFloat(retry)) : null, ids };
+};
+
+// 다른 모델로 넘길 때 앞 모델의 thoughtSignature 는 검증을 건너뛰게 바꿈
+const forOtherModel = (contents: any[]) =>
+  contents.map(c => ({
+    ...c,
+    parts: (c.parts || []).map((p: any) => (p.thoughtSignature ? { ...p, thoughtSignature: 'skip_thought_signature_validator' } : p)),
+  }));
 const MAX_MESSAGES = 120; // 대화가 너무 길어지면 새 대화를 시작하도록
 
 const SYSTEM_PROMPT = `당신은 'Library of Mind' 앱의 일정 비서입니다. 사용자의 달력 일정과, OneNote 에서 달력으로 가져온 노트(회의록·업무일지 등)를 도구로 읽고 다룹니다.
@@ -143,31 +160,49 @@ Deno.serve(async (req: Request) => {
   if (!Array.isArray(contents) || contents.length === 0) return json({ error: 'contents 가 필요합니다.' }, 400);
   if (contents.length > MAX_MESSAGES) return json({ error: '대화가 너무 길어졌습니다. 새 대화를 시작해 주세요.', code: 'too_long' }, 400);
 
-  const callGemini = (thinkingConfig: Record<string, unknown> | null, useModel = model) =>
+  const callGemini = (useModel: string, body: unknown[], thinkingConfig: Record<string, unknown> | null) =>
     fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(useModel)}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents,
+        contents: body,
         tools: [{ functionDeclarations: FUNCTIONS }],
         toolConfig: { functionCallingConfig: { mode: 'AUTO' } },
         generationConfig: { maxOutputTokens: 8192, ...(thinkingConfig ? { thinkingConfig } : {}) },
       }),
     });
 
-  let res: Response | undefined;
-  let data: any = null;
-  try {
-    for (let i = thinkingChoice.get(model) ?? 0; i < THINKING_OPTIONS.length; i++) {
-      res = await callGemini(THINKING_OPTIONS[i]);
-      data = await res.json().catch(() => null);
+  // 한 모델 호출 (그 모델이 받는 생각 설정을 찾아가며)
+  const tryModel = async (useModel: string, body: unknown[]) => {
+    let r: Response | undefined;
+    let d: any = null;
+    for (let i = thinkingChoice.get(useModel) ?? 0; i < THINKING_OPTIONS.length; i++) {
+      r = await callGemini(useModel, body, THINKING_OPTIONS[i]);
+      d = await r.json().catch(() => null);
       // 이 모델이 받지 않는 생각 설정이면 다음 설정으로
-      const thinkingRejected = res.status === 400 && /thinking/i.test(data?.error?.message || '');
+      const thinkingRejected = r.status === 400 && /thinking/i.test(d?.error?.message || '');
       if (!thinkingRejected) {
-        if (res.ok) thinkingChoice.set(model, i);
+        if (r.ok) thinkingChoice.set(useModel, i);
         break;
       }
+    }
+    return { r: r as Response, d };
+  };
+
+  const chain = [model, ...FALLBACK_MODELS.filter(m => m !== model)];
+  let res: Response | undefined;
+  let data: any = null;
+  let usedModel = model;
+  let firstQuota: ReturnType<typeof quotaInfo> | null = null;
+  try {
+    for (const m of chain) {
+      ({ r: res, d: data } = await tryModel(m, m === model ? contents : forOtherModel(contents)));
+      usedModel = m;
+      if (res.status === 429 && !firstQuota) firstQuota = quotaInfo(data);
+      // 모델 이름이 없어졌거나 한도·과부하면 다음 모델로
+      if (!RETRY_STATUS.includes(res.status) && res.status !== 404) break;
+      console.warn('ai-chat fallback:', m, res.status, data?.error?.message);
     }
   } catch (error) {
     console.error('ai-chat fetch error:', error);
@@ -175,22 +210,17 @@ Deno.serve(async (req: Request) => {
   }
   if (!res) return json({ error: 'Gemini 호출에 실패했습니다.' }, 502);
 
-  // 서버가 붐비면 가벼운 모델로 한 번 더
-  if ([500, 503, 504].includes(res.status) && model !== BUSY_FALLBACK_MODEL) {
-    console.warn('ai-chat busy, fallback:', res.status, data?.error?.message);
-    try {
-      res = await callGemini(THINKING_OPTIONS[thinkingChoice.get(BUSY_FALLBACK_MODEL) ?? 0], BUSY_FALLBACK_MODEL);
-      data = await res.json().catch(() => null);
-    } catch (error) {
-      console.error('ai-chat fallback fetch error:', error);
-      return json({ error: 'Gemini 서버에 연결하지 못했습니다.' }, 502);
-    }
-  }
-
   if (!res.ok) {
     const message = data?.error?.message || res.statusText;
     console.error('ai-chat gemini error:', res.status, message);
-    if (res.status === 429) return json({ error: '무료 사용 한도에 걸렸습니다. 잠시(1분쯤) 뒤 다시 시도해 주세요.' }, 429);
+    if (res.status === 429) {
+      const q = quotaInfo(data);
+      console.error('ai-chat quota:', q.ids, firstQuota?.ids);
+      if (q.daily || firstQuota?.daily) {
+        return json({ error: '오늘 Gemini 무료 사용 한도를 다 썼습니다. 내일(한국 시간 오후 4~5시쯤 초기화) 다시 써 주세요.', code: 'quota_daily' }, 429);
+      }
+      return json({ error: `요청이 몰려 잠시 막혔습니다. ${q.retrySec ? `${q.retrySec}초` : '1분쯤'} 뒤 다시 시도해 주세요.`, code: 'quota_minute', retry_after: q.retrySec }, 429);
+    }
     if (res.status === 401 || res.status === 403 || /API key/i.test(message)) {
       return json({ error: 'Gemini API 키가 올바르지 않습니다.' }, 500);
     }
@@ -201,10 +231,10 @@ Deno.serve(async (req: Request) => {
   }
 
   // 질문 자체가 안전 필터에 막힘
-  if (data?.promptFeedback?.blockReason) return json({ parts: [], finish_reason: 'BLOCKED', blocked: true, model });
+  if (data?.promptFeedback?.blockReason) return json({ parts: [], finish_reason: 'BLOCKED', blocked: true, model: usedModel });
 
   const candidate = data?.candidates?.[0];
   const finish = candidate?.finishReason || 'STOP';
   const blocked = ['SAFETY', 'PROHIBITED_CONTENT', 'BLOCKLIST', 'SPII', 'RECITATION'].includes(finish);
-  return json({ parts: candidate?.content?.parts || [], finish_reason: finish, blocked, model });
+  return json({ parts: candidate?.content?.parts || [], finish_reason: finish, blocked, model: usedModel });
 });
