@@ -1,5 +1,5 @@
 // OneNote → 일정 변환과 자동 동기화 (설정은 브라우저 localStorage 에 사용자별로 저장)
-import { getSignedInAccount, listSections, listPages, listPageIds, getPageText } from './oneNote';
+import { getSignedInAccount, listSections, listPages, listPageIds, getPageContent } from './oneNote';
 
 // 메모 최대 길이 (긴 노트 뒷부분을 고쳐도 반영되도록 넉넉하게)
 const MEMO_MAX = 50000;
@@ -139,9 +139,16 @@ export const parseTitleDate = (title, refIso) => {
   return null;
 };
 
-// 페이지 하나 → 일정 항목 (본문을 받아 옴)
+// 서식 HTML 이 바뀌었는지 비교용 짧은 해시 (HTML 자체는 달력 목록에 두지 않음)
+const hashText = (str) => {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+};
+
+// 페이지 하나 → 일정 항목 (본문을 받아 옴). memo_html 은 서식, html_hash 는 바뀜 비교용(DB 에 저장 안 함)
 export const buildScheduleItem = async (page, { dateBasis = 'created', friendId = null } = {}) => {
-  const text = await getPageText(page.id);
+  const { text, html } = await getPageContent(page.id);
   const base = toLocalDateTime(dateBasis === 'created' ? page.created : page.modified);
   const titleDate = parseTitleDate(page.title, page.created);
   return {
@@ -150,6 +157,8 @@ export const buildScheduleItem = async (page, { dateBasis = 'created', friendId 
     date: titleDate || base.date,
     time: '', // OneNote 노트는 작성 시각이 의미 없어 시간 없이 넣음
     memo: text.length > MEMO_MAX ? `${text.slice(0, MEMO_MAX)}…` : text,
+    memo_html: html,
+    html_hash: html ? hashText(html) : '',
     shared_friend_id: friendId || null
   };
 };

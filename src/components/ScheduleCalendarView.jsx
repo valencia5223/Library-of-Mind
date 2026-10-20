@@ -3,8 +3,34 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, Check
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 const OneNoteImportModal = lazy(() => import('./OneNoteImportModal'));
 const ScheduleNotesPanel = lazy(() => import('./ScheduleNotesPanel'));
+const NoteRichView = lazy(() => import('./NoteRichView'));
 
 const isOneNoteId = (id = '') => id.replace(/^sh_/, '').startsWith('sch_onenote_');
+
+// OneNote 서식 HTML 이 바뀌었는지 비교용 해시 { [일정 id]: hash } (HTML 은 크기 때문에 달력 목록·캐시에 두지 않음)
+const htmlHashKey = (userId) => `onenote_html_hash_${userId || 'demo'}`;
+const loadHtmlHashes = (userId) => {
+  try {
+    return JSON.parse(localStorage.getItem(htmlHashKey(userId)) || '{}');
+  } catch {
+    return {};
+  }
+};
+const saveHtmlHashes = (userId, map) => {
+  try {
+    localStorage.setItem(htmlHashKey(userId), JSON.stringify(map));
+  } catch { /* 저장 공간 부족은 무시 (다음 동기화 때 한 번 더 저장될 뿐) */ }
+};
+// 객체에서 몇 개 키를 뺀 복사본
+const omit = (obj, ...keys) => {
+  const copy = { ...obj };
+  keys.forEach(k => delete copy[k]);
+  return copy;
+};
+
+// DB 에 memo_html 칸이 없으면 이번 세션에서는 다시 시도하지 않음
+let memoHtmlColumnMissing = false;
+const isMissingColumnError = (error, column) => Boolean(error && `${error.message} ${error.details || ''}`.includes(column));
 
 const ONENOTE_SYNC_MS = 3 * 60 * 1000; // 열어 둔 동안 확인 주기
 const ONENOTE_SYNC_GAP_MS = 30 * 1000; // 창 클릭·탭 전환으로 너무 자주 돌지 않게
@@ -138,6 +164,9 @@ export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard =
   const [sharedFriendId, setSharedFriendId] = useState(''); // 공유할 친구 ID
   const [showOneNote, setShowOneNote] = useState(false);
   const [showNotesPanel, setShowNotesPanel] = useState(false);
+  const [memoHtml, setMemoHtml] = useState(null); // OneNote 원본 서식 (일정 창을 열 때 DB 에서 읽음)
+  const [memoHtmlLoading, setMemoHtmlLoading] = useState(false);
+  const [memoView, setMemoView] = useState('rich'); // 'rich' 원본 서식 | 'text' 텍스트
   const [oneNoteSyncState, setOneNoteSyncState] = useState(''); // '' | 'syncing' | 'needLogin' | 'error'
   const [oneNoteSyncError, setOneNoteSyncError] = useState('');
   const [oneNoteLastCheck, setOneNoteLastCheck] = useState(null); // 마지막 자동 확인 시각·반영 개수
@@ -299,7 +328,8 @@ export default function ScheduleCalendarView({ userId = null, onOpenHabitBoard =
 
         if (uniqueData && uniqueData.length > 0) {
           // DB에서 불러온 암호화된 title, memo 데이터를 복호화
-          const decryptedList = uniqueData.map(s => ({
+          // memo_html(OneNote 서식)은 크기 때문에 목록에 두지 않고 일정 창을 열 때 따로 읽음
+          const decryptedList = uniqueData.map(row => omit(row, 'memo_html')).map(s => ({
             ...s,
             title: decryptText(s.title, userId),
             memo: decryptText(s.memo, userId)
@@ -543,6 +573,7 @@ const getKoreanHoliday = (dateObj) => {
       const prev = prevById.get(item.id);
       return prev && prev.user_id && prev.user_id !== userId;
     });
+    const htmlHashes = loadHtmlHashes(userId);
     let imported = items
       .filter(item => !sharedToMe.includes(item))
       .map(item => {
@@ -557,11 +588,12 @@ const getKoreanHoliday = (dateObj) => {
           created_at: prev ? prev.created_at : new Date().toISOString()
         };
       });
-    // 자동 동기화: 제목·메모·날짜·공유가 그대로면 저장하지 않음
+    // 자동 동기화: 제목·메모·서식·날짜·공유가 그대로면 저장하지 않음
     if (silent) {
       imported = imported.filter(item => {
         const prev = prevById.get(item.id);
         return !prev || prev.title !== item.title || (prev.memo || '') !== (item.memo || '') ||
+          (!memoHtmlColumnMissing && (htmlHashes[item.id] || '') !== (item.html_hash || '')) ||
           prev.date !== item.date || (prev.shared_friend_id || null) !== item.shared_friend_id;
       });
     }
@@ -571,22 +603,35 @@ const getKoreanHoliday = (dateObj) => {
       return;
     }
     const importedIds = new Set(imported.map(s => s.id));
-    saveSchedulesToLocal([...schedules.filter(s => !importedIds.has(s.id)), ...imported]);
+    // 달력 목록·로컬 캐시에는 서식 HTML 을 두지 않음
+    const forList = imported.map(s => omit(s, 'memo_html', 'html_hash'));
+    saveSchedulesToLocal([...schedules.filter(s => !importedIds.has(s.id)), ...forList]);
 
     if (isSupabaseConfigured() && userId) {
       // OneNote 일정은 시간이 없음: DB 에는 null, 컬럼이 null 을 못 받으면 00:00 으로 (화면에는 시간을 보여 주지 않음)
       let payload = imported.map(s => ({
-        ...s,
+        ...omit(s, 'html_hash', 'memo_html'),
         time: s.time || null,
         title: encryptText(s.title, userId, s.is_shared),
-        memo: encryptText(s.memo, userId, s.is_shared)
+        memo: encryptText(s.memo, userId, s.is_shared),
+        ...(memoHtmlColumnMissing ? {} : { memo_html: s.memo_html ? encryptText(s.memo_html, userId, s.is_shared) : null })
       }));
       let { error } = await supabase.from('user_schedules').upsert(payload);
+      // memo_html 칸이 아직 없으면 서식 없이 저장 (Supabase 에 칸을 추가하면 다음 동기화부터 서식 저장)
+      if (isMissingColumnError(error, 'memo_html')) {
+        memoHtmlColumnMissing = true;
+        payload = payload.map(s => omit(s, 'memo_html'));
+        ({ error } = await supabase.from('user_schedules').upsert(payload));
+      }
       if (error) {
         payload = payload.map(s => ({ ...s, time: s.time || '00:00' }));
         ({ error } = await supabase.from('user_schedules').upsert(payload));
       }
       if (error) console.warn('OneNote 일정 저장 실패 (로컬 유지됨):', error.message);
+      else if (!memoHtmlColumnMissing) {
+        imported.forEach(s => { htmlHashes[s.id] = s.html_hash || ''; });
+        saveHtmlHashes(userId, htmlHashes);
+      }
 
       // 친구 계정 기준 레코드도 시도 (handleSaveSchedule 과 같은 방식, RLS 로 막혀도 원본 레코드로 보임)
       const friendPayload = payload
@@ -742,6 +787,36 @@ const getKoreanHoliday = (dateObj) => {
   // 일정 모달의 입력 묶음 (OneNote 일정은 메모를 크게, 나머지는 접어서 보여 준다)
   const isOneNoteSchedule = isOneNoteId(editingSchedule?.id);
 
+  // OneNote 일정 창을 열면 원본 서식(memo_html)을 그 한 건만 읽음
+  useEffect(() => {
+    setMemoHtml(null);
+    setMemoView('rich');
+    if (!showModal || !isOneNoteSchedule || memoHtmlColumnMissing || !isSupabaseConfigured() || !userId) return;
+    const id = editingSchedule.id;
+    const altId = id.startsWith('sh_') ? id.replace('sh_', '') : `sh_${id}`;
+    let cancelled = false;
+    setMemoHtmlLoading(true);
+    supabase
+      .from('user_schedules')
+      .select('id, memo_html')
+      .in('id', [id, altId])
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          if (isMissingColumnError(error, 'memo_html')) memoHtmlColumnMissing = true;
+          return;
+        }
+        const row = (data || []).find(r => r.memo_html);
+        if (row) setMemoHtml(decryptText(row.memo_html, userId));
+      })
+      .finally(() => {
+        if (!cancelled) setMemoHtmlLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showModal, editingSchedule?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 모아보기에서 고른 일정: 그 달로 이동하고 일정 창 열기
   const handleOpenFromPanel = (sch) => {
     const [y, m, d] = (sch.date || '').split('-').map(Number);
@@ -837,10 +912,33 @@ const getKoreanHoliday = (dateObj) => {
 
   const scheduleMemoField = (
     <div style={isOneNoteSchedule ? { display: 'flex', flexDirection: 'column' } : undefined}>
-      <label className="form-label font-bold text-xs flex align-center gap-1">
-        {isOneNoteSchedule && <NotebookText size={14} style={{ color: '#7719aa' }} />}
-        세부 메모
-      </label>
+      <div className="flex align-center justify-between gap-2">
+        <label className="form-label font-bold text-xs flex align-center gap-1">
+          {isOneNoteSchedule && <NotebookText size={14} style={{ color: '#7719aa' }} />}
+          세부 메모
+          {isOneNoteSchedule && memoHtmlLoading && <span className="sub-text" style={{ fontWeight: 400 }}> · 원본 서식 불러오는 중…</span>}
+        </label>
+        {isOneNoteSchedule && memoHtml && (
+          <div className="flex gap-1">
+            {[['rich', '원본 서식'], ['text', '텍스트']].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                className={`btn btn-sm ${memoView === key ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setMemoView(key)}
+                style={{ padding: '0.2rem 0.6rem', fontSize: '0.75rem' }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {isOneNoteSchedule && memoHtml && memoView === 'rich' ? (
+        <Suspense fallback={<div className="input-field mt-1" style={{ height: 'min(62vh, 680px)' }} />}>
+          <NoteRichView html={memoHtml} style={{ height: 'min(62vh, 680px)', minHeight: '280px', resize: 'vertical' }} />
+        </Suspense>
+      ) : (
       <textarea
         className="input-field mt-1"
         rows={isOneNoteSchedule ? undefined : 3}
@@ -858,6 +956,7 @@ const getKoreanHoliday = (dateObj) => {
           backgroundColor: '#fdfcff'
         } : undefined}
       />
+      )}
     </div>
   );
 

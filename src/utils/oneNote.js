@@ -1,6 +1,7 @@
 // Microsoft Graph OneNote 연동 (개인 Microsoft 계정, 위임 권한 Notes.Read)
 // Azure 앱 등록의 클라이언트 ID 는 VITE_MS_CLIENT_ID 로 주입한다.
 import { PublicClientApplication, InteractionRequiredAuthError } from '@azure/msal-browser';
+import { cleanOneNoteHtml } from './noteHtml';
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 const SCOPES = ['Notes.Read'];
@@ -147,16 +148,26 @@ export const listPagesChunk = async (sectionId, next = null, top = 30) => {
   return { pages: (data.value || []).map(toPage), next: data['@odata.nextLink'] || null };
 };
 
-// 페이지 HTML 본문을 줄바꿈이 살아 있는 일반 텍스트로
-export const getPageText = async (pageId) => {
-  const html = await graphFetch(`/me/onenote/pages/${encodeURIComponent(pageId)}/content`, true);
-  const doc = new DOMParser().parseFromString(html, 'text/html');
+// 페이지 본문: 검색·미리보기용 일반 텍스트(줄바꿈 유지) + 서식을 살린 HTML
+export const getPageContent = async (pageId) => {
+  const raw = await graphFetch(`/me/onenote/pages/${encodeURIComponent(pageId)}/content`, true);
+  const parser = new DOMParser();
+
+  const doc = parser.parseFromString(raw, 'text/html');
   doc.querySelectorAll('title, style, script').forEach(el => el.remove());
   doc.querySelectorAll('br').forEach(el => el.replaceWith('\n'));
   doc.querySelectorAll('p, div, li, h1, h2, h3, h4, h5, h6, tr').forEach(el => el.append('\n'));
-  return (doc.body?.textContent || '')
+  const text = (doc.body?.textContent || '')
     .split('\n')
     .map(line => line.replace(/\s+/g, ' ').trim())
     .filter(Boolean)
     .join('\n');
+
+  let html = null;
+  try {
+    html = cleanOneNoteHtml(parser.parseFromString(raw, 'text/html'));
+  } catch (e) {
+    console.warn('OneNote 서식 정리 실패 (텍스트만 저장):', e);
+  }
+  return { text, html };
 };
