@@ -7,8 +7,9 @@ const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const CATEGORIES = ['WORK', 'READING', 'PERSONAL', 'IMPORTANT'];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
-const FULL_MEMO_ITEMS = 3; // 찾은 일정이 이만큼 이하이고
-const FULL_MEMO_CHARS = 20000; // 메모 합이 이 길이 이하면 검색 결과에 본문 전체를 넣음
+const FULL_MEMO_ITEMS = 30; // 찾은 일정이 이만큼 이하이고
+const FULL_MEMO_CHARS = 60000; // 메모 합이 이 길이 이하면 검색 결과에 본문 전체를 넣음 (기간 요약을 한 번에)
+const READ_MAX = 20; // read_notes 한 번에 읽는 최대 개수
 
 export const isAssistantAvailable = () => Boolean(isSupabaseConfigured());
 
@@ -67,15 +68,17 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
   const tools = {
     search_schedules: async ({ date_from, date_to, query, category, onenote_only, limit } = {}) => {
       const terms = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
-      const matched = getSchedules()
+      const hayOf = (s) => `${s.title || ''}\n${s.memo || ''}\n${s.onenote_path || ''}`.toLowerCase();
+      const inRange = getSchedules()
         .filter(s => (!date_from || s.date >= date_from) && (!date_to || s.date <= date_to))
         .filter(s => !category || (s.category || 'PERSONAL') === category)
-        .filter(s => !onenote_only || isOneNoteId(s.id))
-        .filter(s => {
-          if (terms.length === 0) return true;
-          const hay = `${s.title || ''}\n${s.memo || ''}\n${s.onenote_path || ''}`.toLowerCase();
-          return terms.every(t => hay.includes(t));
-        })
+        .filter(s => !onenote_only || isOneNoteId(s.id));
+      // 단어별로 몇 개가 걸리는지 (여러 단어 AND 로 너무 좁아졌는지 AI 가 알 수 있게)
+      const termCounts = terms.length > 1
+        ? Object.fromEntries(terms.map(t => [t, inRange.filter(s => hayOf(s).includes(t)).length]))
+        : null;
+      const matched = inRange
+        .filter(s => terms.every(t => hayOf(s).includes(t)))
         .sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.time || '').localeCompare(b.time || ''));
       const max = Math.min(Math.max(Number(limit) || 30, 1), 100);
       const items = matched.slice(0, max);
@@ -85,6 +88,8 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
       const bodies = fullMemo ? await Promise.all(items.map(noteBody)) : [];
       return {
         total_matched: matched.length,
+        ...(termCounts ? { matches_per_word: termCounts } : {}),
+        ...(fullMemo ? {} : { note: 'memo_preview 만 있음. 요약하려면 read_notes 로 id 들을 한 번에 읽으세요.' }),
         items: items.map((s, i) => fullMemo
           ? { ...summary(s), ...bodies[i] }
           : {
@@ -99,6 +104,16 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
       const s = find(id);
       if (!s) throw new Error(`id 가 ${id} 인 일정을 찾을 수 없습니다.`);
       return { ...summary(s), ...(await noteBody(s)) };
+    },
+
+    read_notes: async ({ ids }) => {
+      const list = (Array.isArray(ids) ? ids : []).slice(0, READ_MAX);
+      if (list.length === 0) throw new Error('ids 가 필요합니다.');
+      const notes = await Promise.all(list.map(async (id) => {
+        const s = find(id);
+        return s ? { ...summary(s), ...(await noteBody(s)) } : { id, error: '찾을 수 없음' };
+      }));
+      return { count: notes.length, notes, ...(ids.length > READ_MAX ? { truncated: `한 번에 ${READ_MAX}개까지만 읽었습니다. 나머지는 다시 요청하세요.` } : {}) };
     },
 
     add_schedule: async ({ date, title, time, category, memo }) => {
@@ -173,8 +188,10 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
     },
     // 도구 실행 뒤 덧붙일 문구 (취소선 확인 결과)
     note: (name, result) => {
-      if (name !== 'read_note' && name !== 'search_schedules') return null;
-      const list = name === 'read_note' ? [result] : (result?.items || []).filter(i => 'memo' in i);
+      if (!['read_note', 'read_notes', 'search_schedules'].includes(name)) return null;
+      const list = name === 'read_note' ? [result]
+        : name === 'read_notes' ? (result?.notes || [])
+          : (result?.items || []).filter(i => 'memo' in i);
       if (list.length === 0) return null;
       const struck = list.reduce((n, i) => n + (i?.struck_items?.length || 0), 0);
       if (list.some(i => i?.format_unavailable)) return '↳ 원본 서식을 못 읽어 취소선은 확인하지 못했어요';
@@ -185,6 +202,7 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
     label: (name, input = {}) => {
       if (name === 'search_schedules') return `🔎 일정 찾는 중${input.query ? ` · "${input.query}"` : ''}`;
       if (name === 'read_note') return `📓 노트 읽는 중${find(input.id) ? ` · ${find(input.id).title}` : ''}`;
+      if (name === 'read_notes') return `📓 노트 ${(input.ids || []).length}개 읽는 중`;
       if (name === 'add_schedule') return `➕ 일정 추가 · ${input.date || ''} ${input.title || ''}`;
       if (name === 'update_schedule') return `✏️ 일정 수정${find(input.id) ? ` · ${find(input.id).title}` : ''}`;
       if (name === 'delete_schedule') return `🗑 일정 삭제${find(input.id) ? ` · ${find(input.id).title}` : ''}`;

@@ -38,7 +38,9 @@ const SYSTEM_PROMPT = `당신은 'Library of Mind' 앱의 일정 비서입니다
 
 원칙:
 - 일정·노트 내용은 반드시 도구로 확인한 것만 말합니다. 확인하지 않은 일정이나 노트 내용을 지어내지 않습니다.
-- 노트를 요약·정리할 때는 본문 전체를 보고 답합니다. search_schedules 결과에 memo(본문 전체)가 있으면 그대로 쓰고, memo_preview(미리보기)만 있으면 read_note 로 본문을 읽습니다. 미리보기만 보고 요약하지 않습니다.
+- 노트를 요약·정리할 때는 본문 전체를 보고 답합니다. search_schedules 결과에 memo(본문 전체)가 있으면 그대로 쓰고, memo_preview(미리보기)만 있으면 read_notes 로 여러 개를 한 번에 읽습니다. 미리보기만 보고 요약하지 않습니다.
+- '이번 달 OO 요약', 'OO 관련 업무일지 정리'처럼 기간·주제 요약은 그 범위에 걸리는 노트를 하나도 빠뜨리지 않고 모두 읽어 날짜별로 종합합니다. 한두 개만 골라 요약하지 않습니다. total_matched 가 받은 items 수보다 많으면 limit 을 늘리거나 기간을 나눠 전부 확인합니다.
+- search_schedules 의 query 에는 구분되는 핵심 단어(고객사·프로젝트·노트북/섹션 이름 등)만 넣습니다. '업무일지', '노트', '회의록', '요약', '내용' 같은 일반 단어는 노트 제목에 없을 수 있으니 넣지 않습니다. 여러 단어를 넣었는데 결과가 적으면 matches_per_word 를 보고 단어를 줄여 다시 찾습니다.
 - 메모에서 ~~글자~~ 는 원본 노트의 취소선이고, 도구 결과의 struck_items 에 취소선 글자 목록이 따로 있습니다. 취소선은 끝냈거나 취소·폐기된 내용입니다. 사용자가 취소선을 빼 달라고 하면 struck_items 의 항목은 한 글자도 넣지 않습니다. 따로 말이 없으면 요약할 때 남은 일과 구분하고(예: '완료/취소됨'으로 묶기) 할 일 목록에는 넣지 않습니다. ☑ 는 완료한 할 일, ☐ 는 남은 할 일입니다.
 - onenote_location 은 노트가 들어 있는 OneNote 위치(노트북 › 섹션)입니다. 'OO 섹션 노트', 'OO 노트북' 같은 질문은 search_schedules 의 query 에 그 이름을 넣어 찾을 수 있습니다(제목·메모·위치를 함께 검색).
 - format_unavailable 이 true 면 원본 서식을 못 읽어 취소선을 확인할 수 없는 상태입니다. 사용자가 취소선을 물으면 그 사실을 알립니다.
@@ -56,7 +58,7 @@ const FUNCTIONS = [
   {
     name: 'search_schedules',
     description:
-      '달력 일정과 OneNote 노트를 찾습니다. 날짜 범위·검색어·분류로 거를 수 있고, 각 항목의 id·날짜·제목·분류·OneNote 여부를 돌려줍니다. 결과가 3개 이하로 적으면 memo(본문 전체)를, 많으면 memo_preview(앞부분)를 줍니다. memo_preview 만 있을 때 본문이 필요하면 read_note 를 쓰세요. 날짜 범위를 좁게 주면 더 빠릅니다.',
+      '달력 일정과 OneNote 노트를 찾습니다. 날짜 범위·검색어·분류로 거를 수 있고, 각 항목의 id·날짜·제목·분류·OneNote 여부·위치를 돌려줍니다. 결과가 30개 이하이고 너무 길지 않으면 memo(본문 전체)를, 아니면 memo_preview(앞부분)를 줍니다. memo_preview 만 있을 때 본문이 필요하면 read_notes 를 쓰세요. limit 기본 30, 최대 100.',
     parameters: {
       type: 'OBJECT',
       properties: {
@@ -76,6 +78,15 @@ const FUNCTIONS = [
       type: 'OBJECT',
       properties: { id: { type: 'STRING' } },
       required: ['id'],
+    },
+  },
+  {
+    name: 'read_notes',
+    description: '여러 일정·노트의 본문 전체를 한 번에 읽습니다(최대 20개). 기간·주제 요약처럼 노트 여러 개가 필요할 때 씁니다.',
+    parameters: {
+      type: 'OBJECT',
+      properties: { ids: { type: 'ARRAY', items: { type: 'STRING' }, description: 'search_schedules 결과의 id 목록' } },
+      required: ['ids'],
     },
   },
   {
