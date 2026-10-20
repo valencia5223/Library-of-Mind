@@ -270,18 +270,10 @@ export default function AuthModal({
 
             {isAdmin && (
               <button
-                className="btn btn-warning mt-3 w-full justify-center font-bold flex align-center gap-1"
+                className="btn btn-primary mt-3 w-full"
                 onClick={() => {
                   onClose();
                   onOpenAdmin();
-                }}
-                style={{
-                  background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '0.65rem 1rem',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)'
                 }}
               >
                 👑 회원가입 승인 관리 센터
@@ -298,11 +290,6 @@ export default function AuthModal({
                   setIsChangingPassword(true);
                   setNewPassword('');
                   setConfirmPassword('');
-                }}
-                style={{
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  fontSize: '0.9rem',
-                  padding: '0.6rem'
                 }}
               >
                 <KeyRound size={16} /> 비밀번호 변경하기
@@ -375,7 +362,6 @@ export default function AuthModal({
                   type="submit"
                   className="btn btn-primary btn-full w-full justify-center"
                   disabled={loading}
-                  style={{ fontSize: '0.88rem', padding: '0.55rem' }}
                 >
                   {loading ? '변경 중...' : '새 비밀번호 저장'}
                 </button>

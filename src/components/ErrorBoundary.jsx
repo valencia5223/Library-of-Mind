@@ -29,8 +29,8 @@ export default class ErrorBoundary extends React.Component {
           alignItems: 'center',
           justifyContent: 'center',
           minHeight: '100vh',
-          backgroundColor: '#0f172a',
-          color: '#f8fafc',
+          backgroundColor: '#18181b',
+          color: '#fafafa',
           padding: '2rem',
           textAlign: 'center',
           fontFamily: 'system-ui, -apple-system, sans-serif'
@@ -47,7 +47,7 @@ export default class ErrorBoundary extends React.Component {
             <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.75rem' }}>
               화면을 불러오는 중 잠시 오류가 발생했습니다
             </h2>
-            <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+            <p style={{ color: '#a1a1aa', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
               서비스 연결 또는 데이터 동기화 과정에서 일시적 문제가 발생했습니다. 아래 버튼을 눌러 새로고침해 주세요.
             </p>
             {this.state.error && (
@@ -66,7 +66,7 @@ export default class ErrorBoundary extends React.Component {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                backgroundColor: '#0284c7',
+                backgroundColor: '#4f46e5',
                 color: '#ffffff',
                 border: 'none',
                 padding: '0.75rem 1.5rem',

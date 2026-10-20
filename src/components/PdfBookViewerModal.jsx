@@ -541,20 +541,20 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         style={{
           width: '98vw', maxWidth: showNotes ? '2000px' : '1900px', height: '92vh', maxHeight: '1100px',
           display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden',
-          backgroundColor: '#0f172a', color: '#f8fafc',
+          backgroundColor: '#18181b', color: '#fafafa',
           boxShadow: '0 25px 50px -12px rgba(0,0,0,0.6)', borderRadius: '12px',
           outline: 'none'
         }}
       >
         {/* 슬림 상단 툴바 (YES24 뷰어 스타일 46px - 진행률 짤림 완전 차단) */}
         <div style={{
-          padding: '0.25rem 0.85rem', backgroundColor: '#1e293b',
-          borderBottom: '1px solid #334155', display: 'flex', alignItems: 'center',
+          padding: '0.25rem 0.85rem', backgroundColor: '#18181b',
+          borderBottom: '1px solid #3f3f46', display: 'flex', alignItems: 'center',
           justifyContent: 'space-between', gap: '0.5rem', height: '46px', flexShrink: 0
         }}>
           <div className="flex align-center gap-2.5">
             <div style={{
-              width: '28px', height: '28px', borderRadius: '6px', backgroundColor: '#0284c7',
+              width: '28px', height: '28px', borderRadius: '6px', backgroundColor: '#4f46e5',
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
             }}>
               <BookOpen size={16} className="text-white" />
@@ -562,12 +562,12 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             <div className="flex align-center gap-2" style={{ lineHeight: 1.2 }}>
               <h3 className="font-bold text-xs text-white flex align-center gap-1.5" style={{ margin: 0 }}>
                 {book.title || 'PDF 전자책'}
-                <span className="text-[10px] px-1.5 py-0.5 rounded font-normal" style={{ backgroundColor: '#0284c7', color: '#fff' }}>
+                <span className="text-[10px] px-1.5 py-0.5 rounded font-normal" style={{ backgroundColor: '#4f46e5', color: '#fff' }}>
                   {isTwoPageMode ? '📖 양면' : '📖 단면'}
                 </span>
               </h3>
               <span className="text-slate-600 text-xs">•</span>
-              <span className="text-[11px] font-bold" style={{ color: '#38bdf8' }}>진행률 {pct}%</span>
+              <span className="text-[11px] font-bold" style={{ color: '#818cf8' }}>진행률 {pct}%</span>
               <span className="text-slate-600 text-xs">•</span>
               <span className="text-[10px] text-slate-400">방향키 스크롤</span>
             </div>
@@ -575,18 +575,18 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
           <div className="flex align-center gap-1.5 bg-slate-900 px-2 py-1 rounded-lg border border-slate-700">
             <button onClick={() => changePage(currentPage - step)} disabled={currentPage <= 1 || pageRendering}
-              style={{ opacity: currentPage <= 1 ? 0.4 : 1, background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px' }}>
+              style={{ opacity: currentPage <= 1 ? 0.4 : 1, background: 'none', border: 'none', color: '#d4d4d8', cursor: 'pointer', padding: '2px' }}>
               <ChevronLeft size={18} />
             </button>
             <div className="flex align-center gap-1 text-[11px] font-bold px-1.5">
-              <span style={{ color: '#38bdf8', fontSize: '12px' }}>
+              <span style={{ color: '#818cf8', fontSize: '12px' }}>
                 {isTwoPageMode ? `${currentPage}-${Math.min(totalPages, currentPage + 1)}` : currentPage}
               </span>
               <span className="text-slate-500">/</span>
               <span className="text-slate-300">{totalPages}</span>
             </div>
             <button onClick={() => changePage(currentPage + step)} disabled={currentPage >= totalPages || pageRendering}
-              style={{ opacity: currentPage >= totalPages ? 0.4 : 1, background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '2px' }}>
+              style={{ opacity: currentPage >= totalPages ? 0.4 : 1, background: 'none', border: 'none', color: '#d4d4d8', cursor: 'pointer', padding: '2px' }}>
               <ChevronRight size={18} />
             </button>
           </div>
@@ -594,8 +594,8 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
           <div className="flex align-center gap-2" style={{ flexShrink: 0 }}>
             <button onClick={() => setFitMode(fitMode === 'page' ? 'width' : 'page')} title={fitMode === 'page' ? "가로 폭에 맞추기" : "한 화면에 딱 맞추기 (스크롤 없음)"}
               style={{
-                backgroundColor: fitMode === 'page' ? '#0284c7' : '#334155', color: '#fff',
-                border: '1px solid #475569', padding: '0.3rem 0.5rem', borderRadius: '5px',
+                backgroundColor: fitMode === 'page' ? '#4f46e5' : '#3f3f46', color: '#fff',
+                border: '1px solid #52525b', padding: '0.3rem 0.5rem', borderRadius: '5px',
                 display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer'
               }}>
               {fitMode === 'page' ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
@@ -604,8 +604,8 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
             <button onClick={toggleTwoPageMode} title="단면/양면 전환"
               style={{
-                backgroundColor: isTwoPageMode ? '#0284c7' : '#334155', color: '#fff',
-                border: '1px solid #475569', padding: '0.3rem 0.5rem', borderRadius: '5px',
+                backgroundColor: isTwoPageMode ? '#4f46e5' : '#3f3f46', color: '#fff',
+                border: '1px solid #52525b', padding: '0.3rem 0.5rem', borderRadius: '5px',
                 display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer'
               }}>
               {isTwoPageMode ? <Columns size={13} /> : <Square size={13} />}
@@ -613,7 +613,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
             </button>
 
             {/* 자동 읽기 (형광펜 가이드 스크롤) 컨트롤 */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: isAutoPlay ? '#0284c7' : '#334155', borderRadius: '5px', padding: '2px 6px', border: '1px solid #475569' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: isAutoPlay ? '#4f46e5' : '#3f3f46', borderRadius: '5px', padding: '2px 6px', border: '1px solid #52525b' }}>
               <button onClick={() => setIsAutoPlay(!isAutoPlay)} title={isAutoPlay ? "일시정지" : "자동 읽기 시작"}
                 style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '0.75rem' }}>
                 {isAutoPlay ? <Pause size={13} /> : <Play size={13} />}
@@ -621,7 +621,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               </button>
               {isAutoPlay && (
                 <select value={autoSpeed} onChange={(e) => setAutoSpeed(Number(e.target.value))}
-                  style={{ backgroundColor: '#0f172a', color: '#38bdf8', border: 'none', borderRadius: '3px', fontSize: '0.7rem', padding: '1px 3px', cursor: 'pointer' }}>
+                  style={{ backgroundColor: '#18181b', color: '#818cf8', border: 'none', borderRadius: '3px', fontSize: '0.7rem', padding: '1px 3px', cursor: 'pointer' }}>
                   <option value={1}>1x (느림)</option>
                   <option value={2}>2x (보통)</option>
                   <option value={3}>3x (빠름)</option>
@@ -629,25 +629,25 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#0f172a', padding: '2px 6px', borderRadius: '5px', border: '1px solid #334155' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#18181b', padding: '2px 6px', borderRadius: '5px', border: '1px solid #3f3f46' }}>
                <button onClick={() => setZoomScale(Math.max(60, zoomScale - 15))}
-                 style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '1px' }}>
+                 style={{ background: 'none', border: 'none', color: '#d4d4d8', cursor: 'pointer', padding: '1px' }}>
                  <ZoomOut size={13} />
                </button>
-               <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#cbd5e1', minWidth: '34px', textAlign: 'center' }}>{zoomScale}%</span>
+               <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#d4d4d8', minWidth: '34px', textAlign: 'center' }}>{zoomScale}%</span>
                <button onClick={() => setZoomScale(Math.min(220, zoomScale + 15))}
-                 style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '1px' }}>
+                 style={{ background: 'none', border: 'none', color: '#d4d4d8', cursor: 'pointer', padding: '1px' }}>
                  <ZoomIn size={13} />
                </button>
                <button onClick={() => setZoomScale(100)} title="화면 맞춤"
-                 style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '1px', marginLeft: '2px' }}>
+                 style={{ background: 'none', border: 'none', color: '#a1a1aa', cursor: 'pointer', padding: '1px', marginLeft: '2px' }}>
                  <RotateCcw size={11} />
                </button>
             </div>
 
             <button onClick={() => setShowNotes(!showNotes)}
               style={{
-                backgroundColor: showNotes ? '#0284c7' : '#334155', color: '#fff', border: 'none',
+                backgroundColor: showNotes ? '#4f46e5' : '#3f3f46', color: '#fff', border: 'none',
                 padding: '0.3rem 0.5rem', borderRadius: '5px', display: 'flex', alignItems: 'center', gap: '4px',
                 fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap'
               }}>
@@ -657,7 +657,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
 
             <button onClick={onClose} title="닫기 (ESC)"
               style={{
-                backgroundColor: '#334155', color: '#fff', border: 'none', width: '28px', height: '28px',
+                backgroundColor: '#3f3f46', color: '#fff', border: 'none', width: '28px', height: '28px',
                 borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0
               }}>
               <X size={16} />
@@ -666,8 +666,8 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
         </div>
 
         {/* 프로그레스 바 */}
-        <div style={{ height: '3px', backgroundColor: '#1e293b', width: '100%' }}>
-          <div style={{ height: '100%', width: `${pct}%`, backgroundColor: '#0284c7', transition: 'width 0.3s ease' }} />
+        <div style={{ height: '3px', backgroundColor: '#18181b', width: '100%' }}>
+          <div style={{ height: '100%', width: `${pct}%`, backgroundColor: '#4f46e5', transition: 'width 0.3s ease' }} />
         </div>
 
         {/* 본문 뷰포트 (완벽 제어 Canvas 엔진) */}
@@ -697,18 +697,18 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               }} />
             )}
             {pdfError ? (
-              <div style={{ margin: 'auto', textAlign: 'center', padding: '2.5rem', backgroundColor: '#1e293b', borderRadius: '12px', border: '1px solid #ef4444', maxWidth: '520px' }}>
+              <div style={{ margin: 'auto', textAlign: 'center', padding: '2.5rem', backgroundColor: '#18181b', borderRadius: '12px', border: '1px solid #ef4444', maxWidth: '520px' }}>
                 <FileText size={48} style={{ color: '#ef4444', marginBottom: '1rem', margin: '0 auto' }} />
-                <h4 style={{ fontWeight: 800, color: '#f8fafc', margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>PDF 문서를 불러올 수 없습니다</h4>
-                <p style={{ fontSize: '0.85rem', color: '#94a3b8', lineHeight: 1.5, marginBottom: '1.25rem' }}>{pdfError}</p>
+                <h4 style={{ fontWeight: 800, color: '#fafafa', margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>PDF 문서를 불러올 수 없습니다</h4>
+                <p style={{ fontSize: '0.85rem', color: '#a1a1aa', lineHeight: 1.5, marginBottom: '1.25rem' }}>{pdfError}</p>
                 <button onClick={onClose} style={{ backgroundColor: '#ef4444', color: '#fff', border: 'none', padding: '0.5rem 1.25rem', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>
                   뷰어 닫기
                 </button>
               </div>
             ) : loadingPdf ? (
               <div style={{ margin: 'auto', textAlign: 'center', padding: '2rem' }}>
-                <BookOpen size={48} style={{ color: '#0284c7', marginBottom: '0.75rem', margin: '0 auto' }} />
-                <p style={{ fontWeight: 700, color: '#cbd5e1' }}>책 페이지를 로딩하는 중...</p>
+                <BookOpen size={48} style={{ color: '#4f46e5', marginBottom: '0.75rem', margin: '0 auto' }} />
+                <p style={{ fontWeight: 700, color: '#d4d4d8' }}>책 페이지를 로딩하는 중...</p>
               </div>
             ) : (
               <div style={{
@@ -733,11 +733,11 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
           {/* 페이지별 독립 메모장 & 전체 페이지 메모 목록 사이드바 */}
           {showNotes && (
             <div style={{
-              width: '400px', height: '100%', backgroundColor: '#1e293b', borderLeft: '1px solid #334155',
+              width: '400px', height: '100%', backgroundColor: '#18181b', borderLeft: '1px solid #3f3f46',
               display: 'flex', flexDirection: 'column', padding: '1rem', boxShadow: '-10px 0 25px rgba(0,0,0,0.3)', zIndex: 20
             }}>
               {/* 상단 탭 헤더 */}
-              <div style={{ display: 'flex', gap: '6px', marginBottom: '0.85rem', paddingBottom: '0.65rem', borderBottom: '1px solid #334155', flexShrink: 0 }}>
+              <div style={{ display: 'flex', gap: '6px', marginBottom: '0.85rem', paddingBottom: '0.65rem', borderBottom: '1px solid #3f3f46', flexShrink: 0 }}>
                 <button
                   type="button"
                   onClick={() => setNotesTab('current')}
@@ -746,9 +746,9 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                     padding: '0.45rem 0.6rem',
                     borderRadius: '8px',
                     border: '1px solid',
-                    borderColor: notesTab === 'current' ? '#0284c7' : '#334155',
-                    backgroundColor: notesTab === 'current' ? '#0284c7' : '#0f172a',
-                    color: notesTab === 'current' ? '#ffffff' : '#94a3b8',
+                    borderColor: notesTab === 'current' ? '#4f46e5' : '#3f3f46',
+                    backgroundColor: notesTab === 'current' ? '#4f46e5' : '#18181b',
+                    color: notesTab === 'current' ? '#ffffff' : '#a1a1aa',
                     fontWeight: 700,
                     fontSize: '0.78rem',
                     cursor: 'pointer',
@@ -769,9 +769,9 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                     padding: '0.45rem 0.6rem',
                     borderRadius: '8px',
                     border: '1px solid',
-                    borderColor: notesTab === 'list' ? '#0284c7' : '#334155',
-                    backgroundColor: notesTab === 'list' ? '#0284c7' : '#0f172a',
-                    color: notesTab === 'list' ? '#ffffff' : '#94a3b8',
+                    borderColor: notesTab === 'list' ? '#4f46e5' : '#3f3f46',
+                    backgroundColor: notesTab === 'list' ? '#4f46e5' : '#18181b',
+                    color: notesTab === 'list' ? '#ffffff' : '#a1a1aa',
                     fontWeight: 700,
                     fontSize: '0.78rem',
                     cursor: 'pointer',
@@ -800,10 +800,10 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                           borderRadius: '6px',
                           fontSize: '0.78rem',
                           fontWeight: 700,
-                          backgroundColor: targetPageOffset === 0 ? '#0284c7' : '#0f172a',
-                          color: targetPageOffset === 0 ? '#ffffff' : '#94a3b8',
+                          backgroundColor: targetPageOffset === 0 ? '#4f46e5' : '#18181b',
+                          color: targetPageOffset === 0 ? '#ffffff' : '#a1a1aa',
                           border: '1.5px solid',
-                          borderColor: targetPageOffset === 0 ? '#38bdf8' : '#334155',
+                          borderColor: targetPageOffset === 0 ? '#818cf8' : '#3f3f46',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
@@ -822,10 +822,10 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                           borderRadius: '6px',
                           fontSize: '0.78rem',
                           fontWeight: 700,
-                          backgroundColor: targetPageOffset === 1 ? '#0284c7' : '#0f172a',
-                          color: targetPageOffset === 1 ? '#ffffff' : '#94a3b8',
+                          backgroundColor: targetPageOffset === 1 ? '#4f46e5' : '#18181b',
+                          color: targetPageOffset === 1 ? '#ffffff' : '#a1a1aa',
                           border: '1.5px solid',
-                          borderColor: targetPageOffset === 1 ? '#38bdf8' : '#334155',
+                          borderColor: targetPageOffset === 1 ? '#818cf8' : '#3f3f46',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
@@ -839,10 +839,10 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                   )}
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#818cf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <Bookmark size={14} /> {activeNotePage}페이지 전용 기록
                     </span>
-                    <span style={{ fontSize: '0.72rem', color: '#64748b' }}>자동 저장</span>
+                    <span style={{ fontSize: '0.72rem', color: '#71717a' }}>자동 저장</span>
                   </div>
 
                   <textarea
@@ -850,13 +850,13 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                     onChange={(e) => handleCurrentNoteChange(e.target.value)}
                     placeholder={`${activeNotePage}페이지를 읽으며 남기고 싶은 생각을 메모하세요...`}
                     style={{
-                      flex: 1, width: '100%', backgroundColor: '#0f172a', color: '#f8fafc', border: '1.5px solid #334155',
+                      flex: 1, width: '100%', backgroundColor: '#18181b', color: '#fafafa', border: '1.5px solid #3f3f46',
                       borderRadius: '10px', padding: '0.85rem', fontSize: '0.9rem', lineHeight: '1.6', resize: 'none', outline: 'none',
                       fontFamily: 'Inter, system-ui, sans-serif'
                     }}
                   />
 
-                  <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>
+                  <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#a1a1aa' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#34d399' }}>
                       <CheckCircle2 size={13} /> {pageNotes[activeNotePage] ? '저장 완료' : '입력 중...'}
                     </span>
@@ -866,14 +866,14 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
               ) : (
                 /* 탭 2: 전체 페이지 메모 목록 */
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', gap: '0.65rem', minHeight: 0, paddingRight: '2px' }}>
-                  <div style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600, paddingBottom: '0.25rem' }}>
+                  <div style={{ fontSize: '0.78rem', color: '#a1a1aa', fontWeight: 600, paddingBottom: '0.25rem' }}>
                     💡 페이지 카드를 클릭하면 해당 페이지로 즉시 이동합니다.
                   </div>
 
                   {writtenPages.length === 0 ? (
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: '#64748b', padding: '2rem 1rem' }}>
-                      <FileText size={36} style={{ marginBottom: '0.75rem', color: '#475569' }} />
-                      <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600, color: '#cbd5e1' }}>작성된 페이지 메모가 없습니다.</p>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: '#71717a', padding: '2rem 1rem' }}>
+                      <FileText size={36} style={{ marginBottom: '0.75rem', color: '#52525b' }} />
+                      <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 600, color: '#d4d4d8' }}>작성된 페이지 메모가 없습니다.</p>
                       <p style={{ margin: '0.4rem 0 0 0', fontSize: '0.75rem' }}>책을 읽으며 기억하고 싶은 페이지에 메모를 남겨보세요!</p>
                     </div>
                   ) : (
@@ -888,8 +888,8 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                           onClick={() => changePage(pageNum)}
                           style={{
                             padding: '0.75rem 0.85rem',
-                            backgroundColor: isCurrent ? '#0369a1' : '#0f172a',
-                            border: `1.5px solid ${isCurrent ? '#38bdf8' : '#334155'}`,
+                            backgroundColor: isCurrent ? '#4338ca' : '#18181b',
+                            border: `1.5px solid ${isCurrent ? '#818cf8' : '#3f3f46'}`,
                             borderRadius: '10px',
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
@@ -899,7 +899,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: isCurrent ? '#ffffff' : '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: isCurrent ? '#ffffff' : '#818cf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <Bookmark size={13} /> {pageNum} 페이지 메모
                             </span>
                             <button
@@ -928,7 +928,7 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
                                     padding: '5px 8px',
                                     borderRadius: '6px',
                                     fontSize: '0.8rem',
-                                    color: isCurrent ? '#f1f5f9' : '#cbd5e1'
+                                    color: isCurrent ? '#f4f4f5' : '#d4d4d8'
                                   }}
                                 >
                                   <span style={{ flex: 1, wordBreak: 'break-word', lineHeight: '1.4' }}>

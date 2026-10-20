@@ -335,7 +335,6 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
                   <div className="friend-actions flex gap-2">
                     <button
                       className="btn btn-outline-primary btn-sm flex align-middle px-2.5 font-bold"
-                      style={{ fontSize: '0.8rem', color: '#0284c7', borderColor: '#bae6fd', backgroundColor: '#f0f9ff' }}
                       onClick={() => setActiveFriendForMemo(friend)}
                     >
                       <MessageSquare className="me-1 text-sky-600" size={14} /> 실시간 채팅
@@ -343,7 +342,6 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
 
                     <button
                       className="btn btn-outline-primary btn-sm flex align-middle px-3"
-                      style={{ fontSize: '0.8rem' }}
                       onClick={() => onViewFriendBookshelf(friend.friend_id, friend.email, friend.name)}
                     >
                       <ExternalLink className="me-1" size={14} /> 서재 방문

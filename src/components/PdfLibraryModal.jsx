@@ -147,7 +147,7 @@ export default function PdfLibraryModal({ onClose }) {
             justifyContent: 'space-between',
             paddingBottom: '0.85rem',
             marginBottom: '1rem',
-            borderBottom: '1px solid #e2e8f0'
+            borderBottom: '1px solid #e4e4e7'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -156,7 +156,7 @@ export default function PdfLibraryModal({ onClose }) {
                 width: '38px',
                 height: '38px',
                 borderRadius: '10px',
-                backgroundColor: '#0284c7',
+                backgroundColor: '#4f46e5',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -167,10 +167,10 @@ export default function PdfLibraryModal({ onClose }) {
               <FileText size={20} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#1e293b' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#18181b' }}>
                 PDF 전자책 보관함
               </h3>
-              <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#64748b' }}>
+              <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#71717a' }}>
                 원하는 PDF 문서를 등록하고 내장 E-Book 뷰어로 읽어보세요.
               </p>
             </div>
@@ -182,7 +182,7 @@ export default function PdfLibraryModal({ onClose }) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                backgroundColor: '#0284c7',
+                backgroundColor: '#4f46e5',
                 padding: '0.5rem 0.9rem',
                 borderRadius: '8px',
                 color: '#ffffff',
@@ -208,7 +208,7 @@ export default function PdfLibraryModal({ onClose }) {
               onClick={onClose}
               title="닫기 (ESC)"
               style={{
-                background: '#f1f5f9',
+                background: '#f4f4f5',
                 border: 'none',
                 borderRadius: '50%',
                 width: '34px',
@@ -217,7 +217,7 @@ export default function PdfLibraryModal({ onClose }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                color: '#64748b',
+                color: '#71717a',
                 flexShrink: 0
               }}
             >
@@ -233,18 +233,18 @@ export default function PdfLibraryModal({ onClose }) {
               style={{
                 textAlign: 'center',
                 padding: '3rem 1rem',
-                border: '2px dashed #cbd5e1',
+                border: '2px dashed #d4d4d8',
                 borderRadius: '12px',
                 margin: '1rem 0',
-                backgroundColor: '#f8fafc'
+                backgroundColor: '#fafafa'
               }}
             >
-              <FileText size={38} style={{ margin: '0 auto 0.5rem auto', color: '#94a3b8', display: 'block' }} />
-              <h4 style={{ margin: 0, fontWeight: 700, fontSize: '1rem', color: '#334155' }}>
+              <FileText size={38} style={{ margin: '0 auto 0.5rem auto', color: '#a1a1aa', display: 'block' }} />
+              <h4 style={{ margin: 0, fontWeight: 700, fontSize: '1rem', color: '#3f3f46' }}>
                 보관된 PDF 문서가 없습니다
               </h4>
-              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>
-                우측 상단의 <b style={{ color: '#0284c7' }}>[+ 신규 PDF 등록]</b> 버튼을 눌러 PDF 파일을 첨부해보세요.
+              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#71717a' }}>
+                우측 상단의 <b style={{ color: '#4f46e5' }}>[+ 신규 PDF 등록]</b> 버튼을 눌러 PDF 파일을 첨부해보세요.
               </p>
             </div>
           ) : (
@@ -262,8 +262,8 @@ export default function PdfLibraryModal({ onClose }) {
                       gap: '12px',
                       padding: '12px 16px',
                       borderRadius: '12px',
-                      border: '1px solid #e2e8f0',
-                      backgroundColor: '#f8fafc',
+                      border: '1px solid #e4e4e7',
+                      backgroundColor: '#fafafa',
                       width: '100%',
                       boxSizing: 'border-box'
                     }}
@@ -275,8 +275,8 @@ export default function PdfLibraryModal({ onClose }) {
                           width: '38px',
                           height: '38px',
                           borderRadius: '8px',
-                          backgroundColor: '#e0f2fe',
-                          color: '#0284c7',
+                          backgroundColor: '#eef2ff',
+                          color: '#4f46e5',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -292,7 +292,7 @@ export default function PdfLibraryModal({ onClose }) {
                             margin: 0,
                             fontWeight: 700,
                             fontSize: '0.925rem',
-                            color: '#1e293b',
+                            color: '#18181b',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
@@ -303,13 +303,13 @@ export default function PdfLibraryModal({ onClose }) {
                           {item.title}
                         </h4>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#64748b', marginTop: '3px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#71717a', marginTop: '3px', flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: 500 }}><HardDrive size={11} style={{ display: 'inline', marginRight: '2px' }} /> {item.fileSize}</span>
                           <span>•</span>
                           <span><Clock size={11} style={{ display: 'inline', marginRight: '2px' }} /> {new Date(item.createdAt).toLocaleDateString()}</span>
                           <span>•</span>
-                          <span>읽은 위치: <b style={{ color: '#0f172a' }}>{item.currentPage || 1}p</b></span>
-                          <span style={{ fontWeight: 600, color: '#0284c7' }}>({progressPercent}% 완료)</span>
+                          <span>읽은 위치: <b style={{ color: '#18181b' }}>{item.currentPage || 1}p</b></span>
+                          <span style={{ fontWeight: 600, color: '#4f46e5' }}>({progressPercent}% 완료)</span>
                         </div>
                       </div>
                     </div>
@@ -322,7 +322,7 @@ export default function PdfLibraryModal({ onClose }) {
                           display: 'flex',
                           alignItems: 'center',
                           gap: '6px',
-                          backgroundColor: '#0284c7',
+                          backgroundColor: '#4f46e5',
                           border: 'none',
                           color: '#ffffff',
                           padding: '0.45rem 0.85rem',
@@ -342,7 +342,7 @@ export default function PdfLibraryModal({ onClose }) {
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: '#94a3b8',
+                          color: '#a1a1aa',
                           padding: '6px',
                           borderRadius: '6px',
                           cursor: 'pointer',
@@ -351,7 +351,7 @@ export default function PdfLibraryModal({ onClose }) {
                           justifyContent: 'center'
                         }}
                         onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
-                        onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '#a1a1aa')}
                       >
                         <Trash2 size={15} />
                       </button>

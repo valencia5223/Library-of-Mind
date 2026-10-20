@@ -609,8 +609,8 @@ export default function BookshelfView({
         const darkB = Math.max(0, Math.round(b * 0.78));
 
         const bg = `linear-gradient(180deg, rgb(${r},${g},${b}) 0%, rgb(${darkR},${darkG},${darkB}) 100%)`;
-        const titleColor = isDark ? '#ffffff' : '#0f172a';
-        const authorColor = isDark ? '#fde047' : '#1e293b';
+        const titleColor = isDark ? '#ffffff' : '#18181b';
+        const authorColor = isDark ? '#fde047' : '#18181b';
         const textShadow = isDark ? '0px 1px 3px rgba(0,0,0,0.95)' : '0px 1px 2px rgba(255,255,255,0.85)';
 
         setCoverColors(prev => {
@@ -860,14 +860,14 @@ export default function BookshelfView({
         } else if (clampRating >= i - 0.5) {
           stars.push(
             <span key={i} style={{ display: 'inline-flex', position: 'relative', width: '15px', height: '15px' }} className="me-0.5">
-              <Star size={15} color="#cbd5e1" style={{ position: 'absolute' }} />
+              <Star size={15} color="#d4d4d8" style={{ position: 'absolute' }} />
               <span style={{ width: '7.5px', overflow: 'hidden', position: 'absolute', display: 'inline-block' }}>
                 <Star size={15} fill="#f59e0b" color="#f59e0b" />
               </span>
             </span>
           );
         } else {
-          stars.push(<Star key={i} size={15} fill="none" color="#cbd5e1" style={{ display: 'inline' }} />);
+          stars.push(<Star key={i} size={15} fill="none" color="#d4d4d8" style={{ display: 'inline' }} />);
         }
     }
     return stars;
@@ -913,7 +913,7 @@ export default function BookshelfView({
             <span className="me-2">📢</span>
             <span>현재 <strong>{viewedFriend.name ? `${viewedFriend.name} (${viewedFriend.email})` : viewedFriend.email}</strong> 님의 서재를 둘러보고 있습니다. (읽기 전용 모드)</span>
           </div>
-          <button className="btn btn-primary btn-sm px-3 py-1" onClick={onBackToMyBookshelf} style={{ fontSize: '0.8rem' }}>
+          <button className="btn btn-primary btn-sm px-3 py-1" onClick={onBackToMyBookshelf}>
             내 서재로 돌아가기
           </button>
         </div>
@@ -934,21 +934,21 @@ export default function BookshelfView({
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
           {/* 내 서재 전용 도서 실시간 검색창 */}
           <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-            <Search size={15} style={{ position: 'absolute', left: '10px', color: '#94a3b8', pointerEvents: 'none' }} />
+            <Search size={15} style={{ position: 'absolute', left: '10px', color: '#a1a1aa', pointerEvents: 'none' }} />
             <input
               type="text"
               placeholder="내 서재 도서 검색 (제목, 저자, 출판사)..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
-                height: '38px',
+                height: '36px',
                 paddingLeft: '32px',
                 paddingRight: searchQuery ? '30px' : '12px',
                 fontSize: '0.825rem',
                 borderRadius: '8px',
-                border: '1.5px solid #cbd5e1',
+                border: '1px solid var(--border-color)',
                 backgroundColor: '#ffffff',
-                color: '#1e293b',
+                color: '#18181b',
                 fontWeight: 600,
                 outline: 'none',
                 width: '230px',
@@ -963,7 +963,7 @@ export default function BookshelfView({
                   right: '8px',
                   background: 'none',
                   border: 'none',
-                  color: '#94a3b8',
+                  color: '#a1a1aa',
                   cursor: 'pointer',
                   padding: '2px',
                   display: 'flex',
@@ -977,7 +977,7 @@ export default function BookshelfView({
           </div>
 
           {/* 1. 3D / 그리드 뷰 토글 모듈 */}
-          <div className="toggle-group" style={{ height: '38px', display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box' }}>
+          <div className="toggle-group" style={{ height: '36px', display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box' }}>
             <button
               className={`toggle-btn ${viewMode === '3d' ? 'active' : ''}`}
               onClick={() => setViewMode('3d')}
@@ -1001,13 +1001,13 @@ export default function BookshelfView({
                 value={shelfTheme}
                 onChange={(e) => handleShelfThemeChange(e.target.value)}
                 style={{
-                  height: '38px',
+                  height: '36px',
                   padding: '0 0.75rem',
                   fontSize: '0.825rem',
                   borderRadius: '8px',
-                  border: '1.5px solid #cbd5e1',
+                  border: '1px solid var(--border-color)',
                   backgroundColor: '#ffffff',
-                  color: '#1e293b',
+                  color: '#18181b',
                   fontWeight: 700,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
@@ -1047,21 +1047,7 @@ export default function BookshelfView({
             <button
               className="btn btn-outline"
               onClick={() => setShowGuestbookModal(true)}
-              style={{
-                height: '38px',
-                padding: '0 0.9rem',
-                backgroundColor: 'rgba(245, 158, 11, 0.12)',
-                color: '#d97706',
-                borderColor: 'rgba(245, 158, 11, 0.35)',
-                fontWeight: 700,
-                fontSize: '0.825rem',
-                whiteSpace: 'nowrap',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.4rem',
-                borderRadius: '8px',
-                boxSizing: 'border-box'
-              }}
+              style={{ display: 'inline-flex' }}
             >
               <Sparkles size={15} /> {viewedFriend ? '📌 이웃 방명록 남기기' : `💌 내 방명록 (${guestbookNotes.length})`}
             </button>
@@ -1071,21 +1057,7 @@ export default function BookshelfView({
                 <button
                   className="btn btn-outline"
                   onClick={() => setShowTasteGalaxyModal(true)}
-                  style={{
-                    height: '38px',
-                    padding: '0 0.9rem',
-                    backgroundColor: 'rgba(168, 85, 247, 0.1)',
-                    color: '#a855f7',
-                    borderColor: 'rgba(168, 85, 247, 0.3)',
-                    fontWeight: 700,
-                    fontSize: '0.825rem',
-                    whiteSpace: 'nowrap',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    borderRadius: '8px',
-                    boxSizing: 'border-box'
-                  }}
+                  style={{ display: 'inline-flex' }}
                   title="내 서재 카테고리별 독서 성향 및 취향 성운 시각화"
                 >
                   <Compass size={15} /> 🌌 내 취향 지도
@@ -1094,21 +1066,7 @@ export default function BookshelfView({
                 <button
                   className="btn btn-outline"
                   onClick={() => setShowThoughtLedgerModal(true)}
-                  style={{
-                    height: '38px',
-                    padding: '0 0.9rem',
-                    backgroundColor: 'rgba(2, 132, 199, 0.1)',
-                    color: '#0284c7',
-                    borderColor: 'rgba(2, 132, 199, 0.3)',
-                    fontWeight: 700,
-                    fontSize: '0.825rem',
-                    whiteSpace: 'nowrap',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    borderRadius: '8px',
-                    boxSizing: 'border-box'
-                  }}
+                  style={{ display: 'inline-flex' }}
                 >
                   <MessageSquare size={15} /> 📝 독서 기록장 (문장 & 생각)
                 </button>
@@ -1116,18 +1074,7 @@ export default function BookshelfView({
                 <button
                   className="btn btn-primary"
                   onClick={() => setShowAddModal(true)}
-                  style={{
-                    height: '38px',
-                    padding: '0 0.9rem',
-                    fontWeight: 700,
-                    fontSize: '0.825rem',
-                    whiteSpace: 'nowrap',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    borderRadius: '8px',
-                    boxSizing: 'border-box'
-                  }}
+                  style={{ display: 'inline-flex' }}
                 >
                   <PlusCircle size={15} /> 수동 책 추가
                 </button>
@@ -1151,12 +1098,12 @@ export default function BookshelfView({
 
         if (searchQuery.trim() && filteredBooks.length === 0) {
           return (
-            <div style={{ padding: '3rem 1rem', textAlign: 'center', backgroundColor: '#ffffff', borderRadius: '16px', border: '1.5px dashed #cbd5e1', marginTop: '1.5rem' }}>
-              <Search size={36} style={{ margin: '0 auto 0.75rem', color: '#94a3b8', display: 'block' }} />
-              <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#334155' }}>
+            <div style={{ padding: '3rem 1rem', textAlign: 'center', backgroundColor: '#ffffff', borderRadius: '16px', border: '1.5px dashed #d4d4d8', marginTop: '1.5rem' }}>
+              <Search size={36} style={{ margin: '0 auto 0.75rem', color: '#a1a1aa', display: 'block' }} />
+              <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#3f3f46' }}>
                 '{searchQuery}' 검색 결과와 일치하는 도서가 없습니다.
               </h4>
-              <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.85rem', color: '#64748b' }}>
+              <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.85rem', color: '#71717a' }}>
                 제목, 저자, 출판사 키워드를 확인하시거나 검색어를 지워 전체 목록을 확인하세요.
               </p>
             </div>
@@ -1419,7 +1366,6 @@ export default function BookshelfView({
                           {viewedFriend && (
                             <button
                               className="btn btn-primary btn-sm w-full mt-2 font-bold flex justify-center align-center gap-1"
-                              style={{ fontSize: '0.78rem', padding: '0.35rem 0.5rem', borderRadius: '6px' }}
                               onClick={async (e) => {
                                 e.stopPropagation();
                                 if (onAddManualBook) {
@@ -1492,23 +1438,13 @@ export default function BookshelfView({
                 <p className="detail-author">
                   {selectedBook.author} | {selectedBook.publisher || '출판사 정보'}
                   {selectedBook.pub_date ? (
-                    <span className="ml-2 font-bold text-slate-600" style={{ marginLeft: '0.4rem', color: '#475569' }}>
+                    <span className="ml-2 font-bold text-slate-600" style={{ marginLeft: '0.4rem', color: '#52525b' }}>
                       · 📅 출간일: {selectedBook.pub_date}
                     </span>
                   ) : ''}
                   <button 
                     className="btn btn-sm btn-outline inline-flex align-center gap-1"
-                    style={{ 
-                      fontSize: '0.75rem', 
-                      padding: '0.15rem 0.55rem', 
-                      borderRadius: '6px', 
-                      marginLeft: '0.5rem', 
-                      color: 'var(--primary)', 
-                      borderColor: 'rgba(0, 120, 166, 0.3)',
-                      background: 'rgba(0, 120, 166, 0.05)',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
+                    style={{ marginLeft: '0.5rem' }}
                     onClick={() => handleFetchBookDescription(selectedBook)}
                     title="클릭 시 도서 상세 소개글 팝업창을 엽니다."
                   >
@@ -1520,7 +1456,6 @@ export default function BookshelfView({
                   <div className="mt-2 flex align-center gap-2 flex-wrap">
                     <button 
                       className="btn btn-sm btn-outline flex align-center gap-1"
-                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '6px', color: '#0078a6', borderColor: '#cbd5e1' }}
                       onClick={() => handleSyncBookInfo(selectedBook)}
                       disabled={syncingGoogleInfo}
                       title="알라딘 API에서 실제 페이지 수 정보를 가져와 자동 동기화합니다."
@@ -1531,7 +1466,6 @@ export default function BookshelfView({
 
                     <button 
                       className="btn btn-sm btn-outline flex align-center gap-1"
-                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem', borderRadius: '6px', color: '#475569', borderColor: '#cbd5e1' }}
                       onClick={handleManualPageEdit}
                       title="전체 페이지 수를 직접 숫자로 입력하여 수정합니다."
                     >
@@ -1599,7 +1533,7 @@ export default function BookshelfView({
                                 onClick={() => setEditRating(star === 1 && editRating === 0.5 ? 0 : (star - 0.5))}
                                 title={`${star - 0.5}점`}
                               >
-                                <Star size={28} fill={editRating >= star - 0.5 ? "#f59e0b" : "none"} color={editRating > 0 && editRating >= star - 0.5 ? "#f59e0b" : "#cbd5e1"} strokeWidth={1.5} />
+                                <Star size={28} fill={editRating >= star - 0.5 ? "#f59e0b" : "none"} color={editRating > 0 && editRating >= star - 0.5 ? "#f59e0b" : "#d4d4d8"} strokeWidth={1.5} />
                               </div>
                               {/* 전체 채우기 */}
                               <div 
@@ -1607,7 +1541,7 @@ export default function BookshelfView({
                                 onClick={() => setEditRating(star === editRating ? star - 0.5 : star)}
                                 title={`${star}점`}
                               >
-                                <Star size={28} fill={editRating >= star ? "#f59e0b" : "none"} color={editRating > 0 && editRating >= star - 0.5 ? "#f59e0b" : "#cbd5e1"} strokeWidth={1.5} />
+                                <Star size={28} fill={editRating >= star ? "#f59e0b" : "none"} color={editRating > 0 && editRating >= star - 0.5 ? "#f59e0b" : "#d4d4d8"} strokeWidth={1.5} />
                               </div>
                             </div>
                           ))}
@@ -1646,7 +1580,7 @@ export default function BookshelfView({
                               width: '100%',
                               padding: '0.4rem 0.5rem',
                               borderRadius: '6px',
-                              border: '1px solid #cbd5e1',
+                              border: '1px solid #d4d4d8',
                               fontSize: '0.85rem',
                               fontFamily: 'inherit',
                               outline: 'none'
@@ -1675,7 +1609,7 @@ export default function BookshelfView({
                     <div className="saved-review-view mt-2">
                       <div className="flex align-center gap-1 mb-1" style={{ display: 'flex', alignItems: 'center' }}>
                         {renderStars(parseFloat(selectedBook.rating) || 0)}
-                        <span className="ms-2 font-bold" style={{ marginLeft: '0.5rem', color: (parseFloat(selectedBook.rating) || 0) > 0 ? '#f59e0b' : '#94a3b8' }}>
+                        <span className="ms-2 font-bold" style={{ marginLeft: '0.5rem', color: (parseFloat(selectedBook.rating) || 0) > 0 ? '#f59e0b' : '#a1a1aa' }}>
                           {(parseFloat(selectedBook.rating) || 0).toFixed(1)}점 {(parseFloat(selectedBook.rating) || 0) === 0 ? '(미평가)' : ''}
                         </span>
                       </div>
@@ -1711,7 +1645,6 @@ export default function BookshelfView({
                   {viewedFriend ? (
                     <button
                       className="btn btn-primary font-bold flex align-center gap-1"
-                      style={{ padding: '0.5rem 1rem' }}
                       onClick={async () => {
                         if (onAddManualBook) {
                           await onAddManualBook({
@@ -1891,7 +1824,7 @@ export default function BookshelfView({
                 position: 'absolute',
                 top: '1.25rem',
                 right: '1.25rem',
-                background: '#f1f5f9',
+                background: '#f4f4f5',
                 border: 'none',
                 borderRadius: '50%',
                 width: '36px',
@@ -1900,7 +1833,7 @@ export default function BookshelfView({
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                color: '#64748b',
+                color: '#71717a',
                 zIndex: 10
               }}
             >
@@ -1941,7 +1874,7 @@ export default function BookshelfView({
 function getSpineStyle(coverUrl, id) {
   // 표지 색상 로딩 전 플래시 현상 차단을 위한 품격 있는 차콜 세일트 톤 폴백
   return {
-    bg: 'linear-gradient(180deg, #1e293b 0%, #0f172a 100%)',
+    bg: 'linear-gradient(180deg, #18181b 0%, #18181b 100%)',
     titleColor: '#ffffff',
     authorColor: '#fde047',
     textShadow: '0 1px 3px rgba(0, 0, 0, 0.9)'

@@ -5,12 +5,12 @@ import { X, Sparkles, BookOpen, Star, Compass, Award, Layers, TrendingUp } from 
 const GENRE_COLORS = [
   { bg: '#818cf8', border: '#a5b4fc', glow: 'rgba(129, 140, 248, 0.45)', name: '인문/철학' },
   { bg: '#f472b6', border: '#fbcfe8', glow: 'rgba(244, 114, 182, 0.45)', name: '소설/문학' },
-  { bg: '#38bdf8', border: '#bae6fd', glow: 'rgba(56, 189, 248, 0.45)', name: '과학/IT' },
+  { bg: '#818cf8', border: '#c7d2fe', glow: 'rgba(99, 102, 241, 0.45)', name: '과학/IT' },
   { bg: '#34d399', border: '#a7f3d0', glow: 'rgba(52, 211, 153, 0.45)', name: '경제/경영' },
   { bg: '#fbbf24', border: '#fef08a', glow: 'rgba(251, 191, 36, 0.45)', name: '자기계발' },
   { bg: '#c084fc', border: '#e9d5ff', glow: 'rgba(192, 132, 252, 0.45)', name: '에세이/시' },
   { bg: '#fb7185', border: '#fecdd3', glow: 'rgba(251, 113, 133, 0.45)', name: '예술/문화' },
-  { bg: '#94a3b8', border: '#cbd5e1', glow: 'rgba(148, 163, 184, 0.35)', name: '기타/일반' }
+  { bg: '#a1a1aa', border: '#d4d4d8', glow: 'rgba(148, 163, 184, 0.35)', name: '기타/일반' }
 ];
 
 export default function ReadingTasteGalaxyModal({ books = [], onClose }) {
@@ -117,7 +117,7 @@ export default function ReadingTasteGalaxyModal({ books = [], onClose }) {
       style={{
         position: 'fixed',
         top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.82)',
+        backgroundColor: 'rgba(24, 24, 27, 0.82)',
         backdropFilter: 'blur(8px)',
         zIndex: 9999,
         display: 'flex',
@@ -132,12 +132,12 @@ export default function ReadingTasteGalaxyModal({ books = [], onClose }) {
           width: '100%',
           maxWidth: '720px',
           maxHeight: '90vh',
-          backgroundColor: '#0f172a',
-          backgroundImage: 'radial-gradient(circle at 50% 0%, #2e1065 0%, #0f172a 75%)',
+          backgroundColor: '#18181b',
+          backgroundImage: 'radial-gradient(circle at 50% 0%, #2e1065 0%, #18181b 75%)',
           borderRadius: '24px',
           border: '1px solid rgba(168, 85, 247, 0.35)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(168, 85, 247, 0.25)',
-          color: '#f8fafc',
+          color: '#fafafa',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -152,7 +152,7 @@ export default function ReadingTasteGalaxyModal({ books = [], onClose }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            background: 'rgba(15, 23, 42, 0.4)'
+            background: 'rgba(24, 24, 27, 0.4)'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -174,7 +174,7 @@ export default function ReadingTasteGalaxyModal({ books = [], onClose }) {
               <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 🌌 내 지적 취향 성운 (Reading Taste Galaxy)
               </h3>
-              <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.78rem', color: '#cbd5e1' }}>
+              <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.78rem', color: '#d4d4d8' }}>
                 내 서재 도서들의 카테고리를 다각도로 분석하여 독서 성향과 지형도를 시각화합니다.
               </p>
             </div>
@@ -184,7 +184,7 @@ export default function ReadingTasteGalaxyModal({ books = [], onClose }) {
             style={{
               background: 'none',
               border: 'none',
-              color: '#94a3b8',
+              color: '#a1a1aa',
               cursor: 'pointer',
               padding: '6px',
               borderRadius: '50%',
@@ -194,7 +194,7 @@ export default function ReadingTasteGalaxyModal({ books = [], onClose }) {
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#ffffff'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#94a3b8'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = '#a1a1aa'; }}
           >
             <X size={20} />
           </button>
@@ -227,15 +227,15 @@ export default function ReadingTasteGalaxyModal({ books = [], onClose }) {
             </div>
             <div style={{ display: 'flex', gap: '1rem' }}>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>보관 도서</div>
-                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#38bdf8' }}>{categoryStats.totalCount}권</div>
+                <div style={{ fontSize: '0.72rem', color: '#a1a1aa' }}>보관 도서</div>
+                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#818cf8' }}>{categoryStats.totalCount}권</div>
               </div>
               <div style={{ textAlign: 'right', borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: '1rem' }}>
-                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>읽은 누적 페이지</div>
+                <div style={{ fontSize: '0.72rem', color: '#a1a1aa' }}>읽은 누적 페이지</div>
                 <div style={{ fontSize: '1rem', fontWeight: 800, color: '#34d399' }}>{categoryStats.totalPagesRead.toLocaleString()} p</div>
               </div>
               <div style={{ textAlign: 'right', borderLeft: '1px solid rgba(255,255,255,0.15)', paddingLeft: '1rem' }}>
-                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>평균 별점</div>
+                <div style={{ fontSize: '0.72rem', color: '#a1a1aa' }}>평균 별점</div>
                 <div style={{ fontSize: '1rem', fontWeight: 800, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
                   <Star size={13} fill="#fbbf24" color="#fbbf24" /> {categoryStats.avgRating}
                 </div>
@@ -246,18 +246,18 @@ export default function ReadingTasteGalaxyModal({ books = [], onClose }) {
           {/* 2. 장르별 취향 성운 분배 현황 */}
           <div
             style={{
-              backgroundColor: 'rgba(15, 23, 42, 0.6)',
+              backgroundColor: 'rgba(24, 24, 27, 0.6)',
               borderRadius: '16px',
               border: '1px solid rgba(255, 255, 255, 0.08)',
               padding: '1.25rem'
             }}
           >
-            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.925rem', fontWeight: 700, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.925rem', fontWeight: 700, color: '#e4e4e7', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <Sparkles size={16} color="#c084fc" /> 장르별 탐구 비중 (Taste Galaxy Spectrum)
             </h4>
 
             {categoryStats.list.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8', fontSize: '0.85rem' }}>
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#a1a1aa', fontSize: '0.85rem' }}>
                 서재에 등록된 도서가 없습니다. 도서를 추가하면 취향 성운이 형성됩니다!
               </div>
             ) : (
@@ -265,7 +265,7 @@ export default function ReadingTasteGalaxyModal({ books = [], onClose }) {
                 {categoryStats.list.map((item) => (
                   <div key={item.name} style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', fontWeight: 600 }}>
-                      <span style={{ color: '#f1f5f9', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <span style={{ color: '#f4f4f5', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <span
                           style={{
                             width: '9px',
@@ -277,8 +277,8 @@ export default function ReadingTasteGalaxyModal({ books = [], onClose }) {
                         />
                         {item.name}
                       </span>
-                      <span style={{ color: '#cbd5e1' }}>
-                        {item.count}권 <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>({item.ratio}%)</span>
+                      <span style={{ color: '#d4d4d8' }}>
+                        {item.count}권 <span style={{ color: '#a1a1aa', fontSize: '0.75rem' }}>({item.ratio}%)</span>
                       </span>
                     </div>
                     <div
@@ -309,7 +309,7 @@ export default function ReadingTasteGalaxyModal({ books = [], onClose }) {
           </div>
 
           {/* 3. 취향 팁 & 가이드 */}
-          <div style={{ fontSize: '0.78rem', color: '#94a3b8', textAlign: 'center', marginTop: '0.2rem' }}>
+          <div style={{ fontSize: '0.78rem', color: '#a1a1aa', textAlign: 'center', marginTop: '0.2rem' }}>
             💡 탐색 탭에서 다양한 분야의 도서를 내 서재에 수집하면 지적 취향 성운이 더욱 다채롭게 확장됩니다.
           </div>
 

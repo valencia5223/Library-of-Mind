@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
-import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, GripHorizontal, ArrowRightLeft, User, MessageSquare, MapPin, Search } from 'lucide-react';
+import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, GripHorizontal, ArrowRightLeft, User, MessageSquare } from 'lucide-react';
 import { sendWebPushNotification } from '../utils/webPush';
 
 export default function SharedLiveMemoModal({ user, friend, onClose }) {
@@ -619,194 +619,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }
   };
 
-  // 📍 카카오맵 맛집/장소 검색 & 실시간 자동완성 결과 목록 기능
-  const [showPlaceModal, setShowPlaceModal] = useState(false);
-  const [customPlaceName, setCustomPlaceName] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearchingPlace, setIsSearchingPlace] = useState(false);
-
-  // 📍 현재 내 위치 정보 (Geolocation API + 의왕시 폴백)
-  const UIWANG_FALLBACK = { lat: 37.3447, lng: 126.9683, name: '경기도 의왕시 (기본)' };
-  const [placeUserLocation, setPlaceUserLocation] = useState(null);
-
-  useEffect(() => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setPlaceUserLocation({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            name: '내 현재 위치 (GPS)'
-          });
-        },
-        () => {
-          setPlaceUserLocation(UIWANG_FALLBACK);
-        },
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
-      );
-    } else {
-      setPlaceUserLocation(UIWANG_FALLBACK);
-    }
-  }, []);
-
-  // 카카오 키워드 검색 (Kakao Places SDK & REST API 하이브리드 연동)
-  const handleSearchKakaoPlaces = async (queryStr) => {
-    const q = (queryStr !== undefined ? queryStr : customPlaceName).trim();
-    if (!q) {
-      setSearchResults([]);
-      return;
-    }
-
-    setIsSearchingPlace(true);
-
-    const parsePlacesData = (dataList) => {
-      return dataList.map(item => {
-        let catStr = '장소';
-        if (item.category_name) {
-          const parts = item.category_name.split(' > ').filter(p => p !== '음식점');
-          catStr = parts.length > 0 ? parts.slice(-2).join(' · ') : item.category_name;
-        }
-        const roadAddr = item.road_address_name || '';
-        const lotAddr = item.address_name || '';
-        let fullAddress = roadAddr;
-        if (roadAddr && lotAddr && roadAddr !== lotAddr) {
-          fullAddress = `${roadAddr} (지번: ${lotAddr})`;
-        } else if (!roadAddr && lotAddr) {
-          fullAddress = lotAddr;
-        }
-
-        return {
-          id: item.id || Math.random().toString(),
-          name: item.place_name,
-          category: catStr,
-          address: fullAddress || '주소 정보 없음',
-          phone: item.phone || '',
-          mapUrl: item.place_url || `https://map.kakao.com/?q=${encodeURIComponent(item.place_name)}`
-        };
-      });
-    };
-
-    // 1. 카카오 맵 JS SDK (window.kakao.maps.services.Places) 공식 검색 시도
-    if (window.kakao && window.kakao.maps) {
-      const executePlacesSDK = () => {
-        try {
-          if (window.kakao.maps.services && window.kakao.maps.services.Places) {
-            const ps = new window.kakao.maps.services.Places();
-            // 📍 현재 위치 기반 거리순 정렬 검색 옵션 적용
-            const searchOptions = placeUserLocation ? {
-              location: new window.kakao.maps.LatLng(placeUserLocation.lat, placeUserLocation.lng),
-              sort: window.kakao.maps.services.SortBy.DISTANCE
-            } : {};
-            ps.keywordSearch(q, (data, status) => {
-              if (status === window.kakao.maps.services.Status.OK && data && data.length > 0) {
-                setSearchResults(parsePlacesData(data));
-                setIsSearchingPlace(false);
-              } else {
-                fetchKakaoRESTSearch(q, parsePlacesData);
-              }
-            }, searchOptions);
-            return true;
-          }
-        } catch (e) {
-          console.warn('Kakao SDK search error:', e);
-        }
-        return false;
-      };
-
-      if (window.kakao.maps.load) {
-        window.kakao.maps.load(() => {
-          if (!executePlacesSDK()) {
-            fetchKakaoRESTSearch(q, parsePlacesData);
-          }
-        });
-        return;
-      } else {
-        if (executePlacesSDK()) return;
-      }
-    }
-
-    // 2. REST API 백업 검색
-    fetchKakaoRESTSearch(q, parsePlacesData);
-  };
-
-  const fetchKakaoRESTSearch = async (q, parsePlacesData) => {
-    try {
-      // 📍 현재 위치 기반 거리순 정렬 파라미터 적용
-      let apiUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(q)}`;
-      if (placeUserLocation) {
-        apiUrl += `&x=${placeUserLocation.lng}&y=${placeUserLocation.lat}&sort=distance`;
-      }
-      const res = await fetch(apiUrl, {
-        headers: {
-          Authorization: 'KakaoAK dcd623782ec5e52a055131c06e7598e6'
-        }
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.documents && data.documents.length > 0) {
-          setSearchResults(parsePlacesData(data.documents));
-          setIsSearchingPlace(false);
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn('Kakao Local API search warning:', err);
-    }
-
-    // 카카오 API 검색 결과가 없거나 도메인 승인 필요 시 실제 카카오맵 실시간 검색 연결 1건 제공
-    setSearchResults([
-      {
-        id: 'real_kakao_direct_search',
-        name: `'${q}' 카카오맵 실시간 위치/상호 상세 검색`,
-        category: '카카오맵 바로가기',
-        address: `'${q}' 카카오맵 지도에서 실시간 위치 및 지점 확인`,
-        phone: '',
-        mapUrl: `https://map.kakao.com/?q=${encodeURIComponent(q)}`
-      }
-    ]);
-    setIsSearchingPlace(false);
-  };
-
-  // 자동완성 디바운싱 효과
-  useEffect(() => {
-    if (!showPlaceModal) return;
-    const timer = setTimeout(() => {
-      if (customPlaceName.trim().length >= 1) {
-        handleSearchKakaoPlaces(customPlaceName);
-      } else if (customPlaceName.trim().length === 0) {
-        setSearchResults([]);
-      }
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [customPlaceName, showPlaceModal]);
-
-  const handleSharePlace = (item) => {
-    const myName = user.email ? user.email.split('@')[0] : '나';
-    const placeName = item ? item.name : customPlaceName.trim();
-    if (!placeName) return;
-
-    const address = item ? item.address : '';
-    const category = item ? item.category : '';
-    const phone = item ? item.phone : '';
-    
-    let rawUrl = item ? item.mapUrl : `https://map.kakao.com/?q=${encodeURIComponent(placeName + (address ? ' ' + address : ''))}`;
-    if (rawUrl && rawUrl.startsWith('http:')) {
-      rawUrl = rawUrl.replace('http:', 'https:');
-    }
-    const kakaoUrl = rawUrl;
-
-    // 슬림하고 컴팩트한 카카오맵 장소 공유 카드 HTML
-    const placeCardHTML = `<div style="display:inline-block; max-width: 95%; padding: 6px 10px; margin: 4px 0; background: linear-gradient(135deg, #fefce8 0%, #fef08a 100%); color: #854d0e; border: 1.2px solid #facc15; border-radius: 8px; font-size: 0.8rem; box-shadow: 0 1px 4px rgba(234,179,8,0.18);">📍 <b>[${myName}]</b> 맛집/장소:<br><a href="${kakaoUrl}" target="_blank" rel="noreferrer" onclick="window.open('${kakaoUrl}', '_blank'); return false;" style="text-decoration:none;"><b style="font-size: 0.92rem; color: #713f12; text-decoration: underline;">🏪 ${placeName} 🔗</b></a>${category ? ` <span style="font-size: 0.72rem; color: #b45309; background:#ffffff; padding:1px 5px; border-radius:4px; font-weight:800; border: 1px solid #fde047; margin-left: 2px;">🍱 ${category}</span>` : ''}<br>${address ? `<span style="font-size: 0.75rem; color: #713f12; opacity: 0.9;">🏠 ${address}</span><br>` : ''}${phone ? `<span style="font-size: 0.72rem; color: #a16207;">📞 ${phone}</span><br>` : ''}<a href="${kakaoUrl}" target="_blank" rel="noreferrer" onclick="window.open('${kakaoUrl}', '_blank'); return false;" style="display:inline-block; margin-top: 4px; padding: 3px 8px; background: #eab308; color: #ffffff !important; font-weight: 800; text-decoration: none; border-radius: 5px; font-size: 0.74rem; box-shadow: 0 1px 3px rgba(234,179,8,0.25); cursor: pointer;">👉 카카오맵 지도 이동 🗺️</a></div><br>`;
-
-    if (myEditorRef.current) {
-      myEditorRef.current.innerHTML = (myEditorRef.current.innerHTML || '') + placeCardHTML;
-      handleMyEditorInput();
-    }
-    setShowPlaceModal(false);
-    setCustomPlaceName('');
-    setSearchResults([]);
-  };
-
   // 인기 캐릭터 스티커 목록 (실제 키티, 포챠코, 짱구)
   const CHARACTER_STICKERS = [
     { name: '키티', src: '/assets/hello_kitty_sticker.png' },
@@ -883,7 +695,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           flexDirection: 'column',
           padding: '1.2rem 1.35rem',
           borderRadius: '16px',
-          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+          background: 'linear-gradient(135deg, #ffffff 0%, #fafafa 100%)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           position: 'relative',
           transform: `translate(${modalPos.x}px, ${modalPos.y}px)`,
@@ -899,7 +711,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             position: 'absolute',
             top: '1.1rem',
             right: '1.1rem',
-            background: '#f1f5f9',
+            background: '#f4f4f5',
             border: 'none',
             borderRadius: '50%',
             width: '34px',
@@ -908,7 +720,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: '#64748b',
+            color: '#71717a',
             zIndex: 10
           }}
         >
@@ -920,7 +732,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           onMouseDown={handleMouseDownHeader}
           style={{
             paddingBottom: '0.85rem',
-            borderBottom: '1px solid #e2e8f0',
+            borderBottom: '1px solid #e4e4e7',
             marginBottom: '1rem',
             cursor: 'move',
             userSelect: 'none',
@@ -928,9 +740,9 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           }}
         >
           <div className="flex align-center justify-between" style={{ paddingRight: '6.5rem' }}>
-            <h3 className="flex align-center gap-2" style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+            <h3 className="flex align-center gap-2" style={{ fontSize: '1.25rem', fontWeight: 800, color: '#18181b', margin: 0 }}>
               <GripHorizontal size={20} className="text-slate-400 me-1" />
-              <MessageSquare size={22} className="text-primary" style={{ color: '#0078a6' }} />
+              <MessageSquare size={22} className="text-primary" style={{ color: '#4f46e5' }} />
               <span>실시간 1:1 라이브 채팅</span>
             </h3>
 
@@ -940,24 +752,10 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             <div className="flex align-center gap-2" style={{ flexWrap: 'nowrap', alignItems: 'center', whiteSpace: 'nowrap' }}>
               <button
                 type="button"
-                className={`btn btn-xs font-bold flex align-center gap-1 ${nudgeCooldown > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className="btn btn-danger btn-xs"
                 onClick={handleSendNudge}
                 disabled={nudgeCooldown > 0}
                 title="상대방의 메모창/전체 화면을 진동시키고 붉은색 테두리 알람을 보냅니다!"
-                style={{
-                  background: nudgeCooldown > 0 ? '#f1f5f9' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                  color: nudgeCooldown > 0 ? '#94a3b8' : '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '0 10px',
-                  height: '28px',
-                  fontSize: '0.78rem',
-                  boxShadow: nudgeCooldown > 0 ? 'none' : '0 2px 8px rgba(239, 68, 68, 0.3)',
-                  cursor: nudgeCooldown > 0 ? 'not-allowed' : 'pointer',
-                  whiteSpace: 'nowrap',
-                  display: 'inline-flex',
-                  alignItems: 'center'
-                }}
               >
                 <Zap size={14} className={nudgeCooldown > 0 ? '' : 'animate-bounce'} />
                 {nudgeCooldown > 0 ? `${nudgeCooldown}초 대기...` : '⚡ 흔들기 알람'}
@@ -967,23 +765,9 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
                 <button
                   type="button"
-                  className="btn btn-xs font-bold flex align-center gap-1"
+                  className="btn btn-secondary btn-xs"
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                   title="다양한 이모티콘/스티커를 선택하여 메모장에 입력합니다!"
-                  style={{
-                    background: 'linear-gradient(135deg, #ec4899 0%, #db2777 100%)',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '0 10px',
-                    height: '28px',
-                    fontSize: '0.78rem',
-                    boxShadow: '0 2px 6px rgba(236, 72, 153, 0.25)',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    display: 'inline-flex',
-                    alignItems: 'center'
-                  }}
                 >
                   😀 이모티콘
                 </button>
@@ -1003,15 +787,15 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                       borderRadius: '12px',
                       padding: '10px 12px',
                       boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3), 0 8px 10px -6px rgba(0,0,0,0.2)',
-                      border: '1px solid #f1f5f9'
+                      border: '1px solid #f4f4f5'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#334155' }}>이모티콘 팔레트</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', borderBottom: '1px solid #f4f4f5', paddingBottom: '4px' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#3f3f46' }}>이모티콘 팔레트</span>
                       <button
                         type="button"
                         onClick={() => setShowEmojiPicker(false)}
-                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#a1a1aa', padding: 0 }}
                       >
                         <X size={14} />
                       </button>
@@ -1057,7 +841,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
 
                     {EMOJI_CATEGORIES.map((cat, idx) => (
                       <div key={idx} style={{ marginBottom: '8px' }}>
-                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#64748b', marginBottom: '4px' }}>{cat.name}</div>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#71717a', marginBottom: '4px' }}>{cat.name}</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '4px' }}>
                           {cat.emojis.map((emoji, eIdx) => (
                             <button
@@ -1069,7 +853,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                               }}
                               style={{
                                 border: 'none',
-                                background: '#f8fafc',
+                                background: '#fafafa',
                                 borderRadius: '6px',
                                 fontSize: '1.15rem',
                                 padding: '4px 0',
@@ -1092,205 +876,14 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                 )}
               </div>
 
-              {/* 📍 카카오맵 맛집/장소 공유 버튼 */}
-              <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-                <button
-                  type="button"
-                  className="btn btn-xs font-bold flex align-center gap-1"
-                  onClick={() => setShowPlaceModal(!showPlaceModal)}
-                  title="카카오맵 연동 맛집/장소를 검색하고 메모장에 지도 링크와 함께 공유합니다!"
-                  style={{
-                    background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '0 10px',
-                    height: '28px',
-                    fontSize: '0.78rem',
-                    boxShadow: '0 2px 6px rgba(234, 179, 8, 0.3)',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    display: 'inline-flex',
-                    alignItems: 'center'
-                  }}
-                >
-                  <MapPin size={13} /> 📍 맛집/장소
-                </button>
-
-                {/* 카카오맵 맛집/장소 공유 모달 팝오버 */}
-                {showPlaceModal && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: '110%',
-                      right: 0,
-                      zIndex: 999,
-                      width: '320px',
-                      maxHeight: '380px',
-                      overflowY: 'auto',
-                      backgroundColor: '#ffffff',
-                      borderRadius: '12px',
-                      padding: '12px 14px',
-                      boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3), 0 8px 10px -6px rgba(0,0,0,0.2)',
-                      border: '1.5px solid #fef08a'
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', borderBottom: '1px solid #fef08a', paddingBottom: '6px' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#854d0e', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <MapPin size={15} className="text-amber-600" /> 카카오맵 맛집/장소 공유
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setShowPlaceModal(false)}
-                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-
-                    {/* 상호명/장소 검색 입력 */}
-                    <div style={{ marginBottom: '10px' }}>
-                      <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#713f12', display: 'block', marginBottom: '4px' }}>
-                        🔍 상호명 또는 주소 검색 입력 (실시간 연동):
-                      </label>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <input
-                          type="text"
-                          placeholder="예: 마포설렁탕, 성수 카페, 을밀대"
-                          value={customPlaceName}
-                          onChange={(e) => setCustomPlaceName(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              if (searchResults.length > 0) {
-                                handleSharePlace(searchResults[0]);
-                              } else {
-                                handleSharePlace();
-                              }
-                            }
-                          }}
-                          style={{
-                            flex: 1,
-                            padding: '6px 9px',
-                            fontSize: '0.82rem',
-                            border: '1.5px solid #fde047',
-                            borderRadius: '6px',
-                            outline: 'none'
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (searchResults.length > 0) {
-                              handleSharePlace(searchResults[0]);
-                            } else {
-                              handleSharePlace();
-                            }
-                          }}
-                          style={{
-                            background: '#eab308',
-                            color: '#ffffff',
-                            border: 'none',
-                            borderRadius: '6px',
-                            padding: '0 12px',
-                            fontWeight: 700,
-                            fontSize: '0.8rem',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          검색/공유
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* 실시간 검색 결과 및 자동완성 목록 중 선택 공유 */}
-                    <div>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#854d0e', marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span>📋 카카오맵 검색 결과 목록 ({searchResults.length}건):</span>
-                        {isSearchingPlace && <span style={{ fontSize: '0.7rem', color: '#ca8a04' }}>검색 중...</span>}
-                      </div>
-
-                      {searchResults.length === 0 ? (
-                        <div style={{ padding: '16px 8px', textAlign: 'center', color: '#a16207', fontSize: '0.78rem', background: '#fefce8', borderRadius: '8px', border: '1px dashed #fde047' }}>
-                          {customPlaceName.trim() ? '검색어를 더 자세히 입력하시거나 엔터를 누르시면 즉시 카카오맵 링크로 공유됩니다!' : '상호명이나 위치를 입력하시면 카카오맵 장소 목록이 여기에 나타납니다!'}
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '230px', overflowY: 'auto' }}>
-                          {searchResults.map((item) => (
-                            <div
-                              key={item.id}
-                              onClick={() => handleSharePlace(item)}
-                              style={{
-                                padding: '8px 10px',
-                                background: '#ffffff',
-                                border: '1.5px solid #fef08a',
-                                borderRadius: '8px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                transition: 'all 0.15s ease',
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = '#fefce8';
-                                e.currentTarget.style.borderColor = '#eab308';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = '#ffffff';
-                                e.currentTarget.style.borderColor = '#fef08a';
-                              }}
-                            >
-                              <div style={{ flex: 1, paddingRight: '8px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                  <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>{item.name}</span>
-                                  {item.category && (
-                                    <span style={{ fontSize: '0.7rem', color: '#b45309', background: '#fef3c7', padding: '1px 6px', borderRadius: '4px', fontWeight: 800, border: '1px solid #fde047' }}>
-                                      🍱 {item.category}
-                                    </span>
-                                  )}
-                                </div>
-                                <div style={{ fontSize: '0.75rem', color: '#334155', marginTop: '3px', lineHeight: 1.3 }}>
-                                  📍 <b>주소:</b> {item.address}
-                                </div>
-                                {item.phone && (
-                                  <div style={{ fontSize: '0.72rem', color: '#0284c7', marginTop: '2px', fontWeight: 600 }}>
-                                    📞 <b>전화:</b> {item.phone}
-                                  </div>
-                                )}
-                              </div>
-                              <button
-                                type="button"
-                                style={{
-                                  fontSize: '0.75rem',
-                                  fontWeight: 700,
-                                  color: '#ffffff',
-                                  backgroundColor: '#ca8a04',
-                                  border: 'none',
-                                  padding: '5px 9px',
-                                  borderRadius: '6px',
-                                  cursor: 'pointer',
-                                  whiteSpace: 'nowrap',
-                                  boxShadow: '0 1px 3px rgba(202,138,4,0.3)'
-                                }}
-                              >
-                                + 공유
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
 
               {/* 글씨 크기 조절 수평 캡슐 (제일 오른쪽에 배치) */}
-              <div className="flex align-center gap-1" style={{ background: '#f1f5f9', padding: '0 8px', borderRadius: '8px', border: '1px solid #cbd5e1', height: '28px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}>
+              <div className="flex align-center gap-1" style={{ background: '#f4f4f5', padding: '0 8px', borderRadius: '8px', border: '1px solid #d4d4d8', height: '28px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}>
                 <span className="text-xs font-bold text-slate-600" style={{ fontSize: '0.72rem' }}>글씨:</span>
                 <button
                   type="button"
                   onClick={() => handleFontSizePxChange(fontSizePx - 1)}
-                  style={{ width: '18px', height: '18px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: '18px', height: '18px', borderRadius: '4px', border: '1px solid #d4d4d8', background: '#ffffff', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                   -
                 </button>
@@ -1301,14 +894,14 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                     max="100"
                     value={fontSizePx}
                     onChange={(e) => handleFontSizePxChange(e.target.value)}
-                    style={{ width: '36px', height: '20px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 700, color: '#0284c7', border: '1px solid #38bdf8', borderRadius: '4px', outline: 'none', background: '#ffffff', padding: '0 1px' }}
+                    style={{ width: '36px', height: '20px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 700, color: '#4f46e5', border: '1px solid #818cf8', borderRadius: '4px', outline: 'none', background: '#ffffff', padding: '0 1px' }}
                   />
                   <span className="text-xs font-bold text-slate-500" style={{ fontSize: '0.7rem' }}>px</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleFontSizePxChange(fontSizePx + 1)}
-                  style={{ width: '18px', height: '18px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#ffffff', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: '18px', height: '18px', borderRadius: '4px', border: '1px solid #d4d4d8', background: '#ffffff', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                   +
                 </button>
@@ -1317,7 +910,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           </div>
 
           {/* 상태 표시 1줄 */}
-          <div className="flex align-center justify-between mt-2" style={{ fontSize: '0.82rem', color: '#64748b' }}>
+          <div className="flex align-center justify-between mt-2" style={{ fontSize: '0.82rem', color: '#71717a' }}>
             <span className="flex align-center gap-1 font-semibold flex-shrink-0" style={{ color: isConnected ? '#059669' : '#d97706' }}>
               <span
                 style={{
@@ -1344,7 +937,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           {/* 상태 표시 2줄: 작성 중 안내 줄 (고정 높이 20px) */}
           <div style={{ height: '20px', marginTop: '4px', display: 'flex', alignItems: 'center', fontSize: '0.78rem' }}>
             {typingPartner ? (
-              <span className="animate-pulse flex align-center gap-1 font-bold" style={{ color: '#0284c7' }}>
+              <span className="animate-pulse flex align-center gap-1 font-bold" style={{ color: '#4f46e5' }}>
                 <Sparkles size={13} /> {typingPartner}님이 오른쪽 메모장에서 실시간 작성 중...
               </span>
             ) : null}
@@ -1371,7 +964,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                     onClick={handleClearMyContent}
                     disabled={isMyEditorEmpty}
                     title="내 메모 내용만 지우기(초기화)"
-                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem', borderRadius: '6px' }}
                   >
                     <Trash2 size={12} /> 내 메모 초기화
                   </button>
@@ -1385,7 +977,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                         top: '1rem',
                         left: '1rem',
                         right: '1rem',
-                        color: '#94a3b8',
+                        color: '#a1a1aa',
                         fontSize: `${fontSizePx}px`,
                         lineHeight: 1.7,
                         pointerEvents: 'none',
@@ -1410,9 +1002,9 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                       padding: '1rem',
                       fontSize: `${fontSizePx}px`,
                       lineHeight: 1.7,
-                      color: '#1e293b',
+                      color: '#18181b',
                       background: '#ffffff',
-                      border: '2px solid #bae6fd',
+                      border: '2px solid #c7d2fe',
                       borderRadius: '12px',
                       outline: 'none',
                       overflowY: 'auto',
@@ -1437,7 +1029,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                       onClick={handleImportPartnerContent}
                       disabled={isPartnerEmpty}
                       title="상대방 메모 내용을 내 메모장으로 추가 복사"
-                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem', borderRadius: '6px' }}
                     >
                       <ArrowRightLeft size={12} /> 가져오기
                     </button>
@@ -1446,7 +1037,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                       onClick={handleClearPartnerContent}
                       disabled={isPartnerEmpty}
                       title="상대방 메모장 내용을 초기화(지우기)합니다"
-                      style={{ padding: '0.2rem 0.5rem', fontSize: '0.72rem', borderRadius: '6px', color: '#e11d48', borderColor: '#fecdd3' }}
                     >
                       <Trash2 size={12} /> 상대 메모 초기화
                     </button>
@@ -1462,9 +1052,9 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                         padding: '1rem',
                         fontSize: `${fontSizePx}px`,
                         lineHeight: 1.7,
-                        color: '#94a3b8',
-                        background: '#f8fafc',
-                        border: '1.5px dashed #cbd5e1',
+                        color: '#a1a1aa',
+                        background: '#fafafa',
+                        border: '1.5px dashed #d4d4d8',
                         borderRadius: '12px',
                         display: 'flex',
                         alignItems: 'center',
@@ -1483,9 +1073,9 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                         padding: '1rem',
                         fontSize: `${fontSizePx}px`,
                         lineHeight: 1.7,
-                        color: '#334155',
-                        background: '#f8fafc',
-                        border: '1.5px solid #e2e8f0',
+                        color: '#3f3f46',
+                        background: '#fafafa',
+                        border: '1.5px solid #e4e4e7',
                         borderRadius: '12px',
                         overflowY: 'auto',
                         whiteSpace: 'pre-wrap',
@@ -1504,11 +1094,11 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         {/* 하단 푸터 바 */}
         <div
           className="mt-3 pt-3 flex justify-between align-center"
-          style={{ borderTop: '1px solid #e2e8f0', background: 'transparent', flexShrink: 0, paddingRight: '1rem' }}
+          style={{ borderTop: '1px solid #e4e4e7', background: 'transparent', flexShrink: 0, paddingRight: '1rem' }}
         >
           <div className="flex align-center gap-4 text-slate-500" style={{ fontSize: '0.78rem', fontWeight: 500 }}>
-            <span>내 글자 수: <b style={{ color: '#0284c7' }}>{myCharCount}</b>자 ({myLineCount}줄)</span>
-            <span style={{ color: '#cbd5e1' }}>|</span>
+            <span>내 글자 수: <b style={{ color: '#4f46e5' }}>{myCharCount}</b>자 ({myLineCount}줄)</span>
+            <span style={{ color: '#d4d4d8' }}>|</span>
             <span>상대방 글자 수: <b style={{ color: '#059669' }}>{partnerCharCount}</b>자</span>
           </div>
 
@@ -1517,7 +1107,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               className="btn btn-outline btn-sm font-bold flex align-center gap-1"
               onClick={handleCopyMyContent}
               disabled={isMyEditorEmpty}
-              style={{ padding: '0.45rem 0.85rem', borderRadius: '8px' }}
             >
               {copySuccess ? <CheckCircle2 size={15} color="#059669" /> : <Copy size={15} />}
               {copySuccess ? '복사 완료!' : '내 메모 전체 복사'}
@@ -1527,7 +1116,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               className="btn btn-outline btn-sm font-bold flex align-center gap-1 text-red-600 border-red-300"
               onClick={handleClearAllContent}
               disabled={isMyEditorEmpty && isPartnerEmpty}
-              style={{ padding: '0.45rem 0.85rem', borderRadius: '8px', borderColor: '#fca5a5', color: '#dc2626' }}
               title="내 메모와 상대방 메모를 포함한 전체 메모장 내용을 한 번에 초기화합니다"
             >
               <Trash2 size={15} /> 💥 전체 메모 초기화
@@ -1536,7 +1124,6 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             <button
               className="btn btn-secondary btn-sm"
               onClick={onClose}
-              style={{ padding: '0.45rem 1.1rem', borderRadius: '8px', fontWeight: 600 }}
             >
               닫기
             </button>
@@ -1558,11 +1145,11 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#0284c7',
-            background: '#e0f2fe',
+            color: '#4f46e5',
+            background: '#eef2ff',
             borderRadius: '8px',
-            border: '1.5px solid #0284c7',
-            boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)',
+            border: '1.5px solid #4f46e5',
+            boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)',
             zIndex: 50,
             userSelect: 'none',
             touchAction: 'none'

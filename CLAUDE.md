@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | 경로 | 설명 | 스택 |
 |---|---|---|
-| `/` (루트) | **Library of Mind** — 독서 서재 + 일정관리/친구/맛집지도 등 (라이브: library-of-mind.onrender.com) | React 19 + Vite 5 + Supabase |
+| `/` (루트) | **Library of Mind** — 독서 서재 + 일정관리(OneNote 연동)/친구 등 (라이브: library-of-mind.onrender.com) | React 19 + Vite 5 + Supabase |
 | `baby-play-studio/` | 유아용 놀이 앱 (동물·과일·차량 소리/퀴즈, 실로폰, 그림그리기, 동요 등) | React 18 + Vite 5 (백엔드 없음) |
 | `Family_MatZip/` | 가족 맛집 앱. Library of Mind와 무관한 별개 프로젝트이므로 루트 앱 작업 시 참고하지 않는다 | React 19 + Vite |
 | `yuna_nutrition_tracker/` | 영양/수면 기록 웹앱 | Flask + Supabase + Gemini, gunicorn 배포 |
@@ -41,14 +41,15 @@ Python 프로젝트: `yuna_nutrition_tracker/requirements.txt`, 로컬 실행은
 
 ## 루트 앱 (Library of Mind) 아키텍처
 
-- `src/App.jsx` 가 상위 상태(사용자, `books`/`notes`/`sessions`, `activeTab`)와 대부분의 Supabase CRUD를 가지고, 탭별 컴포넌트(`src/components/`)에 props로 내려준다. 탭: `schedule`(기본), `bookshelf`, `search`, `focus`, `stats`, `social`, `places`. 모달류는 App 상태 플래그로 열고 닫는다.
+- `src/App.jsx` 가 상위 상태(사용자, `books`/`notes`/`sessions`, `activeTab`)와 대부분의 Supabase CRUD를 가지고, 탭별 컴포넌트(`src/components/`)에 props로 내려준다. 탭: `schedule`(기본), `bookshelf`, `search`, `focus`, `stats`, `social`. (맛집지도 `places` 탭·카카오맵·메모장 장소 공유는 삭제됨. DB 의 `shared_restaurants` 테이블은 남아 있지만 코드에서 안 씀) 모달류는 App 상태 플래그로 열고 닫는다.
 - 친구 서재 보기: `viewedFriend` 가 설정되면 같은 뷰가 친구의 `user_id` 데이터로 다시 로드된다.
 - Supabase 클라이언트는 `src/supabaseClient.js` (placeholder 대체값 + `isSupabaseConfigured()`)를 모든 코드가 사용한다. `isSupabaseConfigured()` 가 false면 데모 모드로 localStorage에만 저장한다. (`src/supabase.js`, `src/mockData.js` 는 어디서도 import하지 않는 미사용 파일)
 - 낙관적 업데이트로 임시 id(`b-`/`n-`/`s-` + timestamp)를 먼저 넣고, insert 후 `.select().single()` 결과로 실제 UUID로 교체한다(`replaceTempId`). 새 insert 흐름도 이 패턴을 따를 것.
-- 스키마 SQL 파일에 없는 테이블/RPC가 코드에서 쓰인다: `user_schedules`, `shared_restaurants`, `user_profiles`, RPC `get_pending_approval_users`, `approve_user_signup`. 실제 정의는 Supabase 대시보드에서 확인할 것.
+- 스키마 SQL 파일에 없는 테이블/RPC가 코드에서 쓰인다: `user_schedules`, `user_profiles`, RPC `get_pending_approval_users`, `approve_user_signup`. 실제 정의는 Supabase 대시보드에서 확인할 것.
+- 디자인(모던 미니멀): 색·크기는 `src/index.css` 맨 위 `:root` 토큰(`--primary` 인디고 #4f46e5, `--text-main`, `--border-color`, `--bg-subtle`, `--btn-h` 36px 등)만 쓴다. 회색은 zinc 계열, 포인트 색은 인디고 하나. 버튼은 `.btn` + `btn-primary`/`btn-secondary`/`btn-ghost`/`btn-danger` + 크기 `btn-sm`(30)/`btn-xs`(26)/`btn-lg`(44)로만 꾸미고 인라인 style 로 색·높이·모서리·그라데이션을 주지 않는다(레이아웃 속성만). 탭·토글은 회색 바 위 흰 세그먼트(`.nav-tab-capsule`, `.toggle-group`). `index.css` 끝부분 '디자인 시스템'·'유틸리티 클래스' 섹션이 앞 규칙보다 우선한다. 글꼴 Pretendard(index.html CDN). `src/App.css` 는 삭제됨(어디서도 import 안 하던 맛집 화면용).
 - 환경변수: `.env` 의 `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_MS_CLIENT_ID`(OneNote 연동용 Azure 앱 클라이언트 ID).
 - OneNote 가져오기: 일정 달력 헤더의 OneNote 버튼 → `OneNoteImportModal`(lazy 로딩) → `src/utils/oneNote.js`(MSAL 팝업 로그인, 개인 계정 `consumers`, 위임 권한 `Notes.Read`, Graph 호출). 팝업 리디렉트는 `public/onenote-redirect.html`. 페이지는 id `sch_onenote_<페이지id>` 일정으로 upsert 되므로 다시 가져오면 덮어쓴다. 섹션마다 공유할 앱 친구를 한 번 고르면(`onenote_notebook_share_<userId>`, 키=섹션 id, `'none'`=공유 안함, 없으면 예전 노트북 id 설정을 따름 `sectionFriendId`) 가져오기·자동 동기화 모두 shared_friend_id 로 공유된다. 제목에 날짜(10/19, 10월 19일, 2026-10-19)가 있으면 그 날짜로 넣는다(`parseTitleDate`). 자동 동기화를 켜면 최근 30일부터 확인하고, 이후에는 최근 7일 안에 수정된 페이지 중 마지막으로 반영한 수정 시각(`onenote_seen_<userId>`, `markSeen`)과 다른 것 + 최근 3일 안에 고친 페이지(목록의 수정 시각이 캐시돼 늦게 바뀔 수 있어서, 섹션당 15개)만 본문을 받아, 제목·메모·날짜·공유가 실제로 바뀐 것만 저장한다. 메모는 최대 50000자. 실행마다 `onenote_synclog_<userId>` 에 기록(최근 20번)하고 가져오기 창의 '동기화 기록'에서 본다. 원본 서식: `src/utils/noteHtml.js`(`cleanOneNoteHtml` 이 글꼴·크기·색·목록·표·띄어쓰기만 남기고 위치·이미지는 버림, DOMPurify)로 정리한 HTML 을 `user_schedules.memo_html`(암호화, 대시보드에서 `alter table user_schedules add column if not exists memo_html text;` 로 추가하는 칸)에 저장. 목록·로컬 캐시에는 넣지 않고 일정 창을 열 때 그 한 건만 읽어 `NoteRichView`(lazy)로 보여 준다(원본 서식/텍스트 전환). 칸이 없으면 오류 없이 텍스트만 저장. 서식 변경 감지는 `onenote_html_hash_<userId>`. 자동 동기화를 켜지 않은 섹션이라도 손으로 가져온 노트가 있으면(`onenote_tracked_<userId>`, 가져올 때 `trackSection`, 이 기능 전 가져온 노트는 `scanTrackedOnce` 가 한 번 모든 섹션을 훑어 기록) 같은 주기로 확인해 이미 달력에 있는 노트의 수정만 반영한다(새 노트는 안 가져옴). 친구가 공유해 준 노트(user_id 가 내가 아님)는 대상에서 뺀다. OneNote 일정은 시간 없이 넣고(DB 에는 null, 실패 시 00:00) 화면 어디에도 시간을 보여 주지 않는다(`isOneNoteId`). 달력 헤더 '찾기·모아보기'(`ScheduleNotesPanel`, lazy)는 OneNote 노트/전체 일정을 월별로 모아 제목·메모 검색(여러 단어 AND, 강조)하고, 누르면 그 달로 이동해 일정 창을 연다. 섹션별 자동 동기화(`onenote_autosync_<userId>`, `src/utils/oneNoteSync.js` 의 `runAutoSync`)는 일정 화면을 열 때·3분마다·탭으로 돌아오거나 창을 클릭할 때(`focus`, 30초 간격 제한) lastSync 뒤에 고친 페이지를 가져온다. 토큰은 조용히만 받고(만료 시 `NEED_LOGIN` → 버튼이 'OneNote 다시 연결'), MSAL 묶음은 자동 동기화 섹션이 있을 때만 불러온다.
-- 주요 테이블: `user_books`, `book_notes`, `reading_sessions`, `user_schedules`, `user_friends`, `shared_memos`, `shared_restaurants`, `profiles`, `push_subscriptions`. 스키마는 `supabase_schema.sql`, `supabase_bookshelf_schema.sql`.
+- 주요 테이블: `user_books`, `book_notes`, `reading_sessions`, `user_schedules`, `user_friends`, `shared_memos`, `profiles`, `push_subscriptions`. 스키마는 `supabase_schema.sql`, `supabase_bookshelf_schema.sql`.
 - `user_books` 업데이트는 DB에 없는 컬럼 때문에 실패할 수 있어, App.jsx 에서 "안전 필드"만 먼저 저장하고 추가 필드를 따로 저장하는 폴백 패턴을 쓴다. 컬럼을 추가할 때 이 흐름을 유지할 것.
 - 실시간 기능은 Supabase Realtime 채널 사용(예: `global_user_nudge:${user.id}`).
 - 웹 푸시: `src/utils/webPush.js` → `public/sw.js` 서비스워커 등록, 발송은 Supabase Edge Function `supabase/functions/send-push/index.ts` (`verify_jwt = false`). VAPID 키는 Supabase Secrets(`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`)로만 주입하며 소스에 하드코딩하지 않는다. 클라이언트 공개키는 `VITE_VAPID_PUBLIC_KEY`.

@@ -709,7 +709,7 @@ const getKoreanHoliday = (dateObj) => {
       case 'WORK':
         return { label: '💼 업무', bg: '#fef3c7', color: '#b45309', border: '#fde68a' };
       case 'READING':
-        return { label: '📖 독서', bg: '#e0f2fe', color: '#0369a1', border: '#7dd3fc' };
+        return { label: '📖 독서', bg: '#eef2ff', color: '#4338ca', border: '#a5b4fc' };
       case 'IMPORTANT':
         return { label: '🔥 중요', bg: '#ffe4e6', color: '#be123c', border: '#fecdd3' };
       default:
@@ -894,9 +894,9 @@ const getKoreanHoliday = (dateObj) => {
           value={sharedFriendId}
           onChange={(e) => setSharedFriendId(e.target.value)}
           style={{
-            backgroundColor: sharedFriendId ? '#f0f9ff' : '#ffffff',
-            borderColor: sharedFriendId ? '#0284c7' : '#cbd5e1',
-            color: sharedFriendId ? '#0369a1' : '#334155'
+            backgroundColor: sharedFriendId ? '#f5f7ff' : '#ffffff',
+            borderColor: sharedFriendId ? '#4f46e5' : '#d4d4d8',
+            color: sharedFriendId ? '#4338ca' : '#3f3f46'
           }}
         >
           <option value="">🔒 공유 안함 (나만의 개인 일정)</option>
@@ -926,7 +926,6 @@ const getKoreanHoliday = (dateObj) => {
                 type="button"
                 className={`btn btn-sm ${memoView === key ? 'btn-primary' : 'btn-secondary'}`}
                 onClick={() => setMemoView(key)}
-                style={{ padding: '0.2rem 0.6rem', fontSize: '0.75rem' }}
               >
                 {label}
               </button>
@@ -964,8 +963,9 @@ const getKoreanHoliday = (dateObj) => {
     <>
       {/* 📅 외부 캘린더 내보내기 버튼 (수정 모드에서만 노출) */}
       {editingSchedule && (
-        <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: '1px dashed #e2e8f0', marginBottom: '4px' }}>
+        <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: '1px dashed #e4e4e7', marginBottom: '4px' }}>
           <button
+  className="btn btn-secondary btn-sm"
             type="button"
             onClick={() => {
               const currentScheduleData = {
@@ -979,27 +979,13 @@ const getKoreanHoliday = (dateObj) => {
               const url = generateGoogleCalendarUrl(currentScheduleData);
               window.open(url, '_blank');
             }}
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              background: 'linear-gradient(135deg, #4285f4 0%, #34a853 100%)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '8px 12px',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(66,133,244,0.3)'
-            }}
+            style={{ flex: 1 }}
             title="이 일정을 Google 캘린더에 바로 등록합니다"
           >
             <ExternalLink size={14} /> Google 캘린더로 내보내기
           </button>
           <button
+  className="btn btn-secondary btn-sm"
             type="button"
             onClick={() => {
               const currentScheduleData = {
@@ -1012,22 +998,7 @@ const getKoreanHoliday = (dateObj) => {
               };
               downloadICSFile(currentScheduleData);
             }}
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '8px 12px',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(99,102,241,0.3)'
-            }}
+            style={{ flex: 1 }}
             title="ICS 파일을 다운로드하여 아이폰/네이버/아웃룩 캘린더에 등록합니다"
           >
             <Download size={14} /> ICS 파일 (아이폰/네이버)
@@ -1046,67 +1017,40 @@ const getKoreanHoliday = (dateObj) => {
             <CalendarIcon size={24} className="text-primary" />
           </div>
           <div>
-            <h2 className="text-xl font-bold flex align-center gap-2 m-0" style={{ color: '#0f172a' }}>
+            <h2 className="text-xl font-bold flex align-center gap-2 m-0" style={{ color: '#18181b' }}>
               {year}년 {month + 1}월 일정 관리
             </h2>
-            <p className="text-xs sub-text m-0 mt-1" style={{ color: '#64748b', fontWeight: 500 }}>
+            <p className="text-xs sub-text m-0 mt-1" style={{ color: '#71717a', fontWeight: 500 }}>
               월별 일정을 손쉽게 등록하고 관리할 수 있습니다.
             </p>
           </div>
         </div>
 
-        <div className="calendar-nav-controls flex align-center gap-2">
+        <div className="calendar-nav-controls">
           {onOpenHabitBoard && (
             <button
               type="button"
-              className="btn btn-sm font-bold flex align-center gap-1.5"
+              className="btn btn-secondary btn-sm"
               onClick={onOpenHabitBoard}
-              style={{
-                backgroundColor: 'rgba(16, 185, 129, 0.14)',
-                color: '#059669',
-                borderColor: 'rgba(16, 185, 129, 0.4)',
-                borderRadius: '10px',
-                padding: '0.4rem 0.85rem',
-                marginRight: '6px',
-                fontSize: '0.85rem'
-              }}
               title="오늘의 할일 / 해빗 트래커 보드 열기"
             >
-              <CheckSquare size={16} /> ✅ 오늘의 할일
+              <CheckSquare size={15} /> 오늘의 할일
             </button>
           )}
 
           <button
             type="button"
-            className="btn btn-sm font-bold flex align-center gap-1.5"
+            className="btn btn-secondary btn-sm"
             onClick={() => setShowNotesPanel(true)}
-            style={{
-              backgroundColor: 'rgba(14, 165, 233, 0.1)',
-              color: '#0369a1',
-              borderColor: 'rgba(14, 165, 233, 0.35)',
-              borderRadius: '10px',
-              padding: '0.4rem 0.85rem',
-              marginRight: '6px',
-              fontSize: '0.85rem'
-            }}
             title="OneNote 노트·일정을 모아 보고 내용으로 찾기"
           >
-            <Search size={16} /> 찾기·모아보기
+            <Search size={15} /> 찾기·모아보기
           </button>
 
           <button
             type="button"
-            className="btn btn-sm font-bold flex align-center gap-1.5"
+            className="btn btn-secondary btn-sm"
             onClick={() => setShowOneNote(true)}
-            style={{
-              backgroundColor: 'rgba(119, 25, 170, 0.1)',
-              color: '#7719aa',
-              borderColor: 'rgba(119, 25, 170, 0.35)',
-              borderRadius: '10px',
-              padding: '0.4rem 0.85rem',
-              marginRight: '6px',
-              fontSize: '0.85rem'
-            }}
             title={
               oneNoteSyncState === 'needLogin' ? 'OneNote 로그인이 만료되어 자동 동기화가 멈췄습니다. 눌러서 다시 로그인하세요.'
                 : oneNoteSyncState === 'error' ? `OneNote 자동 동기화 오류: ${oneNoteSyncError}`
@@ -1115,33 +1059,25 @@ const getKoreanHoliday = (dateObj) => {
                     : ''}`
             }
           >
-            <NotebookText size={16} />
+            <NotebookText size={15} />
             {oneNoteSyncState === 'syncing' ? 'OneNote 동기화 중…'
               : oneNoteSyncState === 'needLogin' ? 'OneNote 다시 연결'
                 : oneNoteSyncState === 'error' ? 'OneNote 동기화 오류' : 'OneNote'}
             {(oneNoteSyncState === 'needLogin' || oneNoteSyncState === 'error') && (
-              <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#e11d48', display: 'inline-block' }} />
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', backgroundColor: 'var(--accent-red)', display: 'inline-block' }} />
             )}
           </button>
 
-          <button className="btn btn-secondary btn-sm" onClick={handlePrevMonth} title="이전달 이동">
-            <ChevronLeft size={18} />
-          </button>
-          <span className="current-month-badge font-bold text-sm" style={{
-            background: '#e0f2fe',
-            color: '#0369a1',
-            padding: '0.35rem 0.85rem',
-            borderRadius: '12px',
-            border: '1px solid #bae6fd',
-            minWidth: '60px',
-            textAlign: 'center',
-            userSelect: 'none'
-          }}>
-            {month + 1}월
-          </span>
-          <button className="btn btn-secondary btn-sm" onClick={handleNextMonth} title="다음달 이동">
-            <ChevronRight size={18} />
-          </button>
+          {/* 달 이동: ‹ 10월 › 한 묶음 */}
+          <div className="month-stepper">
+            <button type="button" className="btn btn-ghost btn-sm" onClick={handlePrevMonth} title="이전달 이동">
+              <ChevronLeft size={16} />
+            </button>
+            <span className="current-month-badge">{month + 1}월</span>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={handleNextMonth} title="다음달 이동">
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1245,7 +1181,7 @@ const getKoreanHoliday = (dateObj) => {
                       {!isOneNoteId(sch.id) && <span className="schedule-time">{sch.time}</span>}
                       <span className="schedule-title">
                         {isOneNoteId(sch.id) && <span style={{ marginRight: '3px' }} title="OneNote 노트">📓</span>}
-                        {isSharedItem && <Users size={12} style={{ color: '#0284c7', marginRight: '4px', verticalAlign: 'middle', display: 'inline' }} title="공유 일정" />}
+                        {isSharedItem && <Users size={12} style={{ color: '#4f46e5', marginRight: '4px', verticalAlign: 'middle', display: 'inline' }} title="공유 일정" />}
                         {sch.title}
                       </span>
                       <button
@@ -1297,8 +1233,8 @@ const getKoreanHoliday = (dateObj) => {
               {isOneNoteSchedule ? (
                 <>
                   {scheduleMemoField}
-                  <details style={{ border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.6rem 0.85rem' }}>
-                    <summary className="text-xs font-bold" style={{ cursor: 'pointer', color: '#475569' }}>
+                  <details style={{ border: '1px solid #e4e4e7', borderRadius: '10px', padding: '0.6rem 0.85rem' }}>
+                    <summary className="text-xs font-bold" style={{ cursor: 'pointer', color: '#52525b' }}>
                       일정 정보 · {scheduleDate} · {getCategoryBadge(category).label} (눌러서 수정)
                     </summary>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.9rem' }}>

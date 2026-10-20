@@ -13,7 +13,7 @@ export default function NoteRichView({ html, style }) {
         backgroundColor: '#ffffff',
         fontSize: '0.95rem',
         lineHeight: 1.6,
-        color: '#0f172a',
+        color: '#18181b',
         ...style
       }}
       dangerouslySetInnerHTML={{ __html: clean }}

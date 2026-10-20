@@ -311,7 +311,7 @@ export default function FocusStudio({ books = [], onSaveSession }) {
                 value={pagesReadInput}
                 onChange={(e) => setPagesReadInput(e.target.value)}
               />
-              <p className="sub-text mt-1" style={{ fontSize: '0.75rem', color: '#64748b' }}>
+              <p className="sub-text mt-1" style={{ fontSize: '0.75rem', color: '#71717a' }}>
                 💡 누적 페이지를 입력하고 저장하면 내 서재 도서의 진행률(%)이 자동으로 올라갑니다.
               </p>
             </div>

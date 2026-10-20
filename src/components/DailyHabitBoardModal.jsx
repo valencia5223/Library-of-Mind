@@ -4,7 +4,7 @@ import { X, CheckCircle2, Circle, Plus, Trash2, Flame, Calendar, Sparkles, Clock
 export const HABIT_CATEGORIES = [
   { id: 'health', name: '💊 건강/영양제', bg: '#dcfce7', text: '#15803d', border: '#86efac' },
   { id: 'workout', name: '🏃 운동/산책', bg: '#fee2e2', text: '#b91c1c', border: '#fca5a5' },
-  { id: 'water', name: '💧 물 2L 마시기', bg: '#e0f2fe', text: '#0369a1', border: '#7dd3fc' },
+  { id: 'water', name: '💧 물 2L 마시기', bg: '#eef2ff', text: '#4338ca', border: '#a5b4fc' },
   { id: 'target', name: '🎯 개인 목표', bg: '#fef3c7', text: '#b45309', border: '#fde047' },
   { id: 'work', name: '💼 업무/작업', bg: '#f3e8ff', text: '#7e22ce', border: '#d8b4fe' },
   { id: 'hobby', name: '🎨 취미/독서', bg: '#fce7f3', text: '#be185d', border: '#f9a8d4' }
@@ -162,7 +162,7 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(8px)',
+      position: 'fixed', inset: 0, backgroundColor: 'rgba(24, 24, 27, 0.75)', backdropFilter: 'blur(8px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1150, padding: '1rem'
     }}>
       <div style={{
@@ -171,8 +171,8 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
       }}>
         {/* 헤더 */}
         <div style={{
-          padding: '1.25rem 1.5rem', backgroundColor: '#0f172a', color: '#ffffff',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #1e293b'
+          padding: '1.25rem 1.5rem', backgroundColor: '#18181b', color: '#ffffff',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #18181b'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
             <Sparkles size={24} style={{ color: '#10b981' }} />
@@ -180,14 +180,14 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
               <h3 style={{ margin: 0, fontSize: '1.18rem', fontWeight: 800 }}>
                 ✅ 오늘의 할일 & 루틴 관리
               </h3>
-              <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.78rem', color: '#94a3b8' }}>
+              <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.78rem', color: '#a1a1aa' }}>
                 오늘의 할 일부터 내일 계획까지 스마트하게 기록하세요. (ESC 키로 닫기)
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px', borderRadius: '50%' }}
+            style={{ background: 'none', border: 'none', color: '#a1a1aa', cursor: 'pointer', padding: '6px', borderRadius: '50%' }}
             title="닫기 (ESC)"
           >
             <X size={20} />
@@ -195,21 +195,21 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
         </div>
 
         {/* 달성률 프로그레스 바 영역 */}
-        <div style={{ padding: '1.1rem 1.5rem', backgroundColor: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
+        <div style={{ padding: '1.1rem 1.5rem', backgroundColor: '#f4f4f5', borderBottom: '1px solid #e4e4e7' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#3f3f46', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Flame size={18} style={{ color: '#f97316' }} />
               오늘의 달성 현황 ({completedTodayCount} / {totalTodayCount}개 완료)
             </span>
-            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: progressPercent === 100 ? '#10b981' : '#0284c7' }}>
+            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: progressPercent === 100 ? '#10b981' : '#4f46e5' }}>
               {progressPercent}% {progressPercent === 100 && '🎉 완벽 완수!'}
             </span>
           </div>
 
-          <div style={{ width: '100%', height: '12px', backgroundColor: '#cbd5e1', borderRadius: '6px', overflow: 'hidden' }}>
+          <div style={{ width: '100%', height: '12px', backgroundColor: '#d4d4d8', borderRadius: '6px', overflow: 'hidden' }}>
             <div style={{
               width: `${progressPercent}%`, height: '100%',
-              backgroundColor: progressPercent === 100 ? '#10b981' : '#0284c7',
+              backgroundColor: progressPercent === 100 ? '#10b981' : '#4f46e5',
               borderRadius: '6px', transition: 'width 0.4s ease'
             }} />
           </div>
@@ -220,7 +220,7 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
           
           {/* 새 할일 입력 폼 */}
           <form onSubmit={handleAddItem} style={{
-            backgroundColor: '#ffffff', padding: '1.1rem', borderRadius: '18px', border: '1.5px solid #e2e8f0',
+            backgroundColor: '#ffffff', padding: '1.1rem', borderRadius: '18px', border: '1.5px solid #e4e4e7',
             boxShadow: '0 4px 10px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', gap: '0.85rem'
           }}>
             {/* 상단 날짜 설정 & 입력란 */}
@@ -232,7 +232,7 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
                 placeholder={targetDay === 'today' ? "오늘 할 일을 입력하세요..." : "내일 미리 준비할 계획을 입력하세요..."}
                 style={{
                   flex: 1, padding: '0.65rem 0.9rem', fontSize: '0.88rem', borderRadius: '10px',
-                  border: '1.5px solid #cbd5e1', outline: 'none', fontWeight: 600, color: '#1e293b'
+                  border: '1.5px solid #d4d4d8', outline: 'none', fontWeight: 600, color: '#18181b'
                 }}
               />
               <button
@@ -240,7 +240,7 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
                 disabled={!title.trim()}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '0 1.1rem',
-                  backgroundColor: title.trim() ? (targetDay === 'today' ? '#10b981' : '#6366f1') : '#94a3b8',
+                  backgroundColor: title.trim() ? (targetDay === 'today' ? '#10b981' : '#6366f1') : '#a1a1aa',
                   color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700,
                   cursor: title.trim() ? 'pointer' : 'not-allowed', transition: 'all 0.15s ease'
                 }}
@@ -253,14 +253,14 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center' }}>
               
               {/* 1) 수행 날짜 선택 (오늘 vs 내일) */}
-              <div style={{ display: 'flex', gap: '4px', backgroundColor: '#f1f5f9', padding: '3px', borderRadius: '8px' }}>
+              <div style={{ display: 'flex', gap: '4px', backgroundColor: '#f4f4f5', padding: '3px', borderRadius: '8px' }}>
                 <button
                   type="button"
                   onClick={() => setTargetDay('today')}
                   style={{
                     padding: '0.25rem 0.65rem', fontSize: '0.75rem', borderRadius: '6px', border: 'none',
                     backgroundColor: targetDay === 'today' ? '#ffffff' : 'transparent',
-                    color: targetDay === 'today' ? '#10b981' : '#64748b',
+                    color: targetDay === 'today' ? '#10b981' : '#71717a',
                     fontWeight: targetDay === 'today' ? 800 : 600, cursor: 'pointer',
                     boxShadow: targetDay === 'today' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                   }}
@@ -273,7 +273,7 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
                   style={{
                     padding: '0.25rem 0.65rem', fontSize: '0.75rem', borderRadius: '6px', border: 'none',
                     backgroundColor: targetDay === 'tomorrow' ? '#6366f1' : 'transparent',
-                    color: targetDay === 'tomorrow' ? '#ffffff' : '#64748b',
+                    color: targetDay === 'tomorrow' ? '#ffffff' : '#71717a',
                     fontWeight: targetDay === 'tomorrow' ? 800 : 600, cursor: 'pointer',
                     boxShadow: targetDay === 'tomorrow' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                   }}
@@ -283,14 +283,14 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
               </div>
 
               {/* 2) 유형 선택 (기본: 일회성 할일) */}
-              <div style={{ display: 'flex', gap: '4px', backgroundColor: '#f1f5f9', padding: '3px', borderRadius: '8px' }}>
+              <div style={{ display: 'flex', gap: '4px', backgroundColor: '#f4f4f5', padding: '3px', borderRadius: '8px' }}>
                 <button
                   type="button"
                   onClick={() => setType('todo')}
                   style={{
                     padding: '0.25rem 0.65rem', fontSize: '0.75rem', borderRadius: '6px', border: 'none',
                     backgroundColor: type === 'todo' ? '#ffffff' : 'transparent',
-                    color: type === 'todo' ? '#0f172a' : '#64748b',
+                    color: type === 'todo' ? '#18181b' : '#71717a',
                     fontWeight: type === 'todo' ? 800 : 600, cursor: 'pointer',
                     boxShadow: type === 'todo' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                   }}
@@ -303,7 +303,7 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
                   style={{
                     padding: '0.25rem 0.65rem', fontSize: '0.75rem', borderRadius: '6px', border: 'none',
                     backgroundColor: type === 'routine' ? '#ffffff' : 'transparent',
-                    color: type === 'routine' ? '#0f172a' : '#64748b',
+                    color: type === 'routine' ? '#18181b' : '#71717a',
                     fontWeight: type === 'routine' ? 800 : 600, cursor: 'pointer',
                     boxShadow: type === 'routine' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'
                   }}
@@ -321,9 +321,9 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
                     onClick={() => setCategory(cat.id)}
                     style={{
                       padding: '0.2rem 0.55rem', fontSize: '0.73rem', borderRadius: '8px',
-                      backgroundColor: category === cat.id ? cat.bg : '#f1f5f9',
-                      color: category === cat.id ? cat.text : '#64748b',
-                      border: category === cat.id ? `1.5px solid ${cat.border}` : '1px solid #e2e8f0',
+                      backgroundColor: category === cat.id ? cat.bg : '#f4f4f5',
+                      color: category === cat.id ? cat.text : '#71717a',
+                      border: category === cat.id ? `1.5px solid ${cat.border}` : '1px solid #e4e4e7',
                       fontWeight: category === cat.id ? 800 : 600, cursor: 'pointer', transition: 'all 0.15s ease'
                     }}
                   >
@@ -341,8 +341,8 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
               onClick={() => setActiveTab('today')}
               style={{
                 padding: '0.4rem 0.95rem', fontSize: '0.82rem', borderRadius: '20px', border: 'none',
-                backgroundColor: activeTab === 'today' ? '#0f172a' : '#e2e8f0',
-                color: activeTab === 'today' ? '#ffffff' : '#475569',
+                backgroundColor: activeTab === 'today' ? '#18181b' : '#e4e4e7',
+                color: activeTab === 'today' ? '#ffffff' : '#52525b',
                 fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px'
               }}
             >
@@ -352,8 +352,8 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
               onClick={() => setActiveTab('tomorrow')}
               style={{
                 padding: '0.4rem 0.95rem', fontSize: '0.82rem', borderRadius: '20px', border: 'none',
-                backgroundColor: activeTab === 'tomorrow' ? '#6366f1' : '#e2e8f0',
-                color: activeTab === 'tomorrow' ? '#ffffff' : '#475569',
+                backgroundColor: activeTab === 'tomorrow' ? '#6366f1' : '#e4e4e7',
+                color: activeTab === 'tomorrow' ? '#ffffff' : '#52525b',
                 fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px'
               }}
             >
@@ -363,8 +363,8 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
               onClick={() => setActiveTab('routine')}
               style={{
                 padding: '0.4rem 0.95rem', fontSize: '0.82rem', borderRadius: '20px', border: 'none',
-                backgroundColor: activeTab === 'routine' ? '#0f172a' : '#e2e8f0',
-                color: activeTab === 'routine' ? '#ffffff' : '#475569',
+                backgroundColor: activeTab === 'routine' ? '#18181b' : '#e4e4e7',
+                color: activeTab === 'routine' ? '#ffffff' : '#52525b',
                 fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px'
               }}
             >
@@ -375,7 +375,7 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
           {/* 목록 리스트 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
             {displayedItems.length === 0 ? (
-              <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: '#94a3b8', backgroundColor: '#ffffff', borderRadius: '16px', border: '1.5px dashed #cbd5e1' }}>
+              <div style={{ padding: '2.5rem 1rem', textAlign: 'center', color: '#a1a1aa', backgroundColor: '#ffffff', borderRadius: '16px', border: '1.5px dashed #d4d4d8' }}>
                 {activeTab === 'tomorrow' ? '내일 미리 등록된 계획이 없습니다. 상단에서 내일 할 일을 추가해보세요!' : '등록된 할 일이 없습니다.'}
               </div>
             ) : (
@@ -388,7 +388,7 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       padding: '0.85rem 1.1rem', borderRadius: '14px', backgroundColor: '#ffffff',
-                      border: item.completed ? '1.5px solid #cbd5e1' : `1.5px solid ${catObj.border}`,
+                      border: item.completed ? '1.5px solid #d4d4d8' : `1.5px solid ${catObj.border}`,
                       boxShadow: '0 2px 5px rgba(0,0,0,0.02)', cursor: 'pointer', transition: 'all 0.15s ease',
                       opacity: item.completed ? 0.65 : 1
                     }}
@@ -402,13 +402,13 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
                         {item.completed ? (
                           <CheckCircle2 size={22} style={{ color: '#10b981' }} />
                         ) : (
-                          <Circle size={22} style={{ color: '#94a3b8' }} />
+                          <Circle size={22} style={{ color: '#a1a1aa' }} />
                         )}
                       </button>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         <span style={{
-                          fontSize: '0.9rem', fontWeight: 700, color: item.completed ? '#64748b' : '#1e293b',
+                          fontSize: '0.9rem', fontWeight: 700, color: item.completed ? '#71717a' : '#18181b',
                           textDecoration: item.completed ? 'line-through' : 'none'
                         }}>
                           {item.title}
@@ -422,7 +422,7 @@ export default function DailyHabitBoardModal({ isOpen, onClose }) {
                           </span>
                           <span style={{
                             fontSize: '0.7rem', fontWeight: 600,
-                            color: item.targetDay === 'tomorrow' ? '#6366f1' : '#64748b'
+                            color: item.targetDay === 'tomorrow' ? '#6366f1' : '#71717a'
                           }}>
                             {item.targetDay === 'tomorrow' ? '🌅 내일 예정' : (item.type === 'routine' ? '🔁 매일 반복' : '📌 오늘 할일')}
                           </span>

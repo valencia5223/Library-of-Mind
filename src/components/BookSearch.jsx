@@ -355,7 +355,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
         <div className="flex gap-2 align-center">
           {activeTab === 'search' && searchResults.length > 0 && (
             <div className="flex align-center gap-1">
-              <span className="small-text font-bold" style={{ fontSize: '0.85rem', color: '#64748b' }}>정렬 기준:</span>
+              <span className="small-text font-bold" style={{ fontSize: '0.85rem', color: '#71717a' }}>정렬 기준:</span>
               <select
                 className="select-sort"
                 value={sortOption}
@@ -364,9 +364,9 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
                   padding: '0.35rem 1.8rem 0.35rem 0.65rem',
                   fontSize: '0.85rem',
                   borderRadius: '6px',
-                  border: '1px solid #cbd5e1',
+                  border: '1px solid #d4d4d8',
                   backgroundColor: '#ffffff',
-                  color: '#334155',
+                  color: '#3f3f46',
                   cursor: 'pointer',
                   outline: 'none',
                   fontWeight: 600,
@@ -406,13 +406,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
                 setSelectedCategory(cat.id);
                 fetchAladinBestsellers(cat.id);
               }}
-              style={{
-                borderRadius: '20px',
-                whiteSpace: 'nowrap',
-                fontSize: '0.8rem',
-                padding: '0.35rem 0.85rem',
-                flexShrink: 0
-              }}
+              style={{ flexShrink: 0 }}
             >
               {cat.name}
             </button>
@@ -489,14 +483,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
             className="btn btn-outline" 
             onClick={() => handleSearch(null, true)} 
             disabled={loading}
-            style={{ 
-              minWidth: '220px', 
-              display: 'flex', 
-              gap: '0.5rem', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              fontWeight: 700 
-            }}
+            style={{ minWidth: '220px', display: 'flex', justifyContent: 'center' }}
           >
             {loading ? (
               <RefreshCw size={16} className="animate-spin" />

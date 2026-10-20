@@ -131,13 +131,13 @@ export default function AdminApprovalModal({ isOpen, onClose, user }) {
           <X size={20} />
         </button>
 
-        <div className="flex align-center gap-2 mb-3" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '1rem' }}>
-          <ShieldCheck size={24} color="#0284c7" />
+        <div className="flex align-center gap-2 mb-3" style={{ borderBottom: '1px solid #e4e4e7', paddingBottom: '1rem' }}>
+          <ShieldCheck size={24} color="#4f46e5" />
           <div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, color: '#18181b' }}>
               👑 관리자 회원가입 승인 센터
             </h3>
-            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>
+            <span style={{ fontSize: '0.8rem', color: '#71717a' }}>
               가입을 신청한 사용자를 1초 만에 확인하고 승인합니다.
             </span>
           </div>
@@ -152,7 +152,7 @@ export default function AdminApprovalModal({ isOpen, onClose, user }) {
 
         <div className="flex justify-between align-center mb-3">
           <span className="font-bold text-slate-700" style={{ fontSize: '0.9rem' }}>
-            가입 승인 대기 중인 회원 (<b style={{ color: '#0284c7' }}>{pendingUsers.length}</b>명)
+            가입 승인 대기 중인 회원 (<b style={{ color: '#4f46e5' }}>{pendingUsers.length}</b>명)
           </span>
           <button className="btn btn-outline btn-xs flex align-center gap-1" onClick={fetchPendingUsers} disabled={loading}>
             <RefreshCw size={12} className={loading ? 'animate-spin' : ''} /> 새로고침
@@ -167,10 +167,10 @@ export default function AdminApprovalModal({ isOpen, onClose, user }) {
         ) : pendingUsers.length === 0 ? (
           <div
             className="p-5 text-center rounded-xl"
-            style={{ background: '#f8fafc', border: '1.5px dashed #cbd5e1', color: '#64748b' }}
+            style={{ background: '#fafafa', border: '1.5px dashed #d4d4d8', color: '#71717a' }}
           >
             <Clock size={32} className="text-slate-300 mb-2" style={{ display: 'block', margin: '0 auto 8px auto' }} />
-            <p className="font-bold mb-1" style={{ color: '#334155' }}>현재 가입 승인 대기 중인 회원이 없습니다.</p>
+            <p className="font-bold mb-1" style={{ color: '#3f3f46' }}>현재 가입 승인 대기 중인 회원이 없습니다.</p>
             <span style={{ fontSize: '0.78rem' }}>새로운 사용자가 회원가입을 신청하면 여기에 즉시 표시됩니다.</span>
           </div>
         ) : (
@@ -181,7 +181,7 @@ export default function AdminApprovalModal({ isOpen, onClose, user }) {
                 className="flex align-center justify-between p-3 rounded-xl"
                 style={{
                   background: '#ffffff',
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid #e4e4e7',
                   boxShadow: '0 2px 5px rgba(0,0,0,0.03)'
                 }}
               >
@@ -200,7 +200,6 @@ export default function AdminApprovalModal({ isOpen, onClose, user }) {
                     className="btn btn-success btn-sm font-bold flex align-center gap-1"
                     onClick={() => handleApprove(u)}
                     disabled={processingId === u.id}
-                    style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
                   >
                     <UserCheck size={14} /> 승인하기
                   </button>
@@ -208,7 +207,6 @@ export default function AdminApprovalModal({ isOpen, onClose, user }) {
                     className="btn btn-danger btn-sm font-bold flex align-center gap-1"
                     onClick={() => handleReject(u)}
                     disabled={processingId === u.id}
-                    style={{ padding: '0.4rem 0.6rem', fontSize: '0.8rem' }}
                   >
                     <UserX size={14} /> 거절
                   </button>
@@ -218,7 +216,7 @@ export default function AdminApprovalModal({ isOpen, onClose, user }) {
           </div>
         )}
 
-        <div className="mt-4 pt-3 text-end" style={{ borderTop: '1px solid #e2e8f0' }}>
+        <div className="mt-4 pt-3 text-end" style={{ borderTop: '1px solid #e4e4e7' }}>
           <button className="btn btn-secondary btn-sm" onClick={onClose}>
             닫기
           </button>

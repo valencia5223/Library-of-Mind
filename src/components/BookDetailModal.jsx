@@ -177,7 +177,7 @@ export default function BookDetailModal({
             position: 'absolute',
             top: '1rem',
             right: '1rem',
-            background: '#f1f5f9',
+            background: '#f4f4f5',
             border: 'none',
             borderRadius: '50%',
             width: '34px',
@@ -186,7 +186,7 @@ export default function BookDetailModal({
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: '#64748b',
+            color: '#71717a',
             transition: 'all 0.2s ease'
           }}
         >
@@ -231,10 +231,10 @@ export default function BookDetailModal({
                     fontSize: '0.88rem',
                     fontWeight: 700,
                     padding: '0.4rem 0.6rem',
-                    background: '#e0f2fe',
-                    color: '#0369a1',
+                    background: '#eef2ff',
+                    color: '#4338ca',
                     borderRadius: '8px',
-                    border: '1px solid #bae6fd'
+                    border: '1px solid #c7d2fe'
                   }}
                 >
                   판매가: {book.price}
@@ -252,8 +252,8 @@ export default function BookDetailModal({
                   fontSize: '0.82rem',
                   padding: '0.45rem',
                   borderRadius: '8px',
-                  borderColor: '#cbd5e1',
-                  color: '#475569',
+                  borderColor: '#d4d4d8',
+                  color: '#52525b',
                   textDecoration: 'none'
                 }}
               >
@@ -266,13 +266,13 @@ export default function BookDetailModal({
           <div className="detail-content" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             {/* 도서 제목 */}
             <div>
-              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.35, marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#18181b', lineHeight: 1.35, marginBottom: '0.5rem' }}>
                 {book.title}
               </h3>
 
               {/* 뱃지 태그 메타 정보 (가로 단일 flex wrap) */}
               <div className="book-meta-badges flex flex-wrap gap-2" style={{ fontSize: '0.85rem' }}>
-                <span style={{ background: '#f1f5f9', color: '#334155', borderRadius: '6px', padding: '4px 10px', fontWeight: 600 }}>
+                <span style={{ background: '#f4f4f5', color: '#3f3f46', borderRadius: '6px', padding: '4px 10px', fontWeight: 600 }}>
                   ✍️ <b>지은이:</b> {info.author}
                 </span>
                 {info.translator && (
@@ -281,12 +281,12 @@ export default function BookDetailModal({
                   </span>
                 )}
                 {book.publisher && (
-                  <span style={{ background: '#f1f5f9', color: '#334155', borderRadius: '6px', padding: '4px 10px', fontWeight: 600 }}>
+                  <span style={{ background: '#f4f4f5', color: '#3f3f46', borderRadius: '6px', padding: '4px 10px', fontWeight: 600 }}>
                     🏢 <b>출판사:</b> {book.publisher}
                   </span>
                 )}
                 {book.pub_date && (
-                  <span style={{ background: '#f1f5f9', color: '#334155', borderRadius: '6px', padding: '4px 10px', fontWeight: 600 }}>
+                  <span style={{ background: '#f4f4f5', color: '#3f3f46', borderRadius: '6px', padding: '4px 10px', fontWeight: 600 }}>
                     📅 <b>출간일:</b> {book.pub_date}
                   </span>
                 )}
@@ -302,24 +302,24 @@ export default function BookDetailModal({
             <div
               className="review-section"
               style={{
-                background: '#f8fafc',
+                background: '#fafafa',
                 borderRadius: '12px',
                 padding: '1.25rem',
-                border: '1px solid #e2e8f0',
+                border: '1px solid #e4e4e7',
                 display: 'flex',
                 flexDirection: 'column',
                 flex: 1,
                 minHeight: '340px'
               }}
             >
-              <h4 className="flex align-center gap-1 mb-3" style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--primary, #0078a6)' }}>
+              <h4 className="flex align-center gap-1 mb-3" style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--primary, #4f46e5)' }}>
                 <BookOpen size={18} /> 도서 상세 소개
               </h4>
               <div
                 className="desc-text"
                 style={{
                   fontSize: '0.96rem',
-                  color: '#334155',
+                  color: '#3f3f46',
                   lineHeight: 1.8,
                   whiteSpace: 'pre-line',
                   maxHeight: '480px',
@@ -329,7 +329,7 @@ export default function BookDetailModal({
                 }}
               >
                 {loadingDesc ? (
-                  <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>알라딘 API에서 도서 상세 소개를 불러오는 중입니다...</span>
+                  <span style={{ color: '#a1a1aa', fontStyle: 'italic' }}>알라딘 API에서 도서 상세 소개를 불러오는 중입니다...</span>
                 ) : (
                   description || book.description || '등록된 도서 소개 정보가 없습니다.'
                 )}
@@ -372,7 +372,7 @@ export default function BookDetailModal({
         {/* 하단 푸터 버튼 영역 */}
         <div
           className="mt-4 pt-3 flex justify-between align-center flex-wrap gap-2"
-          style={{ borderTop: '1px solid #e2e8f0', background: '#fff', paddingTop: '1rem' }}
+          style={{ borderTop: '1px solid #e4e4e7', background: '#fff', paddingTop: '1rem' }}
         >
           <div className="flex align-center gap-2 flex-wrap">
             {onAddBook && (
@@ -380,7 +380,6 @@ export default function BookDetailModal({
                 className={`btn btn-sm font-bold flex align-center gap-1 ${isAlreadyInShelf ? 'btn-secondary' : 'btn-primary'}`}
                 disabled={isAlreadyInShelf}
                 onClick={() => onAddBook(book)}
-                style={{ padding: '0.5rem 1rem', borderRadius: '8px' }}
               >
                 <Plus size={16} /> {isAlreadyInShelf ? '이미 서재에 있음' : '내 서재에 추가하기'}
               </button>
@@ -392,13 +391,6 @@ export default function BookDetailModal({
                 <button
                   className="btn btn-primary btn-sm font-bold flex align-center gap-1.5"
                   onClick={() => setShowPdfViewer(true)}
-                  style={{
-                    backgroundColor: '#0284c7',
-                    color: '#ffffff',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 12px rgba(2, 132, 199, 0.25)'
-                  }}
                 >
                   <BookOpen size={16} />
                   <span>📖 PDF 전자책 읽기</span>
@@ -410,7 +402,6 @@ export default function BookDetailModal({
                   className="btn btn-outline btn-sm text-xs"
                   onClick={handleRemovePdf}
                   title="첨부된 PDF 제거"
-                  style={{ padding: '0.5rem', borderRadius: '8px', color: '#94a3b8', borderColor: '#e2e8f0' }}
                 >
                   <Trash2 size={14} />
                 </button>
@@ -421,9 +412,9 @@ export default function BookDetailModal({
                 style={{
                   padding: '0.5rem 0.9rem',
                   borderRadius: '8px',
-                  borderColor: '#0284c7',
-                  color: '#0284c7',
-                  backgroundColor: '#f0f9ff'
+                  borderColor: '#4f46e5',
+                  color: '#4f46e5',
+                  backgroundColor: '#f5f7ff'
                 }}
               >
                 <Upload size={15} />
@@ -442,7 +433,6 @@ export default function BookDetailModal({
               <button
                 className="btn btn-danger btn-sm font-bold flex align-center gap-1"
                 onClick={() => onDeleteBook(book.id)}
-                style={{ padding: '0.5rem 0.9rem', borderRadius: '8px' }}
               >
                 <Trash2 size={15} /> 서재에서 삭제
               </button>
@@ -452,7 +442,6 @@ export default function BookDetailModal({
           <button
             className="btn btn-secondary btn-sm"
             onClick={onClose}
-            style={{ padding: '0.5rem 1.2rem', borderRadius: '8px', fontWeight: 600 }}
           >
             확인 닫기
           </button>

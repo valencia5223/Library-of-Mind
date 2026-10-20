@@ -11,8 +11,7 @@ import AdminApprovalModal from './components/AdminApprovalModal';
 import ScheduleCalendarView from './components/ScheduleCalendarView';
 import PdfLibraryModal from './components/PdfLibraryModal';
 import DailyHabitBoardModal from './components/DailyHabitBoardModal';
-import SharedRestaurantMapView from './components/SharedRestaurantMapView';
-import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon, FileText, CheckSquare, Zap, MapPin } from 'lucide-react';
+import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon, FileText, CheckSquare, Zap } from 'lucide-react';
 import NewsTicker from './components/NewsTicker';
 import WeatherWidget from './components/WeatherWidget';
 import SharedLiveMemoModal from './components/SharedLiveMemoModal';
@@ -621,37 +620,25 @@ export default function App() {
             >
               <Users size={16} /> 이웃 서재
             </button>
-
-            <button
-              className={`nav-tab-capsule ${activeTab === 'places' ? 'active' : ''}`}
-              onClick={() => setActiveTab('places')}
-            >
-              <MapPin size={16} /> 맛집지도
-            </button>
           </nav>
         )}
 
         <div className="flex align-center gap-2" style={{ flexWrap: 'nowrap', flexShrink: 0 }}>
           {user && (
             <button
-              className="nav-tab-capsule"
+              type="button"
+              className="btn btn-secondary btn-sm"
               onClick={() => setShowPdfLibrary(true)}
-              style={{
-                backgroundColor: 'rgba(2, 132, 199, 0.14)',
-                color: '#0284c7',
-                borderColor: 'rgba(2, 132, 199, 0.4)',
-                fontWeight: 700,
-                flexShrink: 0
-              }}
+              style={{ flexShrink: 0 }}
             >
-              <FileText size={16} /> PDF 서재
+              <FileText size={15} /> PDF 서재
             </button>
           )}
 
           <WeatherWidget />
 
-          <button className="btn btn-secondary user-profile-btn" onClick={() => setIsAuthOpen(true)}>
-            <User size={16} style={{ flexShrink: 0 }} />
+          <button type="button" className="btn btn-secondary btn-sm user-profile-btn" onClick={() => setIsAuthOpen(true)}>
+            <User size={15} style={{ flexShrink: 0 }} />
             <span className="user-email-text">{user ? (user.user_metadata?.full_name || user.email?.split('@')[0] || '내 프로필') : '로그인 / 회원가입'}</span>
           </button>
         </div>
@@ -738,10 +725,6 @@ export default function App() {
               currentViewedFriend={viewedFriend}
               onBackToMyBookshelf={() => setViewedFriend(null)}
             />
-          )}
-
-          {activeTab === 'places' && (
-            <SharedRestaurantMapView user={user} />
           )}
         </main>
       )}
