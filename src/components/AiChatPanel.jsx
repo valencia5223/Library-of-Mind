@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Sparkles, Send, Loader2, History, SquarePen, Trash2, ChevronLeft } from 'lucide-react';
+import { X, Sparkles, Send, Loader2, History, SquarePen, Trash2, ChevronLeft, FileSpreadsheet } from 'lucide-react';
 import { runAssistantTurn, isAssistantAvailable } from '../utils/aiAssistant';
 import {
   newConversationId,
@@ -10,6 +10,16 @@ import {
   getActiveConversationId,
   setActiveConversationId
 } from '../utils/aiChatStore';
+import {
+  canKeepFileLink,
+  pickExcelHandle,
+  saveExcel,
+  removeExcel,
+  getExcelInfo,
+  ensureExcelPermission,
+  formatWhen,
+  EXCEL_ACCEPT
+} from '../utils/excelSource';
 
 const SUGGESTIONS = [
   '어제 업무일지 요약해줘',
@@ -17,6 +27,9 @@ const SUGGESTIONS = [
   '다음 주 화요일 3시 팀 회의 업무로 추가해줘',
   '최근 회의록에서 할 일만 뽑아줘'
 ];
+
+// 엑셀을 읽을 것 같은 질문이면 보내기 전에 원본 파일 권한을 받아 둠 (권한 창은 클릭 직후에만 뜸)
+const EXCEL_HINT = /엑셀|excel|xlsx|업무\s*일지|일지/i;
 
 const pad = (n) => String(n).padStart(2, '0');
 const whenLabel = (ms) => {
@@ -68,6 +81,14 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
   const convRef = useRef(null);
   const listRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const [excel, setExcel] = useState(null); // 첨부한 엑셀 정보 (getExcelInfo)
+  const [excelBusy, setExcelBusy] = useState(false);
+
+  const refreshExcel = () => {
+    getExcelInfo(userId).then(setExcel).catch(() => setExcel(null));
+  };
+  useEffect(refreshExcel, [userId]);
 
   // 마지막으로 보던 대화 불러오기
   useEffect(() => {
@@ -103,9 +124,52 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
     listConversations(userId).then(setConversations).catch(() => setConversations([]));
   };
 
+  const attachFile = async (file, handle = null) => {
+    setExcelBusy(true);
+    try {
+      await saveExcel(userId, file, handle);
+      refreshExcel();
+    } catch (e) {
+      window.alert(e.message || String(e));
+    } finally {
+      setExcelBusy(false);
+    }
+  };
+
+  const attachExcel = async () => {
+    if (busy || excelBusy) return;
+    // Chrome·Edge: 파일 위치를 기억해 매번 최신 내용을 읽음. 그 밖의 브라우저는 사본만
+    if (!canKeepFileLink()) {
+      fileInputRef.current?.click();
+      return;
+    }
+    try {
+      const handle = await pickExcelHandle();
+      if (handle) await attachFile(await handle.getFile(), handle);
+    } catch (e) {
+      console.warn('엑셀 고르기 실패, 일반 파일 선택으로:', e);
+      fileInputRef.current?.click();
+    }
+  };
+
+  const connectExcel = async () => {
+    await ensureExcelPermission(userId);
+    refreshExcel();
+  };
+
+  const detachExcel = async () => {
+    if (!window.confirm(`첨부한 엑셀(${excel?.name})을 이 브라우저에서 뺄까요? 원본 파일은 그대로입니다.`)) return;
+    await removeExcel(userId).catch(() => {});
+    setExcel(null);
+  };
+
   const send = async (textArg) => {
     const text = (textArg ?? input).trim();
     if (!text || busy) return;
+    if (excel?.permission === 'prompt' && EXCEL_HINT.test(text)) {
+      await ensureExcelPermission(userId);
+      refreshExcel();
+    }
     setInput('');
     // 첫 질문이면 새 대화로 보관 시작
     if (!convRef.current) {
@@ -134,6 +198,7 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
       push({ role: 'error', text: e.message || String(e) });
     } finally {
       setBusy(false);
+      if (excel) refreshExcel(); // 원본에서 새로 읽었으면 수정 시각 갱신
     }
   };
 
@@ -179,10 +244,15 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
           <span className="ai-panel-icon"><Sparkles size={16} /></span>
           <div>
             <div className="font-bold" style={{ fontSize: '0.95rem' }}>AI 일정 비서</div>
-            <div className="text-xs sub-text">일정·OneNote 노트를 읽고 정리해 드려요</div>
+            <div className="text-xs sub-text">일정·OneNote 노트·엑셀을 읽고 정리해 드려요</div>
           </div>
         </div>
         <div className="flex align-center gap-1">
+          {view === 'chat' && (
+            <button type="button" className="btn btn-ghost btn-sm" onClick={attachExcel} disabled={busy || excelBusy || !isAssistantAvailable()} title={excel ? '엑셀 바꾸기' : '엑셀 첨부'}>
+              {excelBusy ? <Loader2 size={15} className="ai-spin" /> : <FileSpreadsheet size={15} />}
+            </button>
+          )}
           {view === 'list' ? (
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => setView('chat')} title="대화로 돌아가기">
               <ChevronLeft size={16} />
@@ -200,6 +270,39 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
           </button>
         </div>
       </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={EXCEL_ACCEPT}
+        hidden
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (file) attachFile(file);
+        }}
+      />
+      {view === 'chat' && excel && (
+        <div className="ai-excel-bar">
+          <FileSpreadsheet size={14} />
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div className="ai-excel-name" title={excel.name}>{excel.name}</div>
+            <div className="text-xs sub-text">
+              {excel.linked
+                ? (excel.permission === 'granted'
+                  ? `원본 연결됨 · 수정 ${formatWhen(excel.lastModified)}`
+                  : `사본 ${formatWhen(excel.savedAt)} · 원본을 읽으려면 연결`)
+                : `사본 ${formatWhen(excel.savedAt)} · 파일이 바뀌면 다시 첨부`}
+            </div>
+          </div>
+          {excel.linked && excel.permission !== 'granted' && (
+            <button type="button" className="btn btn-secondary btn-xs" onClick={connectExcel} disabled={busy}>연결</button>
+          )}
+          <button type="button" className="btn btn-ghost btn-xs" onClick={detachExcel} disabled={busy} title="엑셀 빼기">
+            <X size={13} />
+          </button>
+        </div>
+      )}
 
       <div className="ai-panel-body" ref={listRef}>
         {view === 'list' ? (
@@ -233,7 +336,7 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
           <div className="ai-empty">
             <p className="text-sm sub-text">이렇게 물어보세요</p>
             <div className="ai-suggestions">
-              {SUGGESTIONS.map(s => (
+              {(excel ? ['엑셀 요약해줘', ...SUGGESTIONS] : SUGGESTIONS).map(s => (
                 <button key={s} type="button" className="btn btn-secondary btn-sm" onClick={() => send(s)}>
                   {s}
                 </button>
@@ -241,6 +344,7 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
             </div>
             <p className="text-xs sub-text" style={{ marginTop: '1rem', lineHeight: 1.6 }}>
               질문에 필요한 일정·노트 내용이 AI(Google Gemini)로 전송됩니다. 무료 등급은 보낸 내용이 Google 서비스 개선에 쓰일 수 있어요. 일정 수정·삭제는 실행 전에 확인을 받아요. 대화는 이 브라우저에 보관돼요.
+              {' '}위쪽 엑셀 버튼으로 업무 기록 엑셀(월별 시트, C열 날짜)을 첨부하면 '엑셀 요약'으로 그날 업무를 정리해 드려요. 첨부한 파일은 이 PC·브라우저에만 남아요.
             </p>
           </div>
         ) : (

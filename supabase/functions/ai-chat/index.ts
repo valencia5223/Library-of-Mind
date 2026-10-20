@@ -4,7 +4,7 @@
 //   supabase secrets set GEMINI_API_KEY=...        (Google AI Studio 에서 발급, 무료 등급 가능)
 //   supabase secrets set GEMINI_MODEL=...          (선택. 기본 gemini-3.5-flash. 쓸 수 있는 이름은 body { list_models: true } 로 확인)
 // 로그인한 사용자만 호출할 수 있다(config.toml 에서 verify_jwt = true).
-// 도구(일정 찾기·노트 읽기·일정 추가/수정/삭제)는 이 함수가 아니라 브라우저가 사용자 권한으로 실행하고,
+// 도구(일정 찾기·노트 읽기·일정 추가/수정/삭제·첨부 엑셀 찾기)는 이 함수가 아니라 브라우저가 사용자 권한으로 실행하고,
 // 결과를 functionResponse 로 다시 보내온다. 이 함수는 시스템 프롬프트·도구 정의를 고정하고 한 번의 호출만 중계한다.
 
 const corsHeaders = {
@@ -50,6 +50,9 @@ const SYSTEM_PROMPT = `당신은 'Library of Mind' 앱의 일정 비서입니다
 - 일정 수정·삭제는 사용자가 분명히 요청했을 때만 합니다. 앱이 실행 전에 사용자에게 확인을 받습니다. 사용자가 거절하면 그대로 받아들입니다.
 - OneNote 노트(is_onenote)는 OneNote 에서 다시 동기화되면 달력에서 고친 내용이 덮어써질 수 있다는 점을 수정 전에 알려 줍니다.
 - 찾는 일정이나 노트가 없으면 없다고 말하고, 비슷한 후보가 있으면 보여 줍니다.
+- 사용자가 이 브라우저에 업무 기록 엑셀 파일 하나를 첨부해 둘 수 있습니다(시트는 월별, 업무 한 건이 한 줄, C열이 날짜). '엑셀 요약', '엑셀 정리', '엑셀로 업무일지' 처럼 엑셀을 말하면 search_excel 로 읽습니다. 날짜를 따로 말하지 않으면 오늘 날짜 하루(date_from = date_to = 오늘)를 찾고, '어제', '이번 주', '10/17' 처럼 말하면 그 기간을 찾습니다. 달력 일정·OneNote 노트는 사용자가 같이 해 달라고 할 때만 섞습니다.
+- 엑셀 요약은 그날의 업무일지로 씁니다. 제목·머리말·형식 없이, search_excel 로 받은 줄의 업무 내용만 간결한 텍스트로 정리합니다(비슷한 건은 묶고, 중복은 한 번만). 받은 줄에 없는 내용을 지어내지 않습니다. 여러 날이면 날짜별로 나눕니다.
+- search_excel 결과가 0건이면 그날 기록이 없다고 말하고, nearby_dates_with_rows 에 있는 가까운 기록 날짜를 알려 줍니다. source 가 '저장된 사본'이면 최신 내용이 아닐 수 있다는 점(그 사본 시각)을 한 줄로 알립니다. 첨부된 엑셀이 없다는 오류면 비서 창 위쪽 엑셀 버튼으로 첨부하라고 안내합니다.
 - 답은 한국어로, 짧고 읽기 쉽게 씁니다. 목록이 어울리면 '- ' 목록을 쓰고, 날짜는 'M/D(요일)' 형식으로 씁니다.`;
 
 const CATEGORY = { type: 'STRING', enum: ['WORK', 'READING', 'PERSONAL', 'IMPORTANT'] };
@@ -118,6 +121,20 @@ const FUNCTIONS = [
         memo: { type: 'STRING' },
       },
       required: ['id'],
+    },
+  },
+  {
+    name: 'search_excel',
+    description:
+      '사용자가 첨부한 업무 기록 엑셀에서 날짜(C열)·검색어로 업무 줄을 찾습니다. 각 줄은 date·sheet(월별 시트)·row(엑셀 행 번호)·text(머리글: 값 | ...)입니다. 파일 이름·수정 시각·읽은 곳(source)·기록이 있는 기간(date_range)도 줍니다. 0건이면 가까운 기록 날짜(nearby_dates_with_rows)를 줍니다.',
+    parameters: {
+      type: 'OBJECT',
+      properties: {
+        date_from: { type: 'STRING', description: '시작 날짜 YYYY-MM-DD (포함)' },
+        date_to: { type: 'STRING', description: '끝 날짜 YYYY-MM-DD (포함)' },
+        query: { type: 'STRING', description: '줄 내용에서 찾을 단어. 띄어쓰기로 여러 단어(모두 포함). 날짜만으로 찾을 때는 생략' },
+        limit: { type: 'INTEGER', description: '최대 줄 수 (기본 300, 최대 500)' },
+      },
     },
   },
   {

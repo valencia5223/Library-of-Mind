@@ -3219,6 +3219,25 @@ input[type="date"], input[type="search"] {
 .onenote-path svg { flex-shrink: 0; color: #7719aa; }
 .onenote-path span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* AI 비서 첨부 엑셀 */
+.ai-excel-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 8px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-subtle);
+}
+.ai-excel-bar > svg { flex-shrink: 0; color: var(--primary); }
+.ai-excel-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* AI 비서 지난 대화 목록 */
 .ai-history {
   display: flex;

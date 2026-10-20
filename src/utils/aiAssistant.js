@@ -1,5 +1,5 @@
 // 일정 비서 AI 채팅: Supabase Edge Function(ai-chat)으로 Google Gemini 를 부르고,
-// Gemini 가 요청한 도구(일정 찾기·노트 읽기·일정 추가/수정/삭제)는 브라우저에서 사용자 권한으로 실행한다.
+// Gemini 가 요청한 도구(일정 찾기·노트 읽기·일정 추가/수정/삭제·첨부 엑셀 찾기)는 브라우저에서 사용자 권한으로 실행한다.
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 const MAX_STEPS = 10; // 한 번의 질문에서 도구를 부르고 다시 묻는 최대 횟수
@@ -177,6 +177,12 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
       }
       await removeSchedule(s.id);
       return { ok: true, deleted: summary(s) };
+    },
+
+    // 첨부한 엑셀(업무 기록)에서 날짜별 줄 찾기. SheetJS 는 이때 처음 불러옴
+    search_excel: async (args) => {
+      const { searchExcel } = await import('./excelSource');
+      return searchExcel(userId, args);
     }
   };
 
@@ -188,6 +194,9 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
     },
     // 도구 실행 뒤 덧붙일 문구 (취소선 확인 결과)
     note: (name, result) => {
+      if (name === 'search_excel') {
+        return `↳ ${result?.file || '엑셀'} · ${result?.total_matched ?? 0}줄 · ${result?.source || ''}`;
+      }
       if (!['read_note', 'read_notes', 'search_schedules'].includes(name)) return null;
       const list = name === 'read_note' ? [result]
         : name === 'read_notes' ? (result?.notes || [])
@@ -205,6 +214,11 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
       if (name === 'read_notes') return `📓 노트 ${(input.ids || []).length}개 읽는 중`;
       if (name === 'add_schedule') return `➕ 일정 추가 · ${input.date || ''} ${input.title || ''}`;
       if (name === 'update_schedule') return `✏️ 일정 수정${find(input.id) ? ` · ${find(input.id).title}` : ''}`;
+      if (name === 'search_excel') {
+        const range = input.date_from && input.date_to && input.date_from !== input.date_to
+          ? `${input.date_from} ~ ${input.date_to}` : (input.date_from || input.date_to || '');
+        return `📊 엑셀 읽는 중${range ? ` · ${range}` : ''}${input.query ? ` · "${input.query}"` : ''}`;
+      }
       if (name === 'delete_schedule') return `🗑 일정 삭제${find(input.id) ? ` · ${find(input.id).title}` : ''}`;
       return name;
     }
