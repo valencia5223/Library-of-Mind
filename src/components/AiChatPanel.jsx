@@ -88,7 +88,13 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
   const refreshExcel = () => {
     getExcelInfo(userId).then(setExcel).catch(() => setExcel(null));
   };
-  useEffect(refreshExcel, [userId]);
+  // 창을 열 때·브라우저로 돌아올 때 원본 수정 시각을 다시 확인
+  useEffect(() => {
+    if (!open) return undefined;
+    refreshExcel();
+    window.addEventListener('focus', refreshExcel);
+    return () => window.removeEventListener('focus', refreshExcel);
+  }, [userId, open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 마지막으로 보던 대화 불러오기
   useEffect(() => {
@@ -188,6 +194,8 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
       const { messages, refused } = await runAssistantTurn({
         history: conv.history || [],
         userText: text,
+        // 같은 대화에서 앞서 읽은 엑셀 결과를 재사용하지 않도록 (그 사이 파일이 저장됐을 수 있음)
+        contextLine: excel ? '[첨부 엑셀 있음: 엑셀 내용이 필요하면 앞에서 읽은 결과를 쓰지 말고 search_excel 로 지금 다시 읽을 것]' : '',
         tools,
         onEvent: (ev) => push({ role: ev.type === 'tool' ? 'tool' : 'assistant', text: ev.text })
       });
@@ -290,7 +298,7 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
             <div className="text-xs sub-text">
               {excel.linked
                 ? (excel.permission === 'granted'
-                  ? `원본 연결됨 · 수정 ${formatWhen(excel.lastModified)}`
+                  ? `원본 연결됨 · 수정 ${formatWhen(excel.liveModified || excel.lastModified)}`
                   : `사본 ${formatWhen(excel.savedAt)} · 원본을 읽으려면 연결`)
                 : `사본 ${formatWhen(excel.savedAt)} · 파일이 바뀌면 다시 첨부`}
             </div>

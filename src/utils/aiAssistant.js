@@ -227,9 +227,11 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
 
 // 질문 하나 처리: 도구를 부르고 결과를 돌려주며 Gemini 가 답을 마칠 때까지 반복
 // history: 지금까지의 Gemini contents(수정하지 않고 뒤에만 덧붙임). onEvent({ type: 'text'|'tool', ... })
+// contextLine: 날짜 줄 다음에 덧붙일 상황 안내 (예: 첨부 엑셀은 매번 다시 읽기)
 // 반환: { messages: 새 history, refused }
-export const runAssistantTurn = async ({ history, userText, tools, onEvent }) => {
-  const contents = [...history, { role: 'user', parts: [{ text: `${todayLine()}\n${userText}` }] }];
+export const runAssistantTurn = async ({ history, userText, tools, onEvent, contextLine = '' }) => {
+  const head = contextLine ? `${todayLine()}\n${contextLine}` : todayLine();
+  const contents = [...history, { role: 'user', parts: [{ text: `${head}\n${userText}` }] }];
 
   for (let step = 0; step < MAX_STEPS; step++) {
     const { data, error } = await supabase.functions.invoke('ai-chat', { body: { contents } });

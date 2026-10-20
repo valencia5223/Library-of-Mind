@@ -114,7 +114,14 @@ export const getExcelInfo = async (userId) => {
       permission = 'denied';
     }
   }
-  return { ...excelInfoOf(rec), permission };
+  // 권한이 있으면 원본의 지금 수정 시각 (저장했는지 화면에서 바로 보이게)
+  let liveModified = null;
+  if (permission === 'granted') {
+    try {
+      liveModified = (await rec.handle.getFile()).lastModified;
+    } catch { /* 못 읽으면 사본 시각 */ }
+  }
+  return { ...excelInfoOf(rec), permission, liveModified };
 };
 
 // 원본 파일 읽기 권한 받기. 브라우저가 버튼 클릭 같은 사용자 동작 직후에만 물어볼 수 있어서
