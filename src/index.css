@@ -3218,3 +3218,31 @@ input[type="date"], input[type="search"] {
 }
 .onenote-path svg { flex-shrink: 0; color: #7719aa; }
 .onenote-path span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* AI 비서 지난 대화 목록 */
+.ai-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.ai-history-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  cursor: pointer;
+  text-align: left;
+}
+.ai-history-item:hover { background: var(--bg-subtle); }
+.ai-history-item.is-active { border-color: var(--primary); }
+.ai-history-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

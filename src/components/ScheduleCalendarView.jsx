@@ -1365,7 +1365,7 @@ const getKoreanHoliday = (dateObj) => {
 
       {aiMounted && (
         <Suspense fallback={null}>
-          <AiChatPanel open={aiOpen} onClose={() => setAiOpen(false)} tools={aiTools} />
+          <AiChatPanel open={aiOpen} onClose={() => setAiOpen(false)} tools={aiTools} userId={userId} />
         </Suspense>
       )}
 
