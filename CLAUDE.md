@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `/` (루트) | **Library of Mind** — 독서 서재 + 일정관리(OneNote 연동)/친구 등 (라이브: library-of-mind.onrender.com) | React 19 + Vite 5 + Supabase |
 | `baby-play-studio/` | 유아용 놀이 앱 (동물·과일·차량 소리/퀴즈, 실로폰, 그림그리기, 동요 등) | React 18 + Vite 5 (백엔드 없음) |
 | `Family_MatZip/` | 가족 맛집 앱. Library of Mind와 무관한 별개 프로젝트이므로 루트 앱 작업 시 참고하지 않는다 | React 19 + Vite |
+| `lotto-gacha/` | 로또 6/45 캡슐 뽑기 (당첨 번호 분석 + 번호 뽑기) | React 19 + Vite 5 (백엔드 없음) |
 | `yuna_nutrition_tracker/` | 영양/수면 기록 웹앱 | Flask + Supabase + Gemini, gunicorn 배포 |
 | `flask_app/` | DB 쿼리/프로시저 분석 데스크톱 도구 | Flask, PyInstaller exe |
 | `road_to_threez/`, `creep_company_game/`, 루트 `game.py`/`sprites.py` | 파이썬 게임 | pygame, PyInstaller(`.spec`) |
@@ -54,6 +55,12 @@ Python 프로젝트: `yuna_nutrition_tracker/requirements.txt`, 로컬 실행은
 - AI 일정 비서: 달력 헤더 'AI 비서' → `AiChatPanel`(lazy, 오른쪽 패널) → `src/utils/aiAssistant.js` 의 `runAssistantTurn` 이 Supabase Edge Function `supabase/functions/ai-chat`(Google Gemini REST `generateContent`, 무료 등급, 모델은 Secrets `GEMINI_MODEL` 없으면 `gemini-3.5-flash`(-latest/preview 는 무료 등급에서 1분 넘게 걸려 안 씀, 한도(429)·과부하(5xx)·없는 모델(404)이면 `FALLBACK_MODELS`(3.5-flash-lite → 3.1-flash-lite → flash-lite-latest, 무료 한도가 모델마다 따로)로 차례로 넘기고 이때 thoughtSignature 는 `skip_thought_signature_validator` 로 바꿔 보냄, 429 는 하루/분 한도를 구분해 안내, 생각 시간은 최소로, 쓸 수 있는 모델은 body `{list_models:true}`), `verify_jwt = true`, 키는 Secrets `GEMINI_API_KEY`)을 부른다. 함수는 시스템 프롬프트·도구 정의만 고정해 한 번씩 중계하고, 도구(`search_schedules`(결과 30개·60000자 이하면 본문 전체 포함, 여러 단어면 `matches_per_word`)·`read_note`·`read_notes`(최대 20개)·`add_schedule`·`update_schedule`·`delete_schedule`)는 브라우저가 `createScheduleTools` 로 사용자 권한에서 실행한다(수정·삭제는 `window.confirm`, 친구가 공유해 준 일정은 수정 불가). 저장은 `ScheduleCalendarView` 의 `persistSchedule`/`removeSchedule` 을 같이 쓴다. 대화 기록은 Gemini `contents` 형식이고 받은 parts(`thoughtSignature` 포함)를 고치지 않고 뒤에만 덧붙여 다시 보낸다(도구 결과는 `functionResponse`, 안전 필터 차단 시 그 질문은 기록에서 뺀다). 사용자 메시지 앞에 `[오늘: YYYY-MM-DD (요일) HH:MM]` 을 붙여 날짜 기준을 준다. 대화는 `src/utils/aiChatStore.js`(IndexedDB `lom_ai_chat`, 사용자별 최근 50개, 마지막 대화 id 는 localStorage `ai_chat_active_<userId>`)에 말풍선(items)과 Gemini 기록(history)을 함께 저장해, 다른 메뉴에 갔다 와도 이어지고 '지난 대화'에서 다시 열어 이어서 묻는다. 기기 간 동기화는 안 됨.
 - 실시간 기능은 Supabase Realtime 채널 사용(예: `global_user_nudge:${user.id}`).
 - 웹 푸시: `src/utils/webPush.js` → `public/sw.js` 서비스워커 등록, 발송은 Supabase Edge Function `supabase/functions/send-push/index.ts` (`verify_jwt = false`). VAPID 키는 Supabase Secrets(`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`)로만 주입하며 소스에 하드코딩하지 않는다. 클라이언트 공개키는 `VITE_VAPID_PUBLIC_KEY`.
+
+## lotto-gacha 아키텍처
+
+- 다른 프로젝트와 무관한 별도 앱. 당첨 결과는 `scripts/update-draws.mjs` 가 동행복권(개편 후 비공식 주소 `/lt645/selectPstLt645InfoNew.do?srchDir=center&srchLtEpsd=N` 이 N 근처 10회차, 최신 회차는 `/lt645/result` 의 `id="opt_val"`)에서 받아 `public/draws.json`(행 = [회차, 날짜, 번호 6개, 보너스, 1~5등 당첨자 수, 총판매액])에 새 회차만 덧붙인다. `npm run build` 전에 자동 실행(네트워크 실패 시 기존 데이터로 진행). 브라우저는 CORS 때문에 직접 못 부르므로 개발/preview 서버의 `/dh` 중계로 새 회차를 더 확인한다(정적 배포에서는 draws.json 만).
+- 모든 조합의 당첨 확률은 같으므로 '예측'은 하지 않는다. `src/lotto.js` 의 인기도 모델: 600회 이후 회차의 판매량 대비 3·4·5등 당첨자 수(로그, 표준화)를 번호 45개 + 무늬 4개(연속, 모두 31 이하, 한 십 단위 4개+, 같은 끝자리 3개+)로 릿지 회귀. 앞 80% 학습→뒤 20% 상관 약 0.70. '덜 겹치는 번호' 모드는 인기 낮은 번호 가중치 + 무늬 벌점으로 뽑되 무작위 조합 대비 인기도 하위 30% 이하인 조합만 쓴다(`planSet`, 한 판 6개를 미리 정하고 레버마다 하나씩 공개). 핫/콜드/무작위는 재미용이라고 화면에 밝힌다. 난수는 `crypto.getRandomValues`.
+- 저장한 조합은 localStorage `lotto_gacha_saved_v1`, 추첨 뒤 데이터가 들어오면 등수를 보여 준다.
 
 ## baby-play-studio 아키텍처
 
