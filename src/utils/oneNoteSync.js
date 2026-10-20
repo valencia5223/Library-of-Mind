@@ -169,6 +169,9 @@ export const markSeen = (userId, pages) => {
 
 // 자동 확인 때 다시 훑는 기간 (이 안에서 수정 시각이 바뀐 페이지만 본문을 받음)
 const RECHECK_DAYS = 7;
+// OneNote 목록의 수정 시각은 캐시돼 늦게 바뀔 수 있어, 최근에 고친 페이지는 수정 시각과 상관없이 본문을 다시 받아 비교
+const RECENT_DAYS = 3;
+const RECENT_MAX_PER_SECTION = 15;
 
 // 자동 동기화를 켤 때·'지금 동기화' 때 거슬러 확인하는 기간
 export const SYNC_LOOKBACK_DAYS = 30;
@@ -192,7 +195,6 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
     throw err;
   }
 
-  if (hasImported && !only) await scanTrackedOnce(userId, existingIds);
   const tracked = loadTracked(userId);
   const trackIds = hasImported && !only ? Object.keys(tracked).filter(id => !config[id]) : [];
 
@@ -203,6 +205,7 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
   const seen = loadSeen(userId);
   const synced = [];
   const recheckIso = new Date(Date.now() - RECHECK_DAYS * 86400000).toISOString();
+  const recentMs = Date.now() - RECENT_DAYS * 86400000;
   const isImported = (pageId) => existingIds.has(oneNoteScheduleId(pageId)) || existingIds.has(`sh_${oneNoteScheduleId(pageId)}`);
 
   const blocked = {}; // 암호로 보호된 섹션 (다음부터 건너뜀)
@@ -215,7 +218,15 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
     const firstOrFull = full || !sec.lastSync;
     try {
       let pages = await listPages(sectionId, firstOrFull ? lookbackIso() : recheckIso);
-      if (!firstOrFull) pages = pages.filter(p => seen[p.id] !== p.modified);
+      if (!firstOrFull) {
+        // 수정 시각이 달라진 페이지 + 최근 3일 안에 고친 페이지(최대 15개)
+        const recent = pages
+          .filter(p => new Date(p.modified).getTime() >= recentMs)
+          .sort((a, b) => b.modified.localeCompare(a.modified))
+          .slice(0, RECENT_MAX_PER_SECTION)
+          .map(p => p.id);
+        pages = pages.filter(p => seen[p.id] !== p.modified || recent.includes(p.id));
+      }
       if (!isSync) pages = pages.filter(p => isImported(p.id));
       const friendId = sectionFriendId(shareMap, sectionId, sec.notebookShared ? sec.notebookId : null);
       items.push(...await mapLimit(pages, 3, page => buildScheduleItem(page, { dateBasis: sec.dateBasis, friendId })));
@@ -230,8 +241,22 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
     }
   }
 
-  if (items.length > 0) await onImport(items, { silent: true });
+  // onImport 는 실제로 바뀐 개수를 돌려줌 (내용이 같으면 저장하지 않음)
+  let changed = 0;
+  if (items.length > 0) {
+    const res = await onImport(items, { silent: true });
+    changed = typeof res === 'number' ? res : items.length;
+  }
   if (synced.length > 0) markSeen(userId, synced);
+
+  // 예전에 가져온 노트가 어느 섹션에 있는지 한 번 훑기 (동기화 뒤에, 실패해도 다음에 다시)
+  if (hasImported && !only) {
+    try {
+      await scanTrackedOnce(userId, existingIds);
+    } catch (e) {
+      console.warn('OneNote 섹션 훑기 실패 (다음에 다시 시도):', e);
+    }
+  }
   // 설정이 그사이 바뀌었을 수 있으니 lastSync 만 덮어씀
   const latest = loadAutoSync(userId);
   Object.keys(latest).forEach(id => {
@@ -247,5 +272,5 @@ export const runAutoSync = async (userId, onImport, { sectionIds: only = null, f
   saveTracked(userId, latestTracked);
   // 모든 섹션이 다른 이유로 실패했을 때만 오류로 알림 (보호된 섹션은 오류로 치지 않음)
   if (failures.length > 0 && Object.keys(syncDone).length + Object.keys(trackDone).length === 0) throw failures[0];
-  return items.length;
+  return changed;
 };

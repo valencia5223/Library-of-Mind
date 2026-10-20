@@ -535,7 +535,7 @@ const getKoreanHoliday = (dateObj) => {
       const prev = prevById.get(item.id);
       return prev && prev.user_id && prev.user_id !== userId;
     });
-    const imported = items
+    let imported = items
       .filter(item => !sharedToMe.includes(item))
       .map(item => {
         const prev = prevById.get(item.id);
@@ -549,8 +549,16 @@ const getKoreanHoliday = (dateObj) => {
           created_at: prev ? prev.created_at : new Date().toISOString()
         };
       });
+    // 자동 동기화: 제목·메모·날짜·공유가 그대로면 저장하지 않음
+    if (silent) {
+      imported = imported.filter(item => {
+        const prev = prevById.get(item.id);
+        return !prev || prev.title !== item.title || (prev.memo || '') !== (item.memo || '') ||
+          prev.date !== item.date || (prev.shared_friend_id || null) !== item.shared_friend_id;
+      });
+    }
     if (imported.length === 0) {
-      if (silent) return;
+      if (silent) return 0;
       window.alert('선택한 페이지는 이미 친구가 공유해 준 일정이라 따로 가져오지 않았습니다.');
       return;
     }
@@ -593,7 +601,7 @@ const getKoreanHoliday = (dateObj) => {
       }
     }
 
-    if (silent) return;
+    if (silent) return imported.length;
     const sharedCount = imported.filter(s => s.is_shared).length;
     const friendName = (id) => {
       const f = friendsList.find(fr => fr.id === id);

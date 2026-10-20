@@ -93,7 +93,7 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
     }
     setInfo(count > 0
       ? `최근 ${SYNC_LOOKBACK_DAYS}일 안에 쓰거나 고친 페이지 ${count}개를 달력에 반영했습니다.`
-      : `최근 ${SYNC_LOOKBACK_DAYS}일 안에 쓰거나 고친 페이지가 없습니다.`);
+      : `달력이 이미 최신입니다 (최근 ${SYNC_LOOKBACK_DAYS}일 안에 바뀐 내용 없음).`);
   });
 
   // 날짜 기준을 바꾸면 자동 동기화 설정에도 반영
