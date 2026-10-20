@@ -7,6 +7,8 @@ const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const CATEGORIES = ['WORK', 'READING', 'PERSONAL', 'IMPORTANT'];
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const FULL_MEMO_ITEMS = 3; // 찾은 일정이 이만큼 이하이고
+const FULL_MEMO_CHARS = 20000; // 메모 합이 이 길이 이하면 검색 결과에 본문 전체를 넣음
 
 export const isAssistantAvailable = () => Boolean(isSupabaseConfigured());
 
@@ -56,13 +58,19 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
         })
         .sort((a, b) => (a.date || '').localeCompare(b.date || '') || (a.time || '').localeCompare(b.time || ''));
       const max = Math.min(Math.max(Number(limit) || 30, 1), 100);
+      const items = matched.slice(0, max);
+      // 결과가 적으면 본문 전체를 같이 줘서 read_note 왕복을 줄임
+      const fullMemo = items.length <= FULL_MEMO_ITEMS &&
+        items.reduce((n, s) => n + (s.memo || '').length, 0) <= FULL_MEMO_CHARS;
       return {
         total_matched: matched.length,
-        items: matched.slice(0, max).map(s => ({
-          ...summary(s),
-          memo_preview: (s.memo || '').replace(/\s*\n\s*/g, ' / ').slice(0, 150),
-          memo_length: (s.memo || '').length
-        }))
+        items: items.map(s => fullMemo
+          ? { ...summary(s), memo: s.memo || '' }
+          : {
+            ...summary(s),
+            memo_preview: (s.memo || '').replace(/\s*\n\s*/g, ' / ').slice(0, 150),
+            memo_length: (s.memo || '').length
+          })
       };
     },
 

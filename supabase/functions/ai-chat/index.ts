@@ -19,7 +19,8 @@ const SYSTEM_PROMPT = `당신은 'Library of Mind' 앱의 일정 비서입니다
 
 원칙:
 - 일정·노트 내용은 반드시 도구로 확인한 것만 말합니다. 확인하지 않은 일정이나 노트 내용을 지어내지 않습니다.
-- 노트를 요약·정리할 때는 search_schedules 로 노트를 찾은 뒤 read_note 로 본문 전체를 읽고 답합니다. 미리보기만 보고 요약하지 않습니다.
+- 노트를 요약·정리할 때는 본문 전체를 보고 답합니다. search_schedules 결과에 memo(본문 전체)가 있으면 그대로 쓰고, memo_preview(미리보기)만 있으면 read_note 로 본문을 읽습니다. 미리보기만 보고 요약하지 않습니다.
+- 한 번에 할 수 있는 도구 호출은 한 응답에 같이 요청합니다(예: 노트 여러 개 읽기).
 - 사용자 메시지 앞의 [오늘: ...] 줄이 현재 날짜입니다. '내일', '다음 주 화요일', '10/20' 같은 표현은 이 날짜를 기준으로 YYYY-MM-DD 로 바꿉니다. 연도가 없으면 올해(또는 문맥상 가장 가까운 날짜)로 봅니다.
 - 일정을 추가할 때 시간이 없으면 시간 없이 넣고, 분류가 분명하지 않으면 PERSONAL 로 넣습니다. 분류: WORK(업무), READING(독서), PERSONAL(개인), IMPORTANT(중요).
 - 일정 수정·삭제는 사용자가 분명히 요청했을 때만 합니다. 앱이 실행 전에 사용자에게 확인을 받습니다. 사용자가 거절하면 그대로 받아들입니다.
@@ -33,7 +34,7 @@ const FUNCTIONS = [
   {
     name: 'search_schedules',
     description:
-      '달력 일정과 OneNote 노트를 찾습니다. 날짜 범위·검색어·분류로 거를 수 있고, 각 항목의 id·날짜·제목·분류·OneNote 여부·메모 앞부분을 돌려줍니다. 노트 본문 전체가 필요하면 read_note 를 쓰세요.',
+      '달력 일정과 OneNote 노트를 찾습니다. 날짜 범위·검색어·분류로 거를 수 있고, 각 항목의 id·날짜·제목·분류·OneNote 여부를 돌려줍니다. 결과가 3개 이하로 적으면 memo(본문 전체)를, 많으면 memo_preview(앞부분)를 줍니다. memo_preview 만 있을 때 본문이 필요하면 read_note 를 쓰세요. 날짜 범위를 좁게 주면 더 빠릅니다.',
     parameters: {
       type: 'OBJECT',
       properties: {
@@ -97,6 +98,16 @@ const FUNCTIONS = [
   },
 ];
 
+// 답하기 전 '생각' 시간을 줄여 응답을 빠르게. 모델마다 받는 설정이 달라서(2.5: thinkingBudget, 3: thinkingLevel)
+// 차례로 시도하고, 처음 통한 설정을 기억해 다음부터 바로 쓴다.
+const THINKING_OPTIONS: (Record<string, unknown> | null)[] = [
+  { thinkingLevel: 'low' },
+  { thinkingBudget: 0 },
+  { thinkingBudget: 512 },
+  null, // 설정 없이(모델 기본값)
+];
+const thinkingChoice = new Map<string, number>(); // 모델 → THINKING_OPTIONS 번호
+
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
@@ -118,9 +129,8 @@ Deno.serve(async (req: Request) => {
   if (!Array.isArray(contents) || contents.length === 0) return json({ error: 'contents 가 필요합니다.' }, 400);
   if (contents.length > MAX_MESSAGES) return json({ error: '대화가 너무 길어졌습니다. 새 대화를 시작해 주세요.', code: 'too_long' }, 400);
 
-  let res: Response;
-  try {
-    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+  const callGemini = (thinkingConfig: Record<string, unknown> | null) =>
+    fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
@@ -128,15 +138,29 @@ Deno.serve(async (req: Request) => {
         contents,
         tools: [{ functionDeclarations: FUNCTIONS }],
         toolConfig: { functionCallingConfig: { mode: 'AUTO' } },
-        generationConfig: { maxOutputTokens: 8192 },
+        generationConfig: { maxOutputTokens: 8192, ...(thinkingConfig ? { thinkingConfig } : {}) },
       }),
     });
+
+  let res: Response | undefined;
+  let data: any = null;
+  try {
+    for (let i = thinkingChoice.get(model) ?? 0; i < THINKING_OPTIONS.length; i++) {
+      res = await callGemini(THINKING_OPTIONS[i]);
+      data = await res.json().catch(() => null);
+      // 이 모델이 받지 않는 생각 설정이면 다음 설정으로
+      const thinkingRejected = res.status === 400 && /thinking/i.test(data?.error?.message || '');
+      if (!thinkingRejected) {
+        if (res.ok) thinkingChoice.set(model, i);
+        break;
+      }
+    }
   } catch (error) {
     console.error('ai-chat fetch error:', error);
     return json({ error: 'Gemini 서버에 연결하지 못했습니다.' }, 502);
   }
+  if (!res) return json({ error: 'Gemini 호출에 실패했습니다.' }, 502);
 
-  const data = await res.json().catch(() => null);
   if (!res.ok) {
     const message = data?.error?.message || res.statusText;
     console.error('ai-chat gemini error:', res.status, message);
