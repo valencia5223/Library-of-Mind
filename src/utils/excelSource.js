@@ -222,6 +222,11 @@ const parseDateCell = (XLSX, raw, text, period) => {
 
 const cellText = (v) => String(v ?? '').replace(/\r\n?/g, '\n').trim();
 
+// 업체명 칸이 이 값인 줄(예: '오늘 할 일' 메모 줄)은 업무 기록이 아니라서 아예 읽지 않음 (띄어쓰기 무시)
+const SKIP_COMPANIES = ['오늘할일'];
+const COMPANY_HEADER = /업체|고객|거래처/;
+const isSkippedCompany = (v) => SKIP_COMPANIES.includes(cellText(v).replace(/\s+/g, ''));
+
 // 시트마다: C열이 날짜인 줄을 업무 한 건으로. 날짜가 병합됐거나 비어 있으면 위 줄 날짜를 이어 씀
 const parseBytes = async (bytes) => {
   const XLSX = await import('xlsx');
@@ -269,9 +274,12 @@ const parseBytes = async (bytes) => {
         return;
       }
       if (!header) header = lastNonEmpty || [];
+      const companyCol = header.findIndex((h, j) => j !== c && COMPANY_HEADER.test(cellText(h)));
       const rowDate = date || (cellText(textRow[c]) ? null : prevDate);
       if (date) prevDate = date;
       if (!rowDate || !hasContent) return;
+      // 업체명 칸을 못 찾으면 어느 칸이든 그 값만 적힌 줄을 뺌
+      if (companyCol >= 0 ? isSkippedCompany(others[companyCol]) : others.some(isSkippedCompany)) return;
       const used = new Set();
       const fields = [];
       others.forEach((v, j) => {
