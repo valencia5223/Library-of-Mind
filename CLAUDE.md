@@ -61,6 +61,7 @@ Python 프로젝트: `yuna_nutrition_tracker/requirements.txt`, 로컬 실행은
 - 다른 프로젝트와 무관한 별도 앱. 당첨 결과는 `scripts/update-draws.mjs` 가 동행복권(개편 후 비공식 주소 `/lt645/selectPstLt645InfoNew.do?srchDir=center&srchLtEpsd=N` 이 N 근처 10회차, 최신 회차는 `/lt645/result` 의 `id="opt_val"`)에서 받아 `public/draws.json`(행 = [회차, 날짜, 번호 6개, 보너스, 1~5등 당첨자 수, 총판매액])에 새 회차만 덧붙인다. `npm run build` 전에 자동 실행(네트워크 실패 시 기존 데이터로 진행). 브라우저는 CORS 때문에 직접 못 부르므로 개발/preview 서버의 `/dh` 중계로 새 회차를 더 확인한다(정적 배포에서는 draws.json 만).
 - 모든 조합의 당첨 확률은 같으므로 '예측'은 하지 않는다. `src/lotto.js` 의 인기도 모델: 600회 이후 회차의 판매량 대비 3·4·5등 당첨자 수(로그, 표준화)를 번호 45개 + 무늬 4개(연속, 모두 31 이하, 한 십 단위 4개+, 같은 끝자리 3개+)로 릿지 회귀. 앞 80% 학습→뒤 20% 상관 약 0.70. '덜 겹치는 번호' 모드는 인기 낮은 번호 가중치 + 무늬 벌점으로 뽑되 무작위 조합 대비 인기도 하위 30% 이하인 조합만 쓴다(`planSet`, 한 판 6개를 미리 정하고 레버마다 하나씩 공개). 핫/콜드/무작위는 재미용이라고 화면에 밝힌다. 난수는 `crypto.getRandomValues`.
 - 저장한 조합은 localStorage `lotto_gacha_saved_v1`, 추첨 뒤 데이터가 들어오면 등수를 보여 준다.
+- 배포: Render 정적 사이트(Root Directory `lotto-gacha`, Build `npm install && npm run build`, Publish `dist`, Rewrite `/dh/*` → `https://www.dhlottery.co.kr/*`). 설정은 `lotto-gacha/render.yaml`. 루트 `render.yaml` 은 baby-play-studio 용이라 건드리지 않는다. main 에 push 할 때마다 다시 빌드되며 그때 새 회차를 받는다.
 
 ## baby-play-studio 아키텍처
 

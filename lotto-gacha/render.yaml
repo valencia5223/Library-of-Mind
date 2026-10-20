@@ -1,0 +1,14 @@
+# Render 정적 사이트 (Blueprint 로 만들 때 Blueprint Path 를 lotto-gacha/render.yaml 로)
+# 빌드할 때 prebuild 가 동행복권에서 새 회차를 받아 draws.json 을 갱신하고,
+# /dh/* 는 동행복권으로 중계해 앱이 열릴 때 그 뒤 회차도 확인한다(CORS 회피).
+services:
+  - type: web
+    name: lotto-gacha
+    runtime: static
+    rootDir: lotto-gacha
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /dh/*
+        destination: https://www.dhlottery.co.kr/*
