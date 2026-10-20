@@ -30,8 +30,18 @@ const errorMessage = async (error) => {
 };
 
 // 도구 실행기. ctx: { getSchedules, persistSchedule, removeSchedule, userId }
-export const createScheduleTools = ({ getSchedules, persistSchedule, removeSchedule, userId }) => {
+// loadNoteText(id): OneNote 노트를 원본 서식에서 다시 뽑은 텍스트(취소선 ~~ ~~ 포함). 없으면 null → 저장된 메모를 씀
+export const createScheduleTools = ({ getSchedules, persistSchedule, removeSchedule, loadNoteText, userId }) => {
   const find = (id) => getSchedules().find(s => s.id === id);
+  const fullText = async (s) => {
+    if (loadNoteText && isOneNoteId(s.id)) {
+      try {
+        const text = await loadNoteText(s.id);
+        if (text) return text;
+      } catch { /* 저장된 메모로 */ }
+    }
+    return s.memo || '';
+  };
   const summary = (s) => ({
     id: s.id,
     date: s.date,
@@ -45,7 +55,7 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
   const describe = (s) => `${s.date}${s.time && !isOneNoteId(s.id) ? ` ${s.time}` : ''} · ${s.title}`;
 
   const tools = {
-    search_schedules: ({ date_from, date_to, query, category, onenote_only, limit } = {}) => {
+    search_schedules: async ({ date_from, date_to, query, category, onenote_only, limit } = {}) => {
       const terms = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
       const matched = getSchedules()
         .filter(s => (!date_from || s.date >= date_from) && (!date_to || s.date <= date_to))
@@ -62,10 +72,11 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
       // 결과가 적으면 본문 전체를 같이 줘서 read_note 왕복을 줄임
       const fullMemo = items.length <= FULL_MEMO_ITEMS &&
         items.reduce((n, s) => n + (s.memo || '').length, 0) <= FULL_MEMO_CHARS;
+      const memos = fullMemo ? await Promise.all(items.map(fullText)) : [];
       return {
         total_matched: matched.length,
-        items: items.map(s => fullMemo
-          ? { ...summary(s), memo: s.memo || '' }
+        items: items.map((s, i) => fullMemo
+          ? { ...summary(s), memo: memos[i] }
           : {
             ...summary(s),
             memo_preview: (s.memo || '').replace(/\s*\n\s*/g, ' / ').slice(0, 150),
@@ -74,10 +85,10 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
       };
     },
 
-    read_note: ({ id }) => {
+    read_note: async ({ id }) => {
       const s = find(id);
       if (!s) throw new Error(`id 가 ${id} 인 일정을 찾을 수 없습니다.`);
-      return { ...summary(s), memo: s.memo || '' };
+      return { ...summary(s), memo: await fullText(s) };
     },
 
     add_schedule: async ({ date, title, time, category, memo }) => {

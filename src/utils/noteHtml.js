@@ -27,6 +27,14 @@ const purify = (html) =>
     FORBID_ATTR: ['id', 'class', 'src', 'srcset']
   });
 
+// 할 일 태그 → ☐ / ☑
+const markTodos = (doc) => {
+  doc.body.querySelectorAll('[data-tag]').forEach(el => {
+    const tags = el.getAttribute('data-tag') || '';
+    if (/to-do/.test(tags)) el.prepend(doc.createTextNode(/to-do:completed/.test(tags) ? '☑ ' : '☐ '));
+  });
+};
+
 // doc: DOMParser 로 읽은 OneNote 페이지. 반환: 정리된 HTML (너무 크면 null)
 export const cleanOneNoteHtml = (doc) => {
   const body = doc.body;
@@ -45,11 +53,7 @@ export const cleanOneNoteHtml = (doc) => {
     el.replaceWith(placeholder(`📎 [첨부${el.getAttribute('data-attachment') ? ` ${el.getAttribute('data-attachment')}` : ''}]`))
   );
 
-  // 할 일 태그 → ☐ / ☑
-  body.querySelectorAll('[data-tag]').forEach(el => {
-    const tags = el.getAttribute('data-tag') || '';
-    if (/to-do/.test(tags)) el.prepend(doc.createTextNode(/to-do:completed/.test(tags) ? '☑ ' : '☐ '));
-  });
+  markTodos(doc);
 
   body.querySelectorAll('[style]').forEach(el => {
     const kept = filterStyle(el.getAttribute('style'));
@@ -77,6 +81,36 @@ export const cleanOneNoteHtml = (doc) => {
 
   const html = purify(wrapper.outerHTML);
   return html.length > HTML_MAX ? null : html;
+};
+
+// 취소선 글자를 텍스트에서도 알 수 있게 ~~글자~~ 로 감쌈 (OneNote 는 span style 의 line-through 로 줌)
+const STRIKE_SELECTOR = 'del, s, strike, [style*="line-through"]';
+const markStrikethrough = (doc) => {
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+  const targets = [];
+  while (walker.nextNode()) {
+    const node = walker.currentNode;
+    if (node.nodeValue.trim() && node.parentElement?.closest(STRIKE_SELECTOR)) targets.push(node);
+  }
+  targets.forEach(node => {
+    const [, lead, body, tail] = node.nodeValue.match(/^(\s*)([\s\S]*?)(\s*)$/);
+    node.nodeValue = `${lead}~~${body}~~${tail}`;
+  });
+};
+
+// OneNote 페이지(원본 또는 정리된 서식 HTML) → 일반 텍스트 (줄바꿈 유지, 취소선은 ~~ ~~). doc 은 바뀜
+export const noteDocToText = (doc) => {
+  if (!doc.body) return '';
+  doc.querySelectorAll('title, style, script').forEach(el => el.remove());
+  markTodos(doc);
+  markStrikethrough(doc);
+  doc.querySelectorAll('br').forEach(el => el.replaceWith('\n'));
+  doc.querySelectorAll('p, div, li, h1, h2, h3, h4, h5, h6, tr').forEach(el => el.append('\n'));
+  return (doc.body.textContent || '')
+    .split('\n')
+    .map(line => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .join('\n');
 };
 
 // 보여 주기 직전에 한 번 더 거르기 (링크는 새 창으로)

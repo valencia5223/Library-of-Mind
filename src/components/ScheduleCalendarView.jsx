@@ -149,6 +149,18 @@ const decryptText = (cipherText, userSecret = 'default') => {
   return cipherText;
 };
 
+// OneNote 일정 한 건의 원본 서식(memo_html)을 DB 에서 읽음 (내 것/공유 사본 어느 쪽이든). 없으면 null
+const fetchMemoHtml = async (id, userId) => {
+  const altId = id.startsWith('sh_') ? id.replace('sh_', '') : `sh_${id}`;
+  const { data, error } = await supabase.from('user_schedules').select('id, memo_html').in('id', [id, altId]);
+  if (error) {
+    if (isMissingColumnError(error, 'memo_html')) memoHtmlColumnMissing = true;
+    return null;
+  }
+  const row = (data || []).find(r => r.memo_html);
+  return row ? decryptText(row.memo_html, userId) : null;
+};
+
 export default function ScheduleCalendarView({ userId = null }) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [schedules, setSchedules] = useState([]);
@@ -561,6 +573,14 @@ const getKoreanHoliday = (dateObj) => {
     getSchedules: () => schedulesRef.current,
     persistSchedule: (sch) => persistRef.current(sch),
     removeSchedule: (id) => removeRef.current(id),
+    // OneNote 노트는 원본 서식에서 다시 텍스트를 뽑아 취소선(~~ ~~)까지 전달
+    loadNoteText: async (id) => {
+      if (!isOneNoteId(id) || memoHtmlColumnMissing || !isSupabaseConfigured() || !userId) return null;
+      const html = await fetchMemoHtml(id, userId);
+      if (!html) return null;
+      const { noteDocToText } = await import('../utils/noteHtml');
+      return noteDocToText(new DOMParser().parseFromString(html, 'text/html'));
+    },
     userId
   }), [userId]);
 
@@ -811,22 +831,11 @@ const getKoreanHoliday = (dateObj) => {
     setMemoHtml(null);
     setMemoView('rich');
     if (!showModal || !isOneNoteSchedule || memoHtmlColumnMissing || !isSupabaseConfigured() || !userId) return;
-    const id = editingSchedule.id;
-    const altId = id.startsWith('sh_') ? id.replace('sh_', '') : `sh_${id}`;
     let cancelled = false;
     setMemoHtmlLoading(true);
-    supabase
-      .from('user_schedules')
-      .select('id, memo_html')
-      .in('id', [id, altId])
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) {
-          if (isMissingColumnError(error, 'memo_html')) memoHtmlColumnMissing = true;
-          return;
-        }
-        const row = (data || []).find(r => r.memo_html);
-        if (row) setMemoHtml(decryptText(row.memo_html, userId));
+    fetchMemoHtml(editingSchedule.id, userId)
+      .then(html => {
+        if (!cancelled && html) setMemoHtml(html);
       })
       .finally(() => {
         if (!cancelled) setMemoHtmlLoading(false);
