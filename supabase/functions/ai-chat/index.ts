@@ -2,7 +2,7 @@
 //
 // API 키는 소스에 두지 않고 Supabase Secrets 로만 주입한다
 //   supabase secrets set GEMINI_API_KEY=...        (Google AI Studio 에서 발급, 무료 등급 가능)
-//   supabase secrets set GEMINI_MODEL=...          (선택. 기본 gemini-flash-latest)
+//   supabase secrets set GEMINI_MODEL=...          (선택. 기본 gemini-3.5-flash. 쓸 수 있는 이름은 body { list_models: true } 로 확인)
 // 로그인한 사용자만 호출할 수 있다(config.toml 에서 verify_jwt = true).
 // 도구(일정 찾기·노트 읽기·일정 추가/수정/삭제)는 이 함수가 아니라 브라우저가 사용자 권한으로 실행하고,
 // 결과를 functionResponse 로 다시 보내온다. 이 함수는 시스템 프롬프트·도구 정의를 고정하고 한 번의 호출만 중계한다.
@@ -12,7 +12,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const DEFAULT_MODEL = 'gemini-flash-latest';
+// -latest/preview 모델은 무료 등급에서 몹시 붐벼 1분 넘게 걸리기도 해서 안정판 이름을 쓴다
+const DEFAULT_MODEL = 'gemini-3.5-flash';
+const BUSY_FALLBACK_MODEL = 'gemini-3.5-flash-lite'; // 기본 모델이 붐빌 때(503 등) 한 번 더 시도
 const MAX_MESSAGES = 120; // 대화가 너무 길어지면 새 대화를 시작하도록
 
 const SYSTEM_PROMPT = `당신은 'Library of Mind' 앱의 일정 비서입니다. 사용자의 달력 일정과, OneNote 에서 달력으로 가져온 노트(회의록·업무일지 등)를 도구로 읽고 다룹니다.
@@ -121,16 +123,26 @@ Deno.serve(async (req: Request) => {
 
   // contents: Gemini 형식 대화 [{ role: 'user'|'model', parts: [...] }]
   let contents: unknown[];
+  let listModels = false;
   try {
-    ({ contents } = await req.json());
+    ({ contents, list_models: listModels } = await req.json());
   } catch {
     return json({ error: '요청 형식이 올바르지 않습니다.' }, 400);
+  }
+  // 관리용: 이 키로 쓸 수 있는 모델 이름 목록 (GEMINI_MODEL 고를 때)
+  if (listModels) {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': apiKey } });
+    const body = await r.json().catch(() => null);
+    const names = (body?.models || [])
+      .filter((m: any) => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map((m: any) => String(m.name).replace(/^models\//, ''));
+    return json({ current: model, models: names });
   }
   if (!Array.isArray(contents) || contents.length === 0) return json({ error: 'contents 가 필요합니다.' }, 400);
   if (contents.length > MAX_MESSAGES) return json({ error: '대화가 너무 길어졌습니다. 새 대화를 시작해 주세요.', code: 'too_long' }, 400);
 
-  const callGemini = (thinkingConfig: Record<string, unknown> | null) =>
-    fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+  const callGemini = (thinkingConfig: Record<string, unknown> | null, useModel = model) =>
+    fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(useModel)}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
@@ -161,6 +173,18 @@ Deno.serve(async (req: Request) => {
   }
   if (!res) return json({ error: 'Gemini 호출에 실패했습니다.' }, 502);
 
+  // 서버가 붐비면 가벼운 모델로 한 번 더
+  if ([500, 503, 504].includes(res.status) && model !== BUSY_FALLBACK_MODEL) {
+    console.warn('ai-chat busy, fallback:', res.status, data?.error?.message);
+    try {
+      res = await callGemini(THINKING_OPTIONS[thinkingChoice.get(BUSY_FALLBACK_MODEL) ?? 0], BUSY_FALLBACK_MODEL);
+      data = await res.json().catch(() => null);
+    } catch (error) {
+      console.error('ai-chat fallback fetch error:', error);
+      return json({ error: 'Gemini 서버에 연결하지 못했습니다.' }, 502);
+    }
+  }
+
   if (!res.ok) {
     const message = data?.error?.message || res.statusText;
     console.error('ai-chat gemini error:', res.status, message);
@@ -170,6 +194,7 @@ Deno.serve(async (req: Request) => {
     }
     if (res.status === 404) return json({ error: `Gemini 모델(${model})을 찾을 수 없습니다. GEMINI_MODEL 을 확인해 주세요.` }, 500);
     if (res.status === 400) return json({ error: `요청 오류: ${message}` }, 400);
+    if (res.status === 503) return json({ error: 'Gemini 서버가 붐빕니다. 잠시 뒤 다시 시도해 주세요.' }, 503);
     return json({ error: `Gemini API 오류 (${res.status})` }, 502);
   }
 
