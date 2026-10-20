@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users, ExternalLink, Download, NotebookText, Search } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users, ExternalLink, Download, NotebookText, Search, Sparkles } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
+import { createScheduleTools } from '../utils/aiAssistant';
 const OneNoteImportModal = lazy(() => import('./OneNoteImportModal'));
 const ScheduleNotesPanel = lazy(() => import('./ScheduleNotesPanel'));
 const NoteRichView = lazy(() => import('./NoteRichView'));
+const AiChatPanel = lazy(() => import('./AiChatPanel'));
 
 const isOneNoteId = (id = '') => id.replace(/^sh_/, '').startsWith('sch_onenote_');
 
@@ -164,6 +166,8 @@ export default function ScheduleCalendarView({ userId = null }) {
   const [sharedFriendId, setSharedFriendId] = useState(''); // 공유할 친구 ID
   const [showOneNote, setShowOneNote] = useState(false);
   const [showNotesPanel, setShowNotesPanel] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiMounted, setAiMounted] = useState(false); // 한 번 열면 닫아도 대화가 남도록 계속 그려 둠
   const [memoHtml, setMemoHtml] = useState(null); // OneNote 원본 서식 (일정 창을 열 때 DB 에서 읽음)
   const [memoHtmlLoading, setMemoHtmlLoading] = useState(false);
   const [memoView, setMemoView] = useState('rich'); // 'rich' 원본 서식 | 'text' 텍스트
@@ -344,6 +348,7 @@ export default function ScheduleCalendarView({ userId = null }) {
   };
 
   const saveSchedulesToLocal = (newSchedules) => {
+    schedulesRef.current = newSchedules; // 연달아 저장할 때(AI 비서 등) 다음 저장이 최신 목록을 보도록
     setSchedules(newSchedules);
     localStorage.setItem(storageKey, JSON.stringify(newSchedules));
   };
@@ -500,38 +505,14 @@ const getKoreanHoliday = (dateObj) => {
     setShowModal(true);
   };
 
-  // 일정 저장
-  const handleSaveSchedule = async (e) => {
-    e.preventDefault();
-    if (!title.trim() || !scheduleDate) return;
-
-    const dateStr = scheduleDate;
-    const isShared = Boolean(sharedFriendId);
-    const newSchedule = {
-      id: editingSchedule ? editingSchedule.id : `sch_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-      user_id: userId,
-      shared_friend_id: sharedFriendId || null,
-      is_shared: isShared,
-      date: dateStr,
-      title: title.trim(),
-      time: time,
-      category: category,
-      memo: memo.trim(),
-      is_completed: editingSchedule ? editingSchedule.is_completed : false,
-      created_at: editingSchedule ? editingSchedule.created_at : new Date().toISOString()
-    };
-
-    let updatedList = [];
-    if (editingSchedule) {
-      updatedList = schedules.map(s => s.id === editingSchedule.id ? newSchedule : s);
-    } else {
-      updatedList = [...schedules, newSchedule];
-    }
-
-    saveSchedulesToLocal(updatedList);
-    setShowModal(false);
+  // 일정 한 건 저장: 로컬 목록 + DB(암호화) + 친구 공유 사본. 일정 창 저장과 AI 비서가 함께 씀
+  const persistSchedule = async (newSchedule) => {
+    const list = schedulesRef.current;
+    const exists = list.some(s => s.id === newSchedule.id);
+    saveSchedulesToLocal(exists ? list.map(s => (s.id === newSchedule.id ? newSchedule : s)) : [...list, newSchedule]);
 
     if (isSupabaseConfigured() && userId) {
+      const isShared = Boolean(newSchedule.shared_friend_id);
       try {
         // 1) 내 계정 레코드 DB 업서트 (E2E 암호화)
         const dbSchedulePayload = {
@@ -542,12 +523,12 @@ const getKoreanHoliday = (dateObj) => {
         await supabase.from('user_schedules').upsert(dbSchedulePayload);
 
         // 2) 친구와 공유 시, 상대방 계정 기준 레코드도 듀얼 업서트 시도 (실패 시에도 위의 shared_friend_id 쿼리로 노출 보장)
-        if (isShared && sharedFriendId) {
+        if (isShared) {
           try {
             const friendSchedulePayload = {
               ...dbSchedulePayload,
               id: `sh_${newSchedule.id}`,
-              user_id: sharedFriendId,
+              user_id: newSchedule.shared_friend_id,
               shared_friend_id: userId,
               is_shared: true
             };
@@ -560,6 +541,51 @@ const getKoreanHoliday = (dateObj) => {
         console.warn('Supabase 일정 저장 실패 (로컬 유지됨):', err.message);
       }
     }
+  };
+
+  // 일정 한 건 삭제 (공유 사본 포함)
+  const removeSchedule = async (scheduleId) => {
+    saveSchedulesToLocal(schedulesRef.current.filter(s => s.id !== scheduleId));
+    if (isSupabaseConfigured() && userId) {
+      const altId = scheduleId.startsWith('sh_') ? scheduleId.replace('sh_', '') : `sh_${scheduleId}`;
+      await supabase.from('user_schedules').delete().in('id', [scheduleId, altId]);
+    }
+  };
+
+  // AI 비서가 쓰는 도구 (저장·삭제 함수는 매 렌더 새로 만들어지므로 ref 로 최신 것을 부름)
+  const persistRef = useRef(persistSchedule);
+  persistRef.current = persistSchedule;
+  const removeRef = useRef(removeSchedule);
+  removeRef.current = removeSchedule;
+  const aiTools = useMemo(() => createScheduleTools({
+    getSchedules: () => schedulesRef.current,
+    persistSchedule: (sch) => persistRef.current(sch),
+    removeSchedule: (id) => removeRef.current(id),
+    userId
+  }), [userId]);
+
+  // 일정 저장 (일정 창)
+  const handleSaveSchedule = async (e) => {
+    e.preventDefault();
+    if (!title.trim() || !scheduleDate) return;
+
+    const isShared = Boolean(sharedFriendId);
+    const newSchedule = {
+      id: editingSchedule ? editingSchedule.id : `sch_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+      user_id: userId,
+      shared_friend_id: sharedFriendId || null,
+      is_shared: isShared,
+      date: scheduleDate,
+      title: title.trim(),
+      time: time,
+      category: category,
+      memo: memo.trim(),
+      is_completed: editingSchedule ? editingSchedule.is_completed : false,
+      created_at: editingSchedule ? editingSchedule.created_at : new Date().toISOString()
+    };
+
+    setShowModal(false);
+    await persistSchedule(newSchedule);
   };
 
   // OneNote 페이지 → 일정 (같은 페이지는 id 가 같아 다시 가져오면 덮어씀)
@@ -693,14 +719,7 @@ const getKoreanHoliday = (dateObj) => {
   const handleDeleteSchedule = async (scheduleId, e) => {
     e.stopPropagation();
     if (!window.confirm('이 일정을 삭제하시겠습니까?')) return;
-
-    const updated = schedules.filter(s => s.id !== scheduleId);
-    saveSchedulesToLocal(updated);
-
-    if (isSupabaseConfigured() && userId) {
-      const altId = scheduleId.startsWith('sh_') ? scheduleId.replace('sh_', '') : `sh_${scheduleId}`;
-      await supabase.from('user_schedules').delete().in('id', [scheduleId, altId]);
-    }
+    await removeSchedule(scheduleId);
   };
 
   // 카테고리 태그 정보
@@ -1027,6 +1046,18 @@ const getKoreanHoliday = (dateObj) => {
         </div>
 
         <div className="calendar-nav-controls">
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              setAiMounted(true);
+              setAiOpen(true);
+            }}
+            title="일정·OneNote 노트를 묻고 정리하는 AI 비서"
+          >
+            <Sparkles size={15} /> AI 비서
+          </button>
+
 
           <button
             type="button"
@@ -1252,6 +1283,12 @@ const getKoreanHoliday = (dateObj) => {
             </form>
           </div>
         </div>
+      )}
+
+      {aiMounted && (
+        <Suspense fallback={null}>
+          <AiChatPanel open={aiOpen} onClose={() => setAiOpen(false)} tools={aiTools} />
+        </Suspense>
       )}
 
       {showNotesPanel && (

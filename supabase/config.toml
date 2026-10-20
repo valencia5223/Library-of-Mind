@@ -4,3 +4,7 @@ project_id = "library-of-mind"
 
 [functions.send-push]
 verify_jwt = false
+
+# 일정 비서 AI 채팅: 로그인한 사용자만 호출 (Supabase 가 JWT 를 확인)
+[functions.ai-chat]
+verify_jwt = true
