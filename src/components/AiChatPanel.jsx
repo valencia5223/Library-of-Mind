@@ -22,7 +22,7 @@ const RichText = ({ text }) => (
 
 // 달력 옆에 열리는 일정 비서 채팅 (tools: createScheduleTools 결과)
 export default function AiChatPanel({ open, onClose, tools }) {
-  const [history, setHistory] = useState([]); // Claude 에 보내는 대화 (뒤에만 덧붙임)
+  const [history, setHistory] = useState([]); // Gemini 에 보내는 대화 (뒤에만 덧붙임)
   const [items, setItems] = useState([]); // 화면에 보이는 말풍선
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
@@ -101,7 +101,7 @@ export default function AiChatPanel({ open, onClose, tools }) {
               ))}
             </div>
             <p className="text-xs sub-text" style={{ marginTop: '1rem', lineHeight: 1.6 }}>
-              질문에 필요한 일정·노트 내용이 AI(Claude)로 전송됩니다. 일정 수정·삭제는 실행 전에 확인을 받아요.
+              질문에 필요한 일정·노트 내용이 AI(Google Gemini)로 전송됩니다. 무료 등급은 보낸 내용이 Google 서비스 개선에 쓰일 수 있어요. 일정 수정·삭제는 실행 전에 확인을 받아요.
             </p>
           </div>
         ) : (

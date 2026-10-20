@@ -1,5 +1,5 @@
-// 일정 비서 AI 채팅: Supabase Edge Function(ai-chat)으로 Claude 를 부르고,
-// Claude 가 요청한 도구(일정 찾기·노트 읽기·일정 추가/수정/삭제)는 브라우저에서 사용자 권한으로 실행한다.
+// 일정 비서 AI 채팅: Supabase Edge Function(ai-chat)으로 Google Gemini 를 부르고,
+// Gemini 가 요청한 도구(일정 찾기·노트 읽기·일정 추가/수정/삭제)는 브라우저에서 사용자 권한으로 실행한다.
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 const MAX_STEPS = 10; // 한 번의 질문에서 도구를 부르고 다시 묻는 최대 횟수
@@ -154,42 +154,45 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
   };
 };
 
-// 질문 하나 처리: 도구를 부르고 결과를 돌려주며 Claude 가 답을 마칠 때까지 반복
-// history: 지금까지의 API 메시지(수정하지 않고 뒤에만 덧붙임). onEvent({ type: 'text'|'tool', ... })
+// 질문 하나 처리: 도구를 부르고 결과를 돌려주며 Gemini 가 답을 마칠 때까지 반복
+// history: 지금까지의 Gemini contents(수정하지 않고 뒤에만 덧붙임). onEvent({ type: 'text'|'tool', ... })
 // 반환: { messages: 새 history, refused }
 export const runAssistantTurn = async ({ history, userText, tools, onEvent }) => {
-  const messages = [...history, { role: 'user', content: `${todayLine()}\n${userText}` }];
+  const contents = [...history, { role: 'user', parts: [{ text: `${todayLine()}\n${userText}` }] }];
 
   for (let step = 0; step < MAX_STEPS; step++) {
-    const { data, error } = await supabase.functions.invoke('ai-chat', { body: { messages } });
+    const { data, error } = await supabase.functions.invoke('ai-chat', { body: { contents } });
     if (error) throw new Error(await errorMessage(error));
     if (!data || data.error) throw new Error(data?.error || 'AI 비서 응답이 비어 있습니다.');
 
-    // 안전 필터가 거절(대체 모델까지 거절): 이번 질문은 대화에서 빼고 알림
-    if (data.stop_reason === 'refusal') return { messages: history, refused: true };
+    // 안전 필터에 막힘: 이번 질문은 대화에서 빼고 알림
+    if (data.blocked) return { messages: history, refused: true };
 
-    // 받은 내용은 그대로(사고 과정 블록 포함) 다음 요청에 다시 보냄
-    messages.push({ role: 'assistant', content: data.content });
-    data.content
-      .filter(b => b.type === 'text' && b.text.trim())
-      .forEach(b => onEvent({ type: 'text', text: b.text }));
+    const parts = Array.isArray(data.parts) ? data.parts : [];
+    if (parts.length === 0) throw new Error('AI 비서가 답을 만들지 못했습니다. 다시 시도해 주세요.');
 
-    if (data.stop_reason === 'pause_turn') continue;
-    const uses = data.content.filter(b => b.type === 'tool_use');
-    if (uses.length === 0) return { messages, refused: false };
+    // 받은 parts 는 그대로(thoughtSignature 포함) 다음 요청에 다시 보냄
+    contents.push({ role: 'model', parts });
+    parts
+      .filter(p => typeof p.text === 'string' && !p.thought && p.text.trim())
+      .forEach(p => onEvent({ type: 'text', text: p.text.trim() }));
+
+    const calls = parts.filter(p => p.functionCall).map(p => p.functionCall);
+    if (calls.length === 0) return { messages: contents, refused: false };
 
     // 모든 도구 결과를 한 user 메시지로
     const results = [];
-    for (const use of uses) {
-      onEvent({ type: 'tool', text: tools.label(use.name, use.input) });
+    for (const call of calls) {
+      onEvent({ type: 'tool', text: tools.label(call.name, call.args || {}) });
+      let response;
       try {
-        const result = await tools.run(use.name, use.input);
-        results.push({ type: 'tool_result', tool_use_id: use.id, content: JSON.stringify(result) });
+        response = { result: await tools.run(call.name, call.args || {}) };
       } catch (e) {
-        results.push({ type: 'tool_result', tool_use_id: use.id, content: e.message || String(e), is_error: true });
+        response = { error: e.message || String(e) };
       }
+      results.push({ functionResponse: { ...(call.id ? { id: call.id } : {}), name: call.name, response } });
     }
-    messages.push({ role: 'user', content: results });
+    contents.push({ role: 'user', parts: results });
   }
   throw new Error('단계가 너무 많아 멈췄습니다. 질문을 나눠서 다시 해 주세요.');
 };
