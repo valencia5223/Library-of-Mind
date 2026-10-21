@@ -195,7 +195,7 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
     // 도구 실행 뒤 덧붙일 문구 (취소선 확인 결과)
     note: (name, result) => {
       if (name === 'search_excel') {
-        return `↳ ${result?.file || '엑셀'} · ${result?.total_matched ?? 0}줄 · ${result?.source || ''}`;
+        return `↳ ${result?.file || '엑셀'} (수정 ${result?.file_modified || '?'}) · ${result?.total_matched ?? 0}줄 · ${result?.source || ''}`;
       }
       if (!['read_note', 'read_notes', 'search_schedules'].includes(name)) return null;
       const list = name === 'read_note' ? [result]
@@ -225,13 +225,22 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
   };
 };
 
+// 지난 질문에서 읽은 엑셀 내용은 지움: 그 사이 파일이 저장됐을 수 있어서 AI 가 옛 결과를 다시 쓰지 못하게
+// (functionResponse 만 바꾸고 model parts·thoughtSignature 는 그대로)
+const EXCEL_EXPIRED = { result: { expired: '지난 질문에서 읽은 엑셀 결과라 지웠습니다. 엑셀 내용이 필요하면 search_excel 을 다시 부르세요.' } };
+const expireExcelResults = (history) => history.map(c => (
+  c.role === 'user' && (c.parts || []).some(p => p.functionResponse?.name === 'search_excel' && !p.functionResponse.response?.result?.expired)
+    ? { ...c, parts: c.parts.map(p => (p.functionResponse?.name === 'search_excel' ? { functionResponse: { ...p.functionResponse, response: EXCEL_EXPIRED } } : p)) }
+    : c
+));
+
 // 질문 하나 처리: 도구를 부르고 결과를 돌려주며 Gemini 가 답을 마칠 때까지 반복
 // history: 지금까지의 Gemini contents(수정하지 않고 뒤에만 덧붙임). onEvent({ type: 'text'|'tool', ... })
 // contextLine: 날짜 줄 다음에 덧붙일 상황 안내 (예: 첨부 엑셀은 매번 다시 읽기)
 // 반환: { messages: 새 history, refused }
 export const runAssistantTurn = async ({ history, userText, tools, onEvent, contextLine = '' }) => {
   const head = contextLine ? `${todayLine()}\n${contextLine}` : todayLine();
-  const contents = [...history, { role: 'user', parts: [{ text: `${head}\n${userText}` }] }];
+  const contents = [...expireExcelResults(history), { role: 'user', parts: [{ text: `${head}\n${userText}` }] }];
 
   for (let step = 0; step < MAX_STEPS; step++) {
     const { data, error } = await supabase.functions.invoke('ai-chat', { body: { contents } });

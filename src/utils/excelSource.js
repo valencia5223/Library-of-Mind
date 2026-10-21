@@ -148,10 +148,22 @@ const loadLatest = async (userId) => {
     try {
       const state = await rec.handle.queryPermission({ mode: 'read' });
       if (state === 'granted') {
-        const file = await rec.handle.getFile();
+        // 엑셀이 막 저장하는 중이면 잠깐 못 읽을 수 있어 한 번 더
+        let file;
+        let bytes;
+        for (let attempt = 0; ; attempt++) {
+          try {
+            file = await rec.handle.getFile();
+            bytes = await file.arrayBuffer();
+            break;
+          } catch (e) {
+            if (attempt >= 2 || e?.name === 'NotFoundError') throw e;
+            await new Promise(r => setTimeout(r, 400));
+          }
+        }
         live = true;
-        if (file.lastModified !== rec.lastModified || file.size !== rec.bytes?.byteLength) {
-          rec.bytes = await file.arrayBuffer();
+        if (file.lastModified !== rec.lastModified || bytes.byteLength !== rec.bytes?.byteLength) {
+          rec.bytes = bytes;
           rec.lastModified = file.lastModified;
           rec.savedAt = Date.now();
           await putRecord(rec).catch(e => console.warn('엑셀 사본 저장 실패:', e));
@@ -161,7 +173,7 @@ const loadLatest = async (userId) => {
       }
     } catch (e) {
       console.warn('엑셀 원본 읽기 실패:', e);
-      reason = e?.name === 'NotFoundError' ? '원본 파일을 찾을 수 없음(옮겼거나 이름이 바뀜)' : '원본 파일을 읽지 못함(다른 프로그램이 쓰는 중일 수 있음)';
+      reason = e?.name === 'NotFoundError' ? '원본 파일을 찾을 수 없음(옮겼거나 이름이 바뀜)' : `원본 파일을 읽지 못함(${e?.name || '오류'})`;
     }
   }
   return { rec, live, reason };
@@ -269,6 +281,7 @@ const parseBytes = async (bytes) => {
     let header = null;
     let lastNonEmpty = null;
     let prevDate = null;
+    let prevCompany = '';
     let count = 0;
     texts.forEach((textRow, i) => {
       const rawRow = raws[i] || [];
@@ -285,6 +298,11 @@ const parseBytes = async (bytes) => {
       const rowDate = date || (cellText(textRow[c]) ? null : prevDate);
       if (date) prevDate = date;
       if (!rowDate || !hasContent) return;
+      // 업체명이 빈 줄은 위 줄 거래처의 업무 (병합 칸도 아래 칸은 비어 있어서 같이 처리됨)
+      if (companyCol >= 0) {
+        if (others[companyCol]) prevCompany = others[companyCol];
+        else if (prevCompany) others[companyCol] = prevCompany;
+      }
       // 업체명 칸을 못 찾으면 어느 칸이든 그 값만 적힌 줄을 뺌
       if (companyCol >= 0 ? isSkippedCompany(others[companyCol]) : others.some(isSkippedCompany)) return;
       const used = new Set();
