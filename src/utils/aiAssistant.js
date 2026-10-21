@@ -255,9 +255,13 @@ export const runAssistantTurn = async ({ history, userText, tools, onEvent, cont
 
     // 받은 parts 는 그대로(thoughtSignature 포함) 다음 요청에 다시 보냄
     contents.push({ role: 'model', parts });
-    parts
-      .filter(p => typeof p.text === 'string' && !p.thought && p.text.trim())
-      .forEach(p => onEvent({ type: 'text', text: p.text.trim() }));
+    // 한 응답의 글 조각들은 말풍선 하나로
+    const text = parts
+      .filter(p => typeof p.text === 'string' && !p.thought)
+      .map(p => p.text)
+      .join('')
+      .trim();
+    if (text) onEvent({ type: 'text', text });
 
     const calls = parts.filter(p => p.functionCall).map(p => p.functionCall);
     if (calls.length === 0) return { messages: contents, refused: false };

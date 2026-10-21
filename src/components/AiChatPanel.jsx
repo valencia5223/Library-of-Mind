@@ -197,7 +197,19 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
         // 같은 대화에서 앞서 읽은 엑셀 결과를 재사용하지 않도록 (그 사이 파일이 저장됐을 수 있음)
         contextLine: excel ? '[첨부 엑셀 있음: 엑셀 내용이 필요하면 앞에서 읽은 결과를 쓰지 말고 search_excel 로 지금 다시 읽을 것]' : '',
         tools,
-        onEvent: (ev) => push({ role: ev.type === 'tool' ? 'tool' : 'assistant', text: ev.text })
+        onEvent: (ev) => {
+          // 도구 표시 없이 바로 이어지는 답은 앞 말풍선에 붙여 하나로
+          const last = conv.items?.[conv.items.length - 1];
+          if (ev.type !== 'tool' && last?.role === 'assistant') {
+            conv.items = [...conv.items.slice(0, -1), { ...last, text: `${last.text}
+
+${ev.text}` }];
+            if (convRef.current === conv) setItems(conv.items);
+            persist(conv);
+            return;
+          }
+          push({ role: ev.type === 'tool' ? 'tool' : 'assistant', text: ev.text });
+        }
       });
       conv.history = messages;
       if (refused) push({ role: 'error', text: '이 요청에는 답할 수 없습니다. 다르게 질문해 주세요.' });
