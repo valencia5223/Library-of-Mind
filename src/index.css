@@ -3219,6 +3219,32 @@ input[type="date"], input[type="search"] {
 .onenote-path svg { flex-shrink: 0; color: #7719aa; }
 .onenote-path span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* AI 비서 말풍선 복사 · 자주 쓰는 요청 */
+.ai-msg-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ai-msg-wrap-user { align-items: flex-end; }
+.ai-msg-wrap-assistant { align-items: flex-start; }
+.ai-msg-wrap .ai-msg { align-self: auto; }
+.ai-copy {
+  gap: 4px;
+  color: var(--text-sub);
+  opacity: 0.7;
+}
+.ai-msg-wrap:hover .ai-copy { opacity: 1; }
+.ai-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px 0;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+.ai-quick .btn { gap: 4px; }
+.ai-quick + .ai-panel-input { border-top: none; }
+
 /* AI 비서 첨부 엑셀 */
 .ai-excel-bar {
   display: flex;

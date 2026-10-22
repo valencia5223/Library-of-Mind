@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Sparkles, Send, Loader2, History, SquarePen, Trash2, ChevronLeft, FileSpreadsheet } from 'lucide-react';
+import { X, Sparkles, Send, Loader2, History, SquarePen, Trash2, ChevronLeft, FileSpreadsheet, Copy, Check } from 'lucide-react';
 import { runAssistantTurn, isAssistantAvailable } from '../utils/aiAssistant';
 import {
   newConversationId,
@@ -50,6 +50,37 @@ const Inline = ({ text }) => (
   </>
 );
 
+// 복사용: 화면처럼 **·### ·--- ·` 표시를 뺀 글
+const plainText = (text) => text
+  .replace(/`([^`\n]+)`/g, '$1')
+  .split('\n')
+  .filter(line => !/^\s*(-{3,}|\*{3,})\s*$/.test(line))
+  .map(line => line.replace(/^\s*#{1,6}\s+/, '').replace(/\*\*([^*]+)\*\*/g, '$1'))
+  .join('\n');
+
+const copyText = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // 권한이 없거나 오래된 브라우저
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  }
+};
+
+// 자주 쓰는 요청 (입력창 위 버튼)
+const QUICK_ACTIONS = [
+  { label: '오늘 업무일지 요약', text: '오늘 엑셀 업무일지 요약해줘' }
+];
+
 // '### 제목' 은 굵은 줄로, '---' 구분선은 숨김, '`코드`' 는 따옴표 없이
 const RichText = ({ text }) => {
   const lines = text.replace(/`([^`\n]+)`/g, '$1').split('\n').filter(line => !/^\s*(-{3,}|\*{3,})\s*$/.test(line));
@@ -84,6 +115,16 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
   const fileInputRef = useRef(null);
   const [excel, setExcel] = useState(null); // 첨부한 엑셀 정보 (getExcelInfo)
   const [excelBusy, setExcelBusy] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState(null);
+
+  const copyMessage = async (i, text) => {
+    if (await copyText(plainText(text))) {
+      setCopiedIndex(i);
+      setTimeout(() => setCopiedIndex(cur => (cur === i ? null : cur)), 1500);
+    } else {
+      window.alert('복사하지 못했습니다.');
+    }
+  };
 
   const refreshExcel = () => {
     getExcelInfo(userId).then(setExcel).catch(() => setExcel(null));
@@ -201,9 +242,7 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
           // 도구 표시 없이 바로 이어지는 답은 앞 말풍선에 붙여 하나로
           const last = conv.items?.[conv.items.length - 1];
           if (ev.type !== 'tool' && last?.role === 'assistant') {
-            conv.items = [...conv.items.slice(0, -1), { ...last, text: `${last.text}
-
-${ev.text}` }];
+            conv.items = [...conv.items.slice(0, -1), { ...last, text: `${last.text}\n\n${ev.text}` }];
             if (convRef.current === conv) setItems(conv.items);
             persist(conv);
             return;
@@ -369,9 +408,20 @@ ${ev.text}` }];
           </div>
         ) : (
           items.map((m, i) => (
-            <div key={i} className={`ai-msg ai-msg-${m.role}`}>
-              {m.role === 'tool' ? m.text : <RichText text={m.text} />}
-            </div>
+            m.role === 'user' || m.role === 'assistant' ? (
+              <div key={i} className={`ai-msg-wrap ai-msg-wrap-${m.role}`}>
+                <div className={`ai-msg ai-msg-${m.role}`}>
+                  <RichText text={m.text} />
+                </div>
+                <button type="button" className="btn btn-ghost btn-xs ai-copy" onClick={() => copyMessage(i, m.text)} title="복사">
+                  {copiedIndex === i ? <><Check size={12} /> 복사됨</> : <><Copy size={12} /> 복사</>}
+                </button>
+              </div>
+            ) : (
+              <div key={i} className={`ai-msg ai-msg-${m.role}`}>
+                {m.role === 'tool' ? m.text : <RichText text={m.text} />}
+              </div>
+            )
           ))
         )}
         {busy && view === 'chat' && (
@@ -380,6 +430,16 @@ ${ev.text}` }];
           </div>
         )}
       </div>
+
+      {view === 'chat' && isAssistantAvailable() && (
+        <div className="ai-quick">
+          {QUICK_ACTIONS.map(a => (
+            <button key={a.label} type="button" className="btn btn-secondary btn-xs" onClick={() => send(a.text)} disabled={busy}>
+              <FileSpreadsheet size={12} /> {a.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {view === 'chat' && (
         <form
