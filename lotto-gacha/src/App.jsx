@@ -45,7 +45,9 @@ const useDraws = () => {
       try {
         for (let i = 0; i < 3; i++) {
           const max = draws[draws.length - 1][FIELDS.round];
-          const res = await fetch(`./dh${ROUND_URL(max + 5)}`, { headers: { accept: 'application/json' } });
+          // 아직 없는 회차를 기준으로 물으면 빈 목록이 오므로, 가진 마지막 회차를 기준으로 묻는다
+          // (응답은 최신 회차까지 잘려서 그 뒤 새 회차들이 같이 옴)
+          const res = await fetch(`./dh${ROUND_URL(max)}`, { headers: { accept: 'application/json' } });
           if (!res.ok || !(res.headers.get('content-type') || '').includes('json')) break;
           const list = (await res.json())?.data?.list;
           if (!Array.isArray(list)) break;
