@@ -51,7 +51,13 @@ Deno.serve(async (req: Request) => {
       query = query.eq('user_email', target_user_email);
     }
 
-    const { data: subscriptions, error: dbError } = await query;
+    let { data: subscriptions, error: dbError } = await query;
+
+    // DB 에 user_email 칸이 없으면 위 조회가 실패하므로 user_id 로만 다시 찾는다
+    if (dbError && target_user_id) {
+      ({ data: subscriptions, error: dbError } = await supabase
+        .from('push_subscriptions').select('*').eq('user_id', target_user_id));
+    }
 
     if (dbError) {
       console.error('Push Subscription DB fetch error:', dbError);
@@ -60,8 +66,8 @@ Deno.serve(async (req: Request) => {
     let sentCount = 0;
     let failedCount = 0;
     const notificationPayload = JSON.stringify({
-      title: title || '💬 [클릭 시 채팅창 열림] 쪽지가 도착했습니다!',
-      body: body || '상대방이 채팅창을 흔듭니다! ⚡\n👉 알림창 아무 곳이나 클릭하면 채팅창으로 바로 이동합니다.',
+      title: title || '🔔 일정 알림',
+      body: body || '확인할 일정이 있습니다.',
       icon: icon || '/favicon.ico',
       data: {
         url: url || '/',

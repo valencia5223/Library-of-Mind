@@ -58,13 +58,11 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
 
       // 2. 상대방의 전역 수신 채널 및 Web Push (브라우저/메모창 닫혀 있을 때 오프라인 대응!)
       const targetUserId = friend.friend_id || friend.id;
-      const senderName = user.email ? user.email.split('@')[0] : '상대방';
       await sendWebPushNotification(targetUserId, {
         target_user_email: friend.email,
         sender_id: user.id,
-        sender_email: user.email,
-        title: '💬 [클릭 시 채팅창 열림] 쪽지가 도착했습니다!',
-        body: `${senderName}님이 채팅창을 흔듭니다! ⚡\n👉 알림창 아무 곳이나 클릭하면 1:1 라이브 채팅창이 바로 열립니다.`
+        sender_email: user.email
+        // 제목·본문은 sendWebPushNotification 기본값(채팅과 무관한 '일정 알림')을 쓴다
       });
     } catch (err) {
       console.warn('흔들기 알람 전송 예외 발생:', err);

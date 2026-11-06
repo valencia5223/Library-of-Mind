@@ -131,8 +131,8 @@ export default function App() {
   // 작업표시줄 아이콘 & 탭 제목 깜박임 (document.title 교체)
   const triggerTaskbarBlink = (senderEmail) => {
     const originalTitle = 'Library of Mind';
-    const senderName = senderEmail ? senderEmail.split('@')[0] : '상대방';
-    const alertTitle = `📢 [쪽지 도착] ${senderName}님이 채팅창을 흔듭니다!`;
+    // 업무 중 화면을 봐도 채팅인지 모르게 보낸 사람·채팅 문구를 넣지 않는다
+    const alertTitle = '🔔 일정 알림';
 
     let count = 0;
     const interval = setInterval(() => {
@@ -149,8 +149,9 @@ export default function App() {
   const triggerWebNotification = (senderEmail, senderId) => {
     if (isNotificationSupported() && Notification.permission === 'granted') {
       const senderName = senderEmail ? senderEmail.split('@')[0] : '상대방';
-      const notification = new Notification('💬 [클릭 시 채팅창 열림] 쪽지가 도착했습니다!', {
-        body: `${senderName}님이 채팅창을 흔듭니다! ⚡\n👉 이 알림창 아무 곳이나 클릭하면 1:1 라이브 채팅창이 즉시 열립니다.`,
+      // 보낸 사람·채팅 문구는 화면에 보이지 않게 한다 (senderName 은 클릭 시 채팅창 여는 데만 씀)
+      const notification = new Notification('🔔 일정 알림', {
+        body: '확인할 일정이 있습니다.',
         icon: '/favicon.ico',
         requireInteraction: false
       });

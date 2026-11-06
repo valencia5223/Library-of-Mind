@@ -144,14 +144,20 @@ export async function subscribeUserToPush(userId, userEmail, forceRefresh = fals
       const p256dh = subJson.keys?.p256dh || '';
       const auth = subJson.keys?.auth || '';
 
-      const { error } = await supabase.from('push_subscriptions').upsert({
+      const row = {
         user_id: userId || null,
         user_email: userEmail || '',
         endpoint: subscription.endpoint,
         p256dh: p256dh,
         auth: auth,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'endpoint' });
+      };
+      let { error } = await supabase.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' });
+      // DB 에 user_email 칸이 없으면 저장 전체가 실패하므로 그 칸을 빼고 다시 저장
+      if (error && /user_email/.test(error.message || '')) {
+        delete row.user_email;
+        ({ error } = await supabase.from('push_subscriptions').upsert(row, { onConflict: 'endpoint' }));
+      }
 
       if (error) {
         console.warn('Push Subscription DB 저장 경고:', error.message);
@@ -172,8 +178,8 @@ export async function sendWebPushNotification(targetUserId, payload) {
   const targetEmail = payload?.target_user_email || payload?.email || '';
   if (!targetUserId && !targetEmail) return;
 
-  const title = payload.title || '💬 [클릭 시 채팅창 열림] 쪽지가 도착했습니다!';
-  const body = payload.body || '상대방이 채팅창을 흔듭니다! ⚡\n👉 알림창 아무 곳이나 클릭하면 채팅창으로 바로 이동합니다.';
+  const title = payload.title || '🔔 일정 알림';
+  const body = payload.body || '확인할 일정이 있습니다.';
   const senderEmail = payload.sender_email || '';
   const senderId = payload.sender_id || '';
 
