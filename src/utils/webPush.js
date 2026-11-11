@@ -74,10 +74,9 @@ export async function subscribeUserToPush(userId, userEmail, forceRefresh = fals
   }
 
   try {
-    // 1) 알림 권한 요청
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      console.warn('사용자가 데스크톱 알림 권한을 거부했거나 설정하지 않았습니다.');
+    // 1) 이미 허용된 경우에만 구독한다. 권한 요청은 '알림 켜기' 버튼(클릭)에서만 한다:
+    //    클릭 없이 요청하면 Edge·Chrome 이 조용히 무시하다가 자동으로 '차단'으로 바꾼다
+    if (Notification.permission !== 'granted') {
       return null;
     }
 

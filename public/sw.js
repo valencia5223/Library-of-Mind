@@ -42,23 +42,14 @@ self.addEventListener('push', (event) => {
     badge: notificationData.badge,
     tag: notificationData.tag,
     renotify: notificationData.renotify,
-    requireInteraction: false, // 🔒 프라이버시 보호: 30초 후 자동 소멸
+    requireInteraction: false,
     vibrate: [200, 100, 200, 100, 200],
     data: notificationData.data
   };
 
   event.waitUntil(
-    self.registration.showNotification(notificationData.title, options).then(() => {
-      // 🔒 프라이버시 보호: 30초 타이머 설정 후 팝업 자동 닫기
-      setTimeout(async () => {
-        try {
-          const notifications = await self.registration.getNotifications({ tag: notificationData.tag });
-          notifications.forEach((n) => n.close());
-        } catch (e) {
-          console.warn('Auto close notification timer warning:', e);
-        }
-      }, 30000);
-    })
+    // 자동으로 닫지 않는다: 안 누르고 사라지는 알림이 쌓이면 브라우저가 알림 권한을 회수한다
+    self.registration.showNotification(notificationData.title, options)
   );
 });
 
@@ -82,13 +73,6 @@ self.addEventListener('message', (event) => {
         sender_id: event.data.senderId,
         sender_email: event.data.senderEmail
       }
-    }).then(() => {
-      setTimeout(async () => {
-        try {
-          const notifications = await self.registration.getNotifications({ tag: tag });
-          notifications.forEach((n) => n.close());
-        } catch (e) {}
-      }, 30000);
     });
   }
 });

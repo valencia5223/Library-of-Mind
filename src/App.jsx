@@ -150,21 +150,17 @@ export default function App() {
     if (isNotificationSupported() && Notification.permission === 'granted') {
       const senderName = senderEmail ? senderEmail.split('@')[0] : '상대방';
       // 보낸 사람·채팅 문구는 화면에 보이지 않게 한다 (senderName 은 클릭 시 채팅창 여는 데만 씀)
+      // 웹 푸시(sw.js)와 같은 tag 라서 둘 다 와도 알림은 하나만 남는다.
+      // 자동으로 닫지 않는다: 아무도 안 누르고 사라지는 알림이 쌓이면 브라우저가 알림 권한을 회수한다
       const notification = new Notification('🔔 일정 알림', {
         body: '확인할 일정이 있습니다.',
         icon: '/favicon.ico',
+        tag: 'nudge-shake-notification',
+        renotify: true,
         requireInteraction: false
       });
 
-      // 🔒 프라이버시 보호: 30초 후 알림 창 자동 소멸
-      const timer = setTimeout(() => {
-        try {
-          notification.close();
-        } catch (e) {}
-      }, 30000);
-
       notification.onclick = () => {
-        clearTimeout(timer);
         window.focus();
         if (senderEmail || senderId) {
           setActiveMemoFriend({
@@ -188,11 +184,7 @@ export default function App() {
     });
 
     if (user && isSupabaseConfigured()) {
-      // 알림 권한 요청 (모바일 모듈 미지원 환경 방어)
-      if (isNotificationSupported() && Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
-
+      // 알림 권한은 여기서 요청하지 않는다(클릭 없는 요청은 브라우저가 자동 차단함). 친구 화면 '알림 켜기' 버튼에서만 요청
       const channel = supabase.channel(`global_user_nudge:${user.id}`)
         .on('broadcast', { event: 'nudge_received' }, (payload) => {
           // 본인이 보낸 흔들기 이벤트라면 본인 알림 무시 (상대방만 알림 수신)
