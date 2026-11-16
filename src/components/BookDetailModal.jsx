@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ExternalLink, Plus, RefreshCw, Trash2, X, BookOpen, Layers, FileText, Upload, Eye } from 'lucide-react';
 import PdfBookViewerModal from './PdfBookViewerModal';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
+import { findBookDetail, yes24SearchUrl } from '../utils/yes24';
 import { savePdfBlobToIDB, getFreshPdfUrl, deletePdfBlobFromIDB } from '../utils/pdfStorage';
 
 const parseAuthorAndTranslator = (authorStr = '') => {
@@ -49,26 +50,16 @@ export default function BookDetailModal({
 
   const pdfStorageKey = `book_pdf_meta_${book.id || book.isbn || 'demo'}`;
 
-  // 모달 오픈 시 알라딘 ItemLookUp API를 통해 물리적 실제 페이지 수 자동 검증 & 동기화
+  // 모달을 열 때 쪽수가 없으면 예스24 상세에서 실제 쪽수를 받아 보여 준다
   useEffect(() => {
     let isMounted = true;
-    const rawId = String(book.isbn || book.id || '').replace(/^[a-z]+-/i, '').replace(/^K/i, '').trim();
-    
-    if (rawId) {
-      const fetchRealPages = async () => {
-        try {
-          const idType = rawId.length < 10 ? 'ItemId' : rawId.length === 10 ? 'ISBN' : 'ISBN13';
-          const { data, error } = await supabase.rpc('aladin_lookup_proxy', { item_id: rawId, id_type: idType });
-          if (!error && data && data.item && data.item.length > 0) {
-            const p = parseInt(data.item[0].subInfo?.itemPage || data.item[0].itemPage);
-            if (p && p > 0 && isMounted) {
-              setRealPageCount(p);
-              book.total_pages = p; // book 객체의 total_pages 직접 수정을 통한 일관성 보장
-            }
-          }
-        } catch (e) {}
-      };
-      fetchRealPages();
+    if (!book.total_pages && (book.isbn || book.title)) {
+      findBookDetail(book).then((d) => {
+        if (isMounted && d?.total_pages) {
+          setRealPageCount(d.total_pages);
+          book.total_pages = d.total_pages; // 서재에 담을 때 같은 값을 쓰도록
+        }
+      });
     }
     return () => { isMounted = false; };
   }, [book]);
@@ -150,7 +141,7 @@ export default function BookDetailModal({
   };
 
   const info = parseAuthorAndTranslator(book.author);
-  const buyLink = book.buy_link || book.link || (book.title ? `https://www.aladin.co.kr/search/wsearchresult.aspx?SearchTarget=Book&SearchWord=${encodeURIComponent(book.title)}` : null);
+  const buyLink = book.buy_link || book.link || (book.title ? yes24SearchUrl(book.title) : null);
 
   return (
     <div className="modal-overlay" style={{ zIndex: 99999, position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
@@ -257,7 +248,7 @@ export default function BookDetailModal({
                   textDecoration: 'none'
                 }}
               >
-                <ExternalLink size={14} /> 알라딘 구매 페이지
+                <ExternalLink size={14} /> 예스24 구매 페이지
               </a>
             )}
           </div>
@@ -329,7 +320,7 @@ export default function BookDetailModal({
                 }}
               >
                 {loadingDesc ? (
-                  <span style={{ color: '#a1a1aa', fontStyle: 'italic' }}>알라딘 API에서 도서 상세 소개를 불러오는 중입니다...</span>
+                  <span style={{ color: '#a1a1aa', fontStyle: 'italic' }}>예스24에서 도서 상세 소개를 불러오는 중입니다...</span>
                 ) : (
                   description || book.description || '등록된 도서 소개 정보가 없습니다.'
                 )}

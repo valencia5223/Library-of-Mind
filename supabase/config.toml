@@ -8,3 +8,7 @@ verify_jwt = false
 # 일정 비서 AI 채팅: 로그인한 사용자만 호출 (Supabase 가 JWT 를 확인)
 [functions.ai-chat]
 verify_jwt = true
+
+# 예스24 도서 API 중계(베스트셀러·검색·상세): 키는 Secrets YES24_API_KEY
+[functions.yes24]
+verify_jwt = true

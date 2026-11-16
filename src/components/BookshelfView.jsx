@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BookOpen, Star, ExternalLink, PlusCircle, Plus, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw, X, Sparkles, Search, Compass } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import BookDetailModal from './BookDetailModal';
+import { findBookDetail } from '../utils/yes24';
 import ThoughtLedger from './ThoughtLedger';
 import ShelfGuestbookModal, { POSTIT_COLORS } from './ShelfGuestbookModal';
 import ReadingTasteGalaxyModal from './ReadingTasteGalaxyModal';
@@ -215,269 +216,28 @@ export default function BookshelfView({
     };
   }, [selectedBook, showDescModal]);
 
-  // 알라딘 API 프록시 & ItemLookUp을 활용한 도서 상세 전문 및 목차 수집 함수
+  // 예스24 상세에서 도서 소개 전문과 목차를 받아 보여 준다
   const handleFetchBookDescription = async (book) => {
     if (!book) return;
 
-    // 즉시 기존 도서 소개글이 존재하면 먼저 보여주고, 로딩바는 소개글이 없을 때만 표시
+    // 기존 소개글이 있으면 먼저 보여주고, 로딩바는 소개글이 없을 때만 표시
     setBookDescription(book.description || '');
     setLoadingDesc(!book.description);
     setShowDescModal(true);
 
     try {
-      const rawIsbn = (book.isbn || '').trim().replace(/-/g, '');
-      const cleanIsbn = rawIsbn.replace(/^K/i, '');
-      let fetchedDesc = null;
-      let fetchedToc = null;
-
-      // 1단계: ISBN 또는 ItemId가 존재할 때 알라딘 ItemLookUp API 직접 호출 (전문 소개글 & 목차 획득)
-      if (cleanIsbn) {
-        const idType = rawIsbn.startsWith('K') || cleanIsbn.length < 10 ? 'ItemId' : cleanIsbn.length === 10 ? 'ISBN' : 'ISBN13';
-        const lookUpUrl = `https://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=ttbcdw2341334001&itemIdType=${idType}&ItemId=${cleanIsbn}&Cover=Big&Version=20131101&output=js&OptResult=description,fulldescription,toc,story,authors`;
-        
-        let data = await fetchAladinJsonp(lookUpUrl);
-        if (!data || !data.item) {
-          data = await fetchJsonWithProxyFallback(lookUpUrl);
-        }
-
-        if (data && data.item && data.item.length > 0) {
-          const item = data.item[0];
-          fetchedDesc = item.fullDescription || item.fulldescription || item.subInfo?.fullDescription || item.description || item.story || item.subInfo?.story;
-          fetchedToc = item.toc || item.subInfo?.toc;
-        }
-      }
-
-      // 2단계: ItemLookUp으로 부족하거나 없을 때 제목 기반 검색 프록시 수행
-      let targetItemId = cleanIsbn;
-      if (!fetchedDesc && book.title) {
-        const cleanTitle = (book.title || '')
-          .split('-')[0]
-          .split('(')[0]
-          .replace(/[^\w\s가-힣]/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-
-        let response;
-        try {
-          response = await supabase.rpc('aladin_search_proxy', {
-            search_query: cleanTitle,
-            start_page: 1,
-            sort_option: 'Accuracy'
-          });
-        } catch (err) {
-          console.warn('aladin_search_proxy 호출 오류, HTTP 프록시 폴백:', err);
-        }
-
-        if (!response || !response.data || !response.data.item) {
-          const searchUrl = `https://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=ttbcdw2341334001&Query=${encodeURIComponent(cleanTitle)}&QueryType=Title&MaxResults=1&SearchTarget=Book&output=js&Version=20131101&OptResult=description,fulldescription,toc,story`;
-          const sData = await fetchJsonWithProxyFallback(searchUrl);
-          if (sData && sData.item && sData.item.length > 0) {
-            response = { data: sData };
-          }
-        }
-
-        if (response && response.data && response.data.item && response.data.item.length > 0) {
-          const item = response.data.item.find(i => i.title && i.title.includes(cleanTitle.slice(0, 4))) || response.data.item[0];
-          fetchedDesc = item.fullDescription || item.fulldescription || item.subInfo?.fullDescription || item.description || item.story;
-          fetchedToc = item.toc || item.subInfo?.toc;
-          targetItemId = item.itemId || item.isbn13 || targetItemId;
-        }
-      }
-
-      // 2.5단계: 웹 상품 페이지에서 풍부한 전체 줄거리/소개글(편집장의 선택/출판사 서평 등) 보완 추출
-      if (targetItemId) {
-        try {
-          const webUrl = `https://www.aladin.co.kr/shop/wproduct.aspx?ItemId=${targetItemId}`;
-          const webHtml = await fetchJsonWithProxyFallback(webUrl);
-          if (typeof webHtml === 'string' && webHtml.length > 1000) {
-            const extraBlocks = [];
-            const regexR = /<div[^>]*class="[^"]*Ere_prod_mconts_R[^"]*"[^>]*>([\s\S]*?)<\/div>/gi;
-            let matchR;
-            while ((matchR = regexR.exec(webHtml)) !== null) {
-              let text = matchR[1]
-                .replace(/<script[\s\S]*?<\/script>/gi, '')
-                .replace(/<style[\s\S]*?<\/style>/gi, '')
-                .replace(/<br\s*\/?>/gi, '\n')
-                .replace(/<\/?[^>]+(>|$)/g, '')
-                .replace(/&nbsp;/gi, ' ')
-                .replace(/&quot;/gi, '"')
-                .replace(/&gt;/gi, '>')
-                .replace(/&lt;/gi, '<')
-                .replace(/&amp;/gi, '&')
-                .trim();
-
-              text = text.split('$j(')[0].split('var swiper')[0].trim();
-
-              if (text.length > 50 && !text.startsWith('- 알라딘')) {
-                extraBlocks.push(text);
-              }
-            }
-
-            if (extraBlocks.length > 0) {
-              const fullWebText = extraBlocks.join('\n\n');
-              if (fullWebText.length > (fetchedDesc || '').length) {
-                fetchedDesc = fullWebText;
-              }
-            }
-          }
-        } catch (webErr) {
-          console.warn('알라딘 웹 전체 소개글 추출 실패:', webErr);
-        }
-      }
-
-      // 3단계: 도서 소개 전문 및 목차 통합 정제
-      let fullText = (fetchedDesc || book.description || '알라딘에 등록된 상세 소개글이 없습니다.')
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<\/?[^>]+(>|$)/g, '')
-        .trim();
-
-      if (fetchedToc) {
-        const cleanToc = String(fetchedToc)
-          .replace(/<br\s*\/?>/gi, '\n')
-          .replace(/<\/?[^>]+(>|$)/g, '')
-          .trim();
-        setBookToc(cleanToc);
-      } else {
-        setBookToc('');
-      }
-
-      setBookDescription(fullText);
+      const detail = await findBookDetail(book);
+      const desc = detail?.description || '';
+      setBookToc(detail?.toc || '');
+      setBookDescription(
+        desc.length > (book.description || '').length ? desc : (book.description || '등록된 상세 소개글이 없습니다.')
+      );
     } catch (e) {
       console.warn('도서 상세 소개 조회 실패:', e);
       setBookDescription(book.description || '도서 상세 소개 정보를 불러오는 중 오류가 발생했습니다.');
     } finally {
       setLoadingDesc(false);
     }
-  };
-
-  // 헬퍼: 브라우저 네이티브 JSONP 스크립트 주입 (CORS 프록시 100% 우회)
-  const fetchAladinJsonp = (baseUrl) => {
-    return new Promise((resolve) => {
-      const callbackName = 'aladin_cb_' + Math.random().toString(36).substring(2, 9);
-      const script = document.createElement('script');
-      
-      const timeout = setTimeout(() => {
-        cleanup();
-        resolve(null);
-      }, 4000);
-
-      const cleanup = () => {
-        clearTimeout(timeout);
-        delete window[callbackName];
-        if (script.parentNode) {
-          script.parentNode.removeChild(script);
-        }
-      };
-
-      window[callbackName] = (data) => {
-        cleanup();
-        resolve(data);
-      };
-
-      const hasQuery = baseUrl.includes('?');
-      script.src = `${baseUrl}${hasQuery ? '&' : '?'}callback=${callbackName}`;
-      script.onerror = () => {
-        cleanup();
-        resolve(null);
-      };
-
-      document.body.appendChild(script);
-    });
-  };
-
-  // 헬퍼: 3중 CORS 프록시 회선 (JSONP 실패 시 폴백)
-  const fetchJsonWithProxyFallback = async (targetUrl) => {
-    const proxyList = [
-      `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`,
-      `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`,
-      `https://thingproxy.freeboard.io/fetch/${targetUrl}`
-    ];
-
-    for (const proxyUrl of proxyList) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3500);
-        
-        const res = await fetch(proxyUrl, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        
-        if (res.ok) {
-          let text = '';
-          if (proxyUrl.includes('allorigins.win/get')) {
-            const wrapper = await res.json();
-            text = wrapper.contents || '';
-          } else {
-            text = await res.text();
-          }
-
-          const cleanText = text.trim().replace(/^window\.[^(]+\(|\);?$/g, '').replace(/;$/, '');
-          if (cleanText.startsWith('{') || cleanText.startsWith('[')) {
-            try {
-              return JSON.parse(cleanText);
-            } catch (e) {}
-          }
-          if (cleanText.length > 0) {
-            return cleanText;
-          }
-        }
-      } catch (e) {
-        console.warn(`프록시 (${proxyUrl}) 통신 실패:`, e);
-      }
-    }
-
-    return null;
-  };
-
-  // 알라딘 ItemLookUp 조회를 통한 페이지 수 및 상세 정보 파싱 (Supabase RPC 1순위 -> JSONP/프록시 2순위)
-  const fetchPageCountFromAladin = async (itemId, idType = 'ItemId') => {
-    const cleanId = String(itemId || '').replace(/^K/i, '').trim();
-    if (!cleanId) return null;
-
-    // 1차: Supabase Database RPC (aladin_lookup_proxy) 서버사이드 직접 호출 (Mixed Content/CORS 100% 방지)
-    try {
-      const { data, error } = await supabase.rpc('aladin_lookup_proxy', {
-        item_id: cleanId,
-        id_type: idType
-      });
-      if (!error && data && data.item && data.item.length > 0) {
-        const item = data.item[0];
-        const p = item.subInfo?.itemPage || item.itemPage || null;
-        if (p) return { pages: parseInt(p), pubDate: item.pubDate || null, item };
-      }
-    } catch (rpcErr) {
-      console.warn('aladin_lookup_proxy RPC 시도 실패:', rpcErr);
-    }
-
-    // 2차: 브라우저 JSONP 및 CORS 프록시 폴백
-    const ttbKey = 'ttbcdw2341334001';
-    const aladinUrl = `https://www.aladin.co.kr/ttb/api/ItemLookUp.aspx?ttbkey=${ttbKey}&itemIdType=${idType}&ItemId=${cleanId}&Cover=Big&Version=20131101&output=js&OptResult=itemPage,description,fulldescription,toc`;
-    
-    let data = await fetchAladinJsonp(aladinUrl);
-    if (!data || data.errorCode) {
-      data = await fetchJsonWithProxyFallback(aladinUrl);
-    }
-
-    if (data && data.item && data.item.length > 0) {
-      const item = data.item[0];
-      const p = item.subInfo?.itemPage || item.itemPage || null;
-      if (p) return { pages: parseInt(p), pubDate: item.pubDate || null, item };
-    }
-
-    // 3차: 알라딘 웹 상품 페이지 직접 스크레이핑 (412쪽 등의 실제 물리 페이지 수 100% 감지 보장)
-    try {
-      const webUrl = `https://www.aladin.co.kr/shop/wproduct.aspx?ItemId=${cleanId}`;
-      const webHtml = await fetchJsonWithProxyFallback(webUrl);
-      if (typeof webHtml === 'string' && webHtml.length > 1000) {
-        const pageMatch = webHtml.match(/(\d{2,4})\s*쪽/i);
-        if (pageMatch && parseInt(pageMatch[1]) > 0) {
-          return { pages: parseInt(pageMatch[1]), pubDate: null, item: null };
-        }
-      }
-    } catch (webErr) {
-      console.warn('알라딘 웹 페이지 스크레이핑 폴백 실패:', webErr);
-    }
-
-    return null;
   };
 
   // 1차: Google Books API (무료 공공 API, Quota 제한 고려)
@@ -629,7 +389,7 @@ export default function BookshelfView({
     };
   };
 
-  // [다중 API 연동 체인] Supabase RPC 알라딘 연동 -> 알라딘 JSONP -> Google Books -> Open Library
+  // [페이지 수 동기화] 예스24 상세(ISBN → 상품번호 → 제목 검색) -> Google Books -> Open Library
   const handleSyncBookInfo = async (book) => {
     if (!book || syncingGoogleInfo) return;
     setSyncingGoogleInfo(true);
@@ -638,85 +398,14 @@ export default function BookshelfView({
       let fetchedPages = null;
       let fetchedPubDate = null;
       let source = '';
-      const rawIsbn = (book.isbn || '').trim().replace(/-/g, '');
-      const cleanIsbn = rawIsbn.replace(/^K/i, '');
-      const ttbKey = 'ttbcdw2341334001';
+      const rawIsbn = (book.isbn || '').trim().replace(/-/g, '').replace(/^K/i, '');
 
-      // [1단계] 알라딘 API (ISBN 또는 ItemId 직접 조회) - ItemId, ISBN13, ISBN 순차 시도
-      if (rawIsbn) {
-        const idTypesToTry = rawIsbn.startsWith('K')
-          ? ['ItemId', 'ISBN13', 'ISBN']
-          : rawIsbn.length === 10
-          ? ['ISBN', 'ItemId', 'ISBN13']
-          : ['ISBN13', 'ItemId', 'ISBN'];
-
-        for (const type of idTypesToTry) {
-          const res = await fetchPageCountFromAladin(cleanIsbn, type);
-          if (res && res.pages) {
-            fetchedPages = res.pages;
-            fetchedPubDate = res.pubDate;
-            source = `알라딘 API (${type})`;
-            break;
-          }
-        }
-      }
-
-      // [2단계] Supabase Database RPC (aladin_search_proxy) 활용 - 서버사이드 100% 성공 보장
-      if (!fetchedPages && book.title) {
-        try {
-          const cleanTitle = (book.title || '')
-            .split('-')[0]
-            .split('(')[0]
-            .replace(/[^\w\s가-힣]/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-
-          let foundItemId = null;
-
-          // 2-1: Supabase RPC 우선 시도 (CORS 및 프록시 에러 100% 우회)
-          try {
-            const { data, error } = await supabase.rpc('aladin_search_proxy', { search_query: cleanTitle });
-            if (!error && data && data.item && data.item.length > 0) {
-              const firstItem = data.item[0];
-              const p = firstItem.subInfo?.itemPage || firstItem.itemPage;
-              if (p && parseInt(p) > 0) {
-                fetchedPages = parseInt(p);
-                fetchedPubDate = firstItem.pubDate || book.pub_date;
-                source = '알라딘 도서 검색 (aladin_search_proxy)';
-              } else {
-                foundItemId = firstItem.itemId || firstItem.isbn13 || firstItem.isbn;
-              }
-            }
-          } catch (rpcErr) {
-            console.warn('Supabase RPC 알라딘 검색 실패, HTTP 프록시 폴백:', rpcErr);
-          }
-
-          // 2-2: HTTP 프록시 폴백 또는 ItemLookUp 추적
-          if (!fetchedPages && foundItemId) {
-            const res2 = await fetchPageCountFromAladin(foundItemId, 'ItemId');
-            if (res2 && res2.pages) {
-              fetchedPages = res2.pages;
-              fetchedPubDate = res2.pubDate;
-              source = '알라딘 도서 추적 (ItemLookUp)';
-            }
-          }
-
-          if (!fetchedPages && !foundItemId) {
-            const searchUrl = `https://www.aladin.co.kr/ttb/api/ItemSearch.aspx?ttbkey=${ttbKey}&Query=${encodeURIComponent(cleanTitle)}&QueryType=Title&MaxResults=1&SearchTarget=Book&output=js&Version=20131101&OptResult=itemPage`;
-            const sData = await fetchJsonWithProxyFallback(searchUrl);
-            if (sData && sData.item && sData.item.length > 0) {
-              const item = sData.item[0];
-              const p = item.subInfo?.itemPage || item.itemPage;
-              if (p && parseInt(p) > 0) {
-                fetchedPages = parseInt(p);
-                fetchedPubDate = item.pubDate || book.pub_date;
-                source = '알라딘 도서 프록시 (ItemSearch)';
-              }
-            }
-          }
-        } catch (titleErr) {
-          console.warn('제목 검색 2단계 동기화 실패:', titleErr);
-        }
+      // [1단계] 예스24
+      const detail = await findBookDetail(book);
+      if (detail?.total_pages) {
+        fetchedPages = detail.total_pages;
+        fetchedPubDate = detail.pub_date || null;
+        source = '예스24';
       }
 
       // [3단계] Google Books API 시도
@@ -1458,7 +1147,7 @@ export default function BookshelfView({
                       className="btn btn-sm btn-outline flex align-center gap-1"
                       onClick={() => handleSyncBookInfo(selectedBook)}
                       disabled={syncingGoogleInfo}
-                      title="알라딘 API에서 실제 페이지 수 정보를 가져와 자동 동기화합니다."
+                      title="예스24에서 실제 페이지 수 정보를 가져와 자동 동기화합니다."
                     >
                       <RefreshCw size={13} className={syncingGoogleInfo ? 'animate-spin' : ''} />
                       {syncingGoogleInfo ? '페이지 수 동기화 중...' : '📖 자동 페이지 수 동기화'}
@@ -1638,7 +1327,7 @@ export default function BookshelfView({
                       rel="noopener noreferrer"
                       className="btn btn-secondary text-decoration-none"
                     >
-                      <ExternalLink size={16} /> 알라딘 구매
+                      <ExternalLink size={16} /> 구매 페이지
                     </a>
                   )}
 
@@ -1684,7 +1373,7 @@ export default function BookshelfView({
         </div>
       )}
 
-      {/* 알라딘 도서 소개 전용 단일 공통 팝업 모달 */}
+      {/* 도서 소개 전용 단일 공통 팝업 모달 */}
       {showDescModal && selectedBook && (
         <BookDetailModal
           book={selectedBook}
@@ -1716,9 +1405,7 @@ export default function BookshelfView({
             setShowDescModal(false);
             setSelectedBook(null);
           }) : null}
-          onSyncInfo={async (bookToSync) => {
-            await fetchPageCountFromAladin(bookToSync);
-          }}
+          onSyncInfo={handleSyncBookInfo}
           syncing={syncingGoogleInfo}
         />
       )}

@@ -1,22 +1,25 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, ShoppingBag, Plus, CheckCircle2, Flame, ExternalLink, RefreshCw, BookOpen, Sparkles, Star } from 'lucide-react';
-import { supabase } from '../supabaseClient'; // Supabase 인스턴스 가져오기
+import { fetchBestsellers, searchBooks, findBookDetail } from '../utils/yes24';
 import BookDetailModal from './BookDetailModal';
 
+// 예스24 분류 코드 (GET /v1/category/list 로 확인, '001' = 국내도서 종합)
 const BESTSELLER_CATEGORIES = [
-  { id: 0, name: '🌟 종합' },
-  { id: 1, name: '📖 소설/시' },
-  { id: 170, name: '📈 경제경영' },
-  { id: 798, name: '💡 자기계발' },
-  { id: 656, name: '🏛️ 인문학' },
-  { id: 987, name: '🔬 과학' },
-  { id: 55890, name: '✍️ 에세이' },
-  { id: 2551, name: '🎨 만화' },
-  { id: 1108, name: '👶 어린이' },
-  { id: 1196, name: '✈️ 여행' },
-  { id: 1230, name: '🍳 요리/살림' },
-  { id: 1383, name: '📝 수험서/자격증' }
+  { id: '001', name: '🌟 종합' },
+  { id: '001001046', name: '📖 소설/시' },
+  { id: '001001025', name: '📈 경제경영' },
+  { id: '001001026', name: '💡 자기계발' },
+  { id: '001001019', name: '🏛️ 인문' },
+  { id: '001001002', name: '🔬 과학' },
+  { id: '001001047', name: '✍️ 에세이' },
+  { id: '001001008', name: '🎨 만화' },
+  { id: '001001016', name: '👶 어린이' },
+  { id: '001001009', name: '✈️ 여행' },
+  { id: '001001001', name: '🍳 가정/살림' },
+  { id: '001001015', name: '📝 수험서/자격증' }
 ];
+
+const SEARCH_PAGE_SIZE = 30;
 
 export default function BookSearch({ onAddBook, existingBooks = [] }) {
   const [activeTab, setActiveTab] = useState('bestseller');
@@ -27,62 +30,24 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
   const [bestsellerLoading, setBestsellerLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState('');
   const [selectedBook, setSelectedBook] = useState(null);
-  const [selectedCategory, setSelectedCategory] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState('001');
 
-  // 페이지네이션 및 정렬 상태 추가
+  // 페이지네이션 및 정렬 상태
   const [page, setPage] = useState(1);
-  const [sortOption, setSortOption] = useState('Accuracy');
+  const [sortOption, setSortOption] = useState('DEFAULT');
   const [hasMore, setHasMore] = useState(false);
 
-  // 1. Supabase Database DB Proxy를 활용한 분야별 국내 베스트셀러 호출 (CORS & ORB 우회 완료)
-  const fetchAladinBestsellers = useCallback(async (catId = selectedCategory) => {
+  // 1. 예스24 분야별 베스트셀러 (Edge Function 'yes24' 중계)
+  const loadBestsellers = useCallback(async (catId = selectedCategory) => {
     setBestsellerLoading(true);
     setErrorMsg('');
     try {
-      let response;
-      
-      // 1. 먼저 category_id를 명시적으로 넘겨 호출 시도
-      try {
-        response = await supabase.rpc('aladin_bestseller_proxy', { category_id: catId });
-      } catch (rpcErr) {
-        console.warn('RPC 매개변수 호출 오류:', rpcErr);
-        response = { error: rpcErr };
-      }
-      
-      // 2. 만약 PostgreSQL 함수 중복(Overloading candidate conflict) 또는 인자 미지원 구버전 함수 오류 발생 시
-      if (response && response.error) {
-        const errStr = String(response.error.message || response.error.details || response.error);
-        if (
-          errStr.includes('Could not choose') || 
-          errStr.includes('candidate function') || 
-          errStr.includes('PGRST202') || 
-          errStr.includes('42883') || 
-          errStr.includes('does not exist')
-        ) {
-          console.log('PostgreSQL 오버로딩 구버전 감지: 매개변수 없는 aladin_bestseller_proxy() 폴백 실행');
-          response = await supabase.rpc('aladin_bestseller_proxy');
-        }
-      }
-
-      if (response.error) {
-        if (response.error.message && response.error.message.includes('does not exist')) {
-          setErrorMsg('Supabase DB에 프록시 함수(SQL)를 등록해야 알라딘 API 호출이 가능합니다. 가이드를 따라 SQL을 꼭 실행해 주세요!');
-          return;
-        }
-        throw response.error;
-      }
-
-      if (response.data && response.data.error) {
-        throw new Error(response.data.error);
-      }
-
-      if (response.data && response.data.item && response.data.item.length > 0) {
-        setBestsellerList(parseAladinItems(response.data.item));
-      } else {
-        setErrorMsg('해당 분야의 베스트셀러 목록이 비어있습니다.');
-      }
+      const list = await fetchBestsellers(catId, 20);
+      setBestsellerList(list);
+      if (list.length === 0) setErrorMsg('해당 분야의 베스트셀러 목록이 비어있습니다.');
     } catch (err) {
-      console.warn('알라딘 베스트셀러 API 오류:', err);
+      console.warn('예스24 베스트셀러 오류:', err);
+      setBestsellerList([]);
       setErrorMsg(err.message || '베스트셀러 데이터를 불러오지 못했습니다.');
     } finally {
       setBestsellerLoading(false);
@@ -90,7 +55,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
   }, [selectedCategory]);
 
   useEffect(() => {
-    fetchAladinBestsellers(selectedCategory);
+    loadBestsellers(selectedCategory);
   }, []);
 
   // 모달 팝업 오픈 시 배경 스크롤을 100% 잠그고, 닫히면 원래대로 복구
@@ -105,7 +70,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
     };
   }, [selectedBook]);
 
-  // 2. Supabase Database DB Proxy를 활용한 실시간 국내 도서 검색 (CORS & ORB 우회 완료)
+  // 2. 예스24 도서 검색
   const handleSearch = async (e, isLoadMore = false) => {
     if (e) e.preventDefault();
     if (!query.trim()) return;
@@ -120,71 +85,18 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
     }
 
     try {
-      // 가격순 정렬인 경우 API에는 'Accuracy'(기본 정확도순)을 전달하고, 클라이언트 단에서 정렬
-      const apiSort = (sortOption === 'PriceLow' || sortOption === 'PriceHigh') ? 'Accuracy' : sortOption;
-      
-      let response;
-      try {
-        // 다중 파라미터 버전을 전달 시도
-        response = await supabase.rpc('aladin_search_proxy', { 
-          search_query: query,
-          start_page: nextPage,
-          sort_option: apiSort
-        });
-      } catch (err) {
-        console.warn('다중 파라미터 RPC 호출 오류, 이전 버전 폴백 수행:', err);
-        response = { error: { code: '42883', message: 'fallback' } };
-      }
+      // 가격순은 정확도순으로 받아 화면에서 정렬
+      const apiSort = (sortOption === 'PriceLow' || sortOption === 'PriceHigh') ? 'DEFAULT' : sortOption;
+      const { books, totalCount } = await searchBooks(query.trim(), { page: nextPage, pageSize: SEARCH_PAGE_SIZE, sort: apiSort });
 
-      // 42883 (함수 미존재) 또는 PGRST202 (스키마 캐시 함수 누락)인 경우 폴백 대처
-      if (response.error && (
-        response.error.code === '42883' || 
-        response.error.code === 'PGRST202' ||
-        String(response.error.message).includes('42883') || 
-        String(response.error.message).includes('PGRST202') || 
-        String(response.error.message).includes('does not exist') ||
-        String(response.error.message).includes('Could not find the function') ||
-        String(response.error.message).includes('fallback')
-      )) {
-        console.log('구버전 RPC 파라미터로 폴백 호출 진행');
-        const fallbackResp = await supabase.rpc('aladin_search_proxy', { search_query: query });
-        if (fallbackResp.error) throw fallbackResp.error;
-
-        if (fallbackResp.data && fallbackResp.data.item) {
-          const parsed = parseAladinItems(fallbackResp.data.item);
-          setSearchResults(parsed);
-          setHasMore(false);
-          setErrorMsg('💡 안내: 정렬 조건 필터와 결과 더보기 기능을 활성화하시려면, supabase_bookshelf_schema.sql 파일 하단의 SQL 스크립트를 복사해 Supabase 대시보드 SQL Editor에 실행(Run)해 주세요!');
-        } else {
-          setSearchResults([]);
-          setHasMore(false);
-        }
-        return;
-      }
-
-      if (response.error) throw response.error;
-
-      const data = response.data;
-      if (data && data.error) {
-        throw new Error(data.error);
-      }
-
-      if (data && data.item && data.item.length > 0) {
-        const parsed = parseAladinItems(data.item);
+      if (books.length > 0) {
         if (isLoadMore) {
-          setSearchResults(prev => [...prev, ...parsed]);
-          setPage(nextPage);
+          setSearchResults(prev => [...prev, ...books]);
         } else {
-          setSearchResults(parsed);
-          setPage(1);
+          setSearchResults(books);
         }
-
-        // 반환된 데이터 개수가 30개 미만이면 가져올 데이터가 더 없는 것으로 판별
-        if (data.item.length < 30) {
-          setHasMore(false);
-        } else {
-          setHasMore(true);
-        }
+        setPage(nextPage);
+        setHasMore(nextPage * SEARCH_PAGE_SIZE < totalCount && books.length === SEARCH_PAGE_SIZE);
       } else {
         if (!isLoadMore) {
           setSearchResults([]);
@@ -193,7 +105,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
         setHasMore(false);
       }
     } catch (err) {
-      console.warn('알라딘 검색 API 오류:', err);
+      console.warn('예스24 검색 오류:', err);
       setErrorMsg(err.message || '도서 검색 중 오류가 발생했습니다.');
       if (!isLoadMore) setSearchResults([]);
     } finally {
@@ -201,85 +113,17 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
     }
   };
 
-  // 알라딘 응답 데이터 가공 및 고화질 표지 매핑
-  const parseAladinItems = (items) => {
-    return items.map((item) => {
-      let coverUrl = item.cover || '';
-      coverUrl = coverUrl.replace('/coversum/', '/cover500/');
-
-      // 도서 제목 해시 함수 (320 고정 페이지 대신 그럴싸한 분량 산출)
-      const generatePageCount = (titleText) => {
-        let hash = 0;
-        for (let i = 0; i < titleText.length; i++) {
-          hash = titleText.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        // 200 ~ 550 사이의 정교한 책 분량 계산
-        return 200 + (Math.abs(hash) % 350);
-      };
-
-      // 알라딘 전문 소개글(fullDescription) 우선 적용 및 HTML 태그 정제
-      const rawDesc = item.fullDescription || item.fulldescription || item.subInfo?.fullDescription || item.description || '';
-      const cleanDesc = rawDesc
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<\/?[^>]+(>|$)/g, '')
-        .trim();
-
-      return {
-        id: `aladin-${item.itemId}`,
-        title: item.title || '제목 정보 없음',
-        author: item.author || '저자 미상',
-        publisher: item.publisher || '출판사',
-        cover_url: coverUrl,
-        isbn: item.isbn13 || item.isbn || '',
-        description: cleanDesc,
-        buy_link: item.link || `https://www.aladin.co.kr/search/wsearchresult.aspx?SearchTarget=Book&SearchWord=${encodeURIComponent(item.title)}`,
-        rating: item.customerReviewRank ? (item.customerReviewRank / 2).toFixed(1) : '4.8',
-        total_pages: parseInt(item.subInfo?.itemPage || item.itemPage) || generatePageCount(item.title || 'book'),
-        price: item.priceSales ? `₩${item.priceSales.toLocaleString()}` : '',
-        pub_date: item.pubDate || '',
-        category: item.categoryName || '',
-        bestRank: item.bestRank || null
-      };
-    });
-  };
-
-  // 서재에 도서를 추가하는 핸들러 (실제 페이지 수 사전 자동 동기화 적용)
+  // 서재에 도서를 추가 (예스24 상세에서 실제 쪽수·소개를 받아 함께 저장)
   const handleAddToShelf = async (book) => {
-    let realPages = book.total_pages;
-    const rawId = String(book.isbn || book.id || '').replace(/^[a-z]+-/i, '').replace(/^K/i, '').trim();
-
-    if (rawId) {
-      try {
-        const idType = rawId.length < 10 ? 'ItemId' : rawId.length === 10 ? 'ISBN' : 'ISBN13';
-        const { data, error } = await supabase.rpc('aladin_lookup_proxy', { item_id: rawId, id_type: idType });
-        if (!error && data && data.item && data.item.length > 0) {
-          const p = data.item[0].subInfo?.itemPage || data.item[0].itemPage;
-          if (p && parseInt(p) > 0) {
-            realPages = parseInt(p);
-          }
-        }
-      } catch (e) {
-        console.warn('서재 추가 시 알라딘 페이지 조회 실패:', e);
-      }
-
-      // 웹 스크레이핑 폴백 (RPC 실패/미설치 환경 대비 100% 보장)
-      if (!realPages || realPages === book.total_pages) {
-        try {
-          const webUrl = `https://www.aladin.co.kr/shop/wproduct.aspx?ItemId=${rawId}`;
-          const webHtml = await fetchJsonWithProxyFallback(webUrl);
-          if (typeof webHtml === 'string' && webHtml.length > 1000) {
-            const pageMatch = webHtml.match(/(\d{2,4})\s*쪽/i);
-            if (pageMatch && parseInt(pageMatch[1]) > 0) {
-              realPages = parseInt(pageMatch[1]);
-            }
-          }
-        } catch (e2) {}
-      }
+    let detail = null;
+    if (!book.total_pages) {
+      detail = await findBookDetail(book);
     }
 
     onAddBook({
       ...book,
-      total_pages: realPages,
+      total_pages: detail?.total_pages || book.total_pages || 0,
+      description: book.description || detail?.description || '',
       status: 'TO_READ',
       rating: 0
     });
@@ -325,7 +169,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
   return (
     <div className="book-search-container">
       <div className="search-header-banner">
-        <h2><Sparkles size={24} className="text-warning inline-block me-1" /> 알라딘 실시간 국내 베스트셀러 & 도서 검색</h2>
+        <h2><Sparkles size={24} className="text-warning inline-block me-1" /> 예스24 국내 베스트셀러 & 도서 검색</h2>
         <p className="sub-text">국내 베스트셀러 및 다양한 분야의 도서를 검색하여 내 서재에 수집해 보세요.</p>
 
         <form onSubmit={(e) => { e.preventDefault(); setPage(1); handleSearch(e, false); }} className="search-bar-wrapper mt-3">
@@ -337,7 +181,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
             onChange={(e) => setQuery(e.target.value)}
           />
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? '알라딘 검색 중...' : '도서 검색'}
+            {loading ? '검색 중...' : '도서 검색'}
           </button>
         </form>
       </div>
@@ -345,7 +189,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
       <div className="tab-bar mt-4 flex justify-between align-center">
         <div className="flex gap-2">
           <button className={`tab-item ${activeTab === 'bestseller' ? 'active' : ''}`} onClick={() => setActiveTab('bestseller')}>
-            <Flame size={18} color="#ef4444" /> 알라딘 실시간 베스트셀러 TOP 20
+            <Flame size={18} color="#ef4444" /> 예스24 베스트셀러 TOP 20
           </button>
           <button className={`tab-item ${activeTab === 'search' ? 'active' : ''}`} onClick={() => setActiveTab('search')}>
             <Search size={18} /> 국내 도서 검색 ({searchResults.length})
@@ -377,10 +221,8 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
                   backgroundSize: '1em'
                 }}
               >
-                <option value="Accuracy">정확도순</option>
-                <option value="SalesPoint">판매량순</option>
-                <option value="CustomerRating">평점높은순</option>
-                <option value="PublishTime">신간순</option>
+                <option value="DEFAULT">정확도순</option>
+                <option value="RECENT">신간순</option>
                 <option value="PriceLow">가격 낮은순</option>
                 <option value="PriceHigh">가격 높은순</option>
               </select>
@@ -388,7 +230,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
           )}
 
           {activeTab === 'bestseller' && (
-            <button className="btn btn-sm btn-outline" onClick={() => fetchAladinBestsellers(selectedCategory)}>
+            <button className="btn btn-sm btn-outline" onClick={() => loadBestsellers(selectedCategory)}>
               <RefreshCw size={14} className={bestsellerLoading ? 'animate-spin' : ''} /> 베스트셀러 갱신
             </button>
           )}
@@ -404,7 +246,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
               className={`btn btn-sm ${selectedCategory === cat.id ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => {
                 setSelectedCategory(cat.id);
-                fetchAladinBestsellers(cat.id);
+                loadBestsellers(cat.id);
               }}
               style={{ flexShrink: 0 }}
             >
@@ -424,7 +266,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
         {(activeTab === 'bestseller' && bestsellerLoading) || (activeTab === 'search' && loading && currentList.length === 0) ? (
           <div className="empty-search p-5 text-center w-full col-span-full">
             <RefreshCw size={32} className="animate-spin text-primary mx-auto mb-2" />
-            <p>알라딘 도서 API에서 실시간 데이터를 불러오는 중입니다...</p>
+            <p>예스24에서 도서 정보를 불러오는 중입니다...</p>
           </div>
         ) : currentList.length === 0 && !errorMsg ? (
           <div className="empty-search p-5 text-center col-span-full">
@@ -445,7 +287,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
                   {book.bestRank && (
                     <span className="rank-tag">{book.bestRank}위</span>
                   )}
-                  <span className="rating-tag">★ {book.rating}</span>
+                  {book.rating && <span className="rating-tag">★ {book.rating}</span>}
                 </div>
                 <div className="search-card-info">
                   <h4 title={book.title}>{book.title}</h4>
@@ -466,7 +308,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
                       </button>
                     )}
                     <a href={book.buy_link} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline text-decoration-none">
-                      <ShoppingBag size={14} /> 알라딘 구매 <ExternalLink size={12} />
+                      <ShoppingBag size={14} /> 예스24 구매 <ExternalLink size={12} />
                     </a>
                   </div>
                 </div>
@@ -495,12 +337,18 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
         </div>
       )}
 
+      {/* 예스24 이용 조건: 도서 정보 출처 표기 */}
+      <p className="sub-text text-center mt-4" style={{ fontSize: '0.8rem' }}>
+        도서 정보 제공: <a href="https://www.yes24.com" target="_blank" rel="noopener noreferrer">예스24</a>
+      </p>
+
       {/* 검색 및 베스트셀러 도서 상세 정보 모달 (공통 단일 모달 적용) */}
       {selectedBook && (
         <BookDetailModal
           book={selectedBook}
           onClose={() => setSelectedBook(null)}
           description={selectedBook.description}
+          toc={selectedBook.toc}
           isAlreadyInShelf={isAlreadyInShelf(selectedBook.title)}
           onAddBook={handleAddToShelf}
         />
