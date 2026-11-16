@@ -132,10 +132,10 @@ export default function PdfLibraryModal({ onClose }) {
           display: 'flex',
           flexDirection: 'column',
           padding: '1.5rem 1.75rem',
-          borderRadius: '16px',
+          borderRadius: 'var(--radius-lg)',
           boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)',
           overflow: 'hidden',
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--bg-card)',
           boxSizing: 'border-box'
         }}
       >
@@ -147,7 +147,7 @@ export default function PdfLibraryModal({ onClose }) {
             justifyContent: 'space-between',
             paddingBottom: '0.85rem',
             marginBottom: '1rem',
-            borderBottom: '1px solid #e4e4e7'
+            borderBottom: '1px solid var(--border-color)'
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -155,22 +155,22 @@ export default function PdfLibraryModal({ onClose }) {
               style={{
                 width: '38px',
                 height: '38px',
-                borderRadius: '10px',
-                backgroundColor: '#4f46e5',
+                borderRadius: 'var(--radius-lg)',
+                backgroundColor: 'var(--primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#ffffff',
+                color: 'var(--on-primary)',
                 flexShrink: 0
               }}
             >
               <FileText size={20} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#18181b' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-main)' }}>
                 PDF 전자책 보관함
               </h3>
-              <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#71717a' }}>
+              <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: 'var(--text-sub)' }}>
                 원하는 PDF 문서를 등록하고 내장 E-Book 뷰어로 읽어보세요.
               </p>
             </div>
@@ -182,10 +182,10 @@ export default function PdfLibraryModal({ onClose }) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.4rem',
-                backgroundColor: '#4f46e5',
+                backgroundColor: 'var(--primary)',
                 padding: '0.5rem 0.9rem',
-                borderRadius: '8px',
-                color: '#ffffff',
+                borderRadius: 'var(--radius-md)',
+                color: 'var(--on-primary)',
                 fontWeight: 700,
                 fontSize: '0.825rem',
                 cursor: 'pointer',
@@ -208,7 +208,7 @@ export default function PdfLibraryModal({ onClose }) {
               onClick={onClose}
               title="닫기 (ESC)"
               style={{
-                background: '#f4f4f5',
+                background: 'var(--bg-subtle)',
                 border: 'none',
                 borderRadius: '50%',
                 width: '34px',
@@ -217,7 +217,7 @@ export default function PdfLibraryModal({ onClose }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                color: '#71717a',
+                color: 'var(--text-sub)',
                 flexShrink: 0
               }}
             >
@@ -233,18 +233,18 @@ export default function PdfLibraryModal({ onClose }) {
               style={{
                 textAlign: 'center',
                 padding: '3rem 1rem',
-                border: '2px dashed #d4d4d8',
-                borderRadius: '12px',
+                border: '2px dashed var(--border-strong)',
+                borderRadius: 'var(--radius-lg)',
                 margin: '1rem 0',
-                backgroundColor: '#fafafa'
+                backgroundColor: 'var(--bg-card-hover)'
               }}
             >
-              <FileText size={38} style={{ margin: '0 auto 0.5rem auto', color: '#a1a1aa', display: 'block' }} />
-              <h4 style={{ margin: 0, fontWeight: 700, fontSize: '1rem', color: '#3f3f46' }}>
+              <FileText size={38} style={{ margin: '0 auto 0.5rem auto', color: 'var(--text-muted)', display: 'block' }} />
+              <h4 style={{ margin: 0, fontWeight: 700, fontSize: '1rem', color: 'var(--text-body)' }}>
                 보관된 PDF 문서가 없습니다
               </h4>
-              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: '#71717a' }}>
-                우측 상단의 <b style={{ color: '#4f46e5' }}>[+ 신규 PDF 등록]</b> 버튼을 눌러 PDF 파일을 첨부해보세요.
+              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-sub)' }}>
+                우측 상단의 <b style={{ color: 'var(--primary)' }}>[+ 신규 PDF 등록]</b> 버튼을 눌러 PDF 파일을 첨부해보세요.
               </p>
             </div>
           ) : (
@@ -261,9 +261,9 @@ export default function PdfLibraryModal({ onClose }) {
                       justifyContent: 'space-between',
                       gap: '12px',
                       padding: '12px 16px',
-                      borderRadius: '12px',
-                      border: '1px solid #e4e4e7',
-                      backgroundColor: '#fafafa',
+                      borderRadius: 'var(--radius-lg)',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-card-hover)',
                       width: '100%',
                       boxSizing: 'border-box'
                     }}
@@ -274,9 +274,9 @@ export default function PdfLibraryModal({ onClose }) {
                         style={{
                           width: '38px',
                           height: '38px',
-                          borderRadius: '8px',
-                          backgroundColor: '#eef2ff',
-                          color: '#4f46e5',
+                          borderRadius: 'var(--radius-md)',
+                          backgroundColor: 'var(--primary-soft)',
+                          color: 'var(--primary)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -292,7 +292,7 @@ export default function PdfLibraryModal({ onClose }) {
                             margin: 0,
                             fontWeight: 700,
                             fontSize: '0.925rem',
-                            color: '#18181b',
+                            color: 'var(--text-main)',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
@@ -303,13 +303,13 @@ export default function PdfLibraryModal({ onClose }) {
                           {item.title}
                         </h4>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: '#71717a', marginTop: '3px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: 'var(--text-sub)', marginTop: '3px', flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: 500 }}><HardDrive size={11} style={{ display: 'inline', marginRight: '2px' }} /> {item.fileSize}</span>
                           <span>•</span>
                           <span><Clock size={11} style={{ display: 'inline', marginRight: '2px' }} /> {new Date(item.createdAt).toLocaleDateString()}</span>
                           <span>•</span>
-                          <span>읽은 위치: <b style={{ color: '#18181b' }}>{item.currentPage || 1}p</b></span>
-                          <span style={{ fontWeight: 600, color: '#4f46e5' }}>({progressPercent}% 완료)</span>
+                          <span>읽은 위치: <b style={{ color: 'var(--text-main)' }}>{item.currentPage || 1}p</b></span>
+                          <span style={{ fontWeight: 600, color: 'var(--primary)' }}>({progressPercent}% 완료)</span>
                         </div>
                       </div>
                     </div>
@@ -322,11 +322,11 @@ export default function PdfLibraryModal({ onClose }) {
                           display: 'flex',
                           alignItems: 'center',
                           gap: '6px',
-                          backgroundColor: '#4f46e5',
+                          backgroundColor: 'var(--primary)',
                           border: 'none',
-                          color: '#ffffff',
+                          color: 'var(--on-primary)',
                           padding: '0.45rem 0.85rem',
-                          borderRadius: '7px',
+                          borderRadius: 'var(--radius-md)',
                           fontWeight: 700,
                           fontSize: '0.8rem',
                           cursor: 'pointer',
@@ -342,9 +342,9 @@ export default function PdfLibraryModal({ onClose }) {
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: '#a1a1aa',
+                          color: 'var(--text-muted)',
                           padding: '6px',
-                          borderRadius: '6px',
+                          borderRadius: 'var(--radius-md)',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',

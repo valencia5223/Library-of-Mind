@@ -199,27 +199,11 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
         <div className="flex gap-2 align-center">
           {activeTab === 'search' && searchResults.length > 0 && (
             <div className="flex align-center gap-1">
-              <span className="small-text font-bold" style={{ fontSize: '0.85rem', color: '#71717a' }}>정렬 기준:</span>
+              <span className="sort-label">정렬</span>
               <select
                 className="select-sort"
                 value={sortOption}
                 onChange={(e) => setSortOption(e.target.value)}
-                style={{
-                  padding: '0.35rem 1.8rem 0.35rem 0.65rem',
-                  fontSize: '0.85rem',
-                  borderRadius: '6px',
-                  border: '1px solid #d4d4d8',
-                  backgroundColor: '#ffffff',
-                  color: '#3f3f46',
-                  cursor: 'pointer',
-                  outline: 'none',
-                  fontWeight: 600,
-                  appearance: 'none',
-                  backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2364748b\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpolyline points=\'6 9 12 15 18 9\'%3E%3C/polyline%3E%3C/svg%3E")',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 0.5rem center',
-                  backgroundSize: '1em'
-                }}
               >
                 <option value="DEFAULT">정확도순</option>
                 <option value="RECENT">신간순</option>
@@ -230,7 +214,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
           )}
 
           {activeTab === 'bestseller' && (
-            <button className="btn btn-sm btn-outline" onClick={() => loadBestsellers(selectedCategory)}>
+            <button className="btn btn-sm btn-secondary" onClick={() => loadBestsellers(selectedCategory)}>
               <RefreshCw size={14} className={bestsellerLoading ? 'animate-spin' : ''} /> 베스트셀러 갱신
             </button>
           )}
@@ -243,7 +227,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
           {BESTSELLER_CATEGORIES.map(cat => (
             <button
               key={cat.id}
-              className={`btn btn-sm ${selectedCategory === cat.id ? 'btn-primary' : 'btn-outline'}`}
+              className={`btn btn-sm ${selectedCategory === cat.id ? 'btn-primary' : 'btn-secondary'}`}
               onClick={() => {
                 setSelectedCategory(cat.id);
                 loadBestsellers(cat.id);
@@ -257,8 +241,8 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
       )}
 
       {errorMsg && (
-        <div className="p-4 text-warning text-center mt-3 bg-opacity-10 bg-warning rounded-lg border border-warning">
-          ⚠️ {errorMsg}
+        <div className="notice-box mt-3">
+          {errorMsg}
         </div>
       )}
 
@@ -301,13 +285,13 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
                   )}
                   <div className="card-btn-group mt-3" onClick={(e) => e.stopPropagation()}>
                     {added ? (
-                      <button className="btn btn-sm btn-disabled" disabled><CheckCircle2 size={14} /> 내 책장에 있음</button>
+                      <button className="btn btn-sm btn-secondary" disabled><CheckCircle2 size={14} /> 내 책장에 있음</button>
                     ) : (
                       <button className="btn btn-sm btn-primary" onClick={() => handleAddToShelf(book)}>
                         <Plus size={14} /> 책장에 담기
                       </button>
                     )}
-                    <a href={book.buy_link} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-outline text-decoration-none">
+                    <a href={book.buy_link} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary">
                       <ShoppingBag size={14} /> 예스24 구매 <ExternalLink size={12} />
                     </a>
                   </div>
@@ -322,10 +306,10 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
       {activeTab === 'search' && hasMore && (
         <div className="flex justify-center mt-5 mb-4">
           <button 
-            className="btn btn-outline" 
-            onClick={() => handleSearch(null, true)} 
+            className="btn btn-secondary"
+            onClick={() => handleSearch(null, true)}
             disabled={loading}
-            style={{ minWidth: '220px', display: 'flex', justifyContent: 'center' }}
+            style={{ minWidth: '220px', justifyContent: 'center' }}
           >
             {loading ? (
               <RefreshCw size={16} className="animate-spin" />
@@ -338,7 +322,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
       )}
 
       {/* 예스24 이용 조건: 도서 정보 출처 표기 */}
-      <p className="sub-text text-center mt-4" style={{ fontSize: '0.8rem' }}>
+      <p className="sub-text text-center mt-4 search-attribution" style={{ fontSize: '0.8rem' }}>
         도서 정보 제공: <a href="https://www.yes24.com" target="_blank" rel="noopener noreferrer">예스24</a>
       </p>
 

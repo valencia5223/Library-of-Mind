@@ -10,10 +10,10 @@ export default function NoteRichView({ html, style }) {
       style={{
         overflowY: 'auto',
         padding: '1rem 1.1rem',
-        backgroundColor: '#ffffff',
+        backgroundColor: 'var(--bg-card)',
         fontSize: '0.95rem',
         lineHeight: 1.6,
-        color: '#18181b',
+        color: 'var(--text-main)',
         ...style
       }}
       dangerouslySetInnerHTML={{ __html: clean }}

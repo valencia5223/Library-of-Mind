@@ -154,33 +154,11 @@ export default function BookDetailModal({
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
-          padding: '1.75rem',
-          borderRadius: '16px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           overflow: 'hidden'
         }}
       >
         {/* 모달 닫기 버튼 */}
-        <button
-          className="modal-close"
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: '1rem',
-            right: '1rem',
-            background: '#f4f4f5',
-            border: 'none',
-            borderRadius: '50%',
-            width: '34px',
-            height: '34px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            color: '#71717a',
-            transition: 'all 0.2s ease'
-          }}
-        >
+        <button type="button" className="modal-close book-detail-close" onClick={onClose} aria-label="닫기">
           <X size={18} />
         </button>
 
@@ -204,33 +182,9 @@ export default function BookDetailModal({
               alt={book.title}
               referrerPolicy="no-referrer"
               className="detail-cover"
-              style={{
-                width: '100%',
-                maxHeight: '270px',
-                objectFit: 'cover',
-                borderRadius: '10px',
-                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)',
-                border: '1px solid rgba(0,0,0,0.08)'
-              }}
             />
             {book.price && (
-              <div className="mt-3 text-center" style={{ width: '100%' }}>
-                <span
-                  style={{
-                    display: 'inline-block',
-                    width: '100%',
-                    fontSize: '0.88rem',
-                    fontWeight: 700,
-                    padding: '0.4rem 0.6rem',
-                    background: '#eef2ff',
-                    color: '#4338ca',
-                    borderRadius: '8px',
-                    border: '1px solid #c7d2fe'
-                  }}
-                >
-                  판매가: {book.price}
-                </span>
-              </div>
+              <div className="detail-price">판매가 {book.price}</div>
             )}
 
             {buyLink && (
@@ -238,15 +192,7 @@ export default function BookDetailModal({
                 href={buyLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn btn-outline btn-sm mt-3 w-100 flex align-center justify-center gap-1"
-                style={{
-                  fontSize: '0.82rem',
-                  padding: '0.45rem',
-                  borderRadius: '8px',
-                  borderColor: '#d4d4d8',
-                  color: '#52525b',
-                  textDecoration: 'none'
-                }}
+                className="btn btn-secondary btn-sm detail-buy-btn"
               >
                 <ExternalLink size={14} /> 예스24 구매 페이지
               </a>
@@ -257,32 +203,32 @@ export default function BookDetailModal({
           <div className="detail-content" style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
             {/* 도서 제목 */}
             <div>
-              <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#18181b', lineHeight: 1.35, marginBottom: '0.5rem' }}>
+              <h3 className="detail-title">
                 {book.title}
               </h3>
 
               {/* 뱃지 태그 메타 정보 (가로 단일 flex wrap) */}
-              <div className="book-meta-badges flex flex-wrap gap-2" style={{ fontSize: '0.85rem' }}>
-                <span style={{ background: '#f4f4f5', color: '#3f3f46', borderRadius: '6px', padding: '4px 10px', fontWeight: 600 }}>
+              <div className="book-meta-badges">
+                <span className="meta-chip">
                   ✍️ <b>지은이:</b> {info.author}
                 </span>
                 {info.translator && (
-                  <span style={{ background: '#eff6ff', color: '#1d4ed8', borderRadius: '6px', padding: '4px 10px', fontWeight: 600 }}>
+                  <span className="meta-chip">
                     🌐 <b>옮긴이:</b> {info.translator}
                   </span>
                 )}
                 {book.publisher && (
-                  <span style={{ background: '#f4f4f5', color: '#3f3f46', borderRadius: '6px', padding: '4px 10px', fontWeight: 600 }}>
+                  <span className="meta-chip">
                     🏢 <b>출판사:</b> {book.publisher}
                   </span>
                 )}
                 {book.pub_date && (
-                  <span style={{ background: '#f4f4f5', color: '#3f3f46', borderRadius: '6px', padding: '4px 10px', fontWeight: 600 }}>
+                  <span className="meta-chip">
                     📅 <b>출간일:</b> {book.pub_date}
                   </span>
                 )}
                 {(realPageCount || book.total_pages || book.itemPage) && (
-                  <span style={{ background: '#ecfdf5', color: '#047857', borderRadius: '6px', padding: '4px 10px', fontWeight: 600 }}>
+                  <span className="meta-chip meta-chip-accent">
                     📄 <b>분량:</b> {realPageCount || book.total_pages || book.itemPage}쪽
                   </span>
                 )}
@@ -290,37 +236,13 @@ export default function BookDetailModal({
             </div>
 
             {/* 도서 상세 소개 박스 (시원하게 확장된 칼럼) */}
-            <div
-              className="review-section"
-              style={{
-                background: '#fafafa',
-                borderRadius: '12px',
-                padding: '1.25rem',
-                border: '1px solid #e4e4e7',
-                display: 'flex',
-                flexDirection: 'column',
-                flex: 1,
-                minHeight: '340px'
-              }}
-            >
-              <h4 className="flex align-center gap-1 mb-3" style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--primary, #4f46e5)' }}>
+            <div className="review-section detail-section">
+              <h4 className="detail-section-title">
                 <BookOpen size={18} /> 도서 상세 소개
               </h4>
-              <div
-                className="desc-text"
-                style={{
-                  fontSize: '0.96rem',
-                  color: '#3f3f46',
-                  lineHeight: 1.8,
-                  whiteSpace: 'pre-line',
-                  maxHeight: '480px',
-                  overflowY: 'auto',
-                  paddingRight: '6px',
-                  flex: 1
-                }}
-              >
+              <div className="desc-text detail-desc">
                 {loadingDesc ? (
-                  <span style={{ color: '#a1a1aa', fontStyle: 'italic' }}>예스24에서 도서 상세 소개를 불러오는 중입니다...</span>
+                  <span className="detail-loading">예스24에서 도서 상세 소개를 불러오는 중입니다...</span>
                 ) : (
                   description || book.description || '등록된 도서 소개 정보가 없습니다.'
                 )}
@@ -329,30 +251,11 @@ export default function BookDetailModal({
 
             {/* 목차 (TOC) 섹션 */}
             {toc && (
-              <div
-                className="toc-section"
-                style={{
-                  background: '#fffbe3',
-                  borderRadius: '12px',
-                  padding: '1.1rem',
-                  border: '1px solid #fef08a'
-                }}
-              >
-                <h4 className="flex align-center gap-1 mb-2" style={{ fontSize: '0.98rem', fontWeight: 700, color: '#854d0e' }}>
-                  <Layers size={17} /> 목차 (Table of Contents)
+              <div className="toc-section detail-section detail-toc">
+                <h4 className="detail-section-title">
+                  <Layers size={17} /> 목차
                 </h4>
-                <div
-                  className="toc-text"
-                  style={{
-                    fontSize: '0.9rem',
-                    color: '#713f12',
-                    lineHeight: 1.65,
-                    whiteSpace: 'pre-line',
-                    maxHeight: '200px',
-                    overflowY: 'auto',
-                    paddingRight: '6px'
-                  }}
-                >
+                <div className="toc-text detail-toc-text">
                   {toc}
                 </div>
               </div>
@@ -361,10 +264,7 @@ export default function BookDetailModal({
         </div>
 
         {/* 하단 푸터 버튼 영역 */}
-        <div
-          className="mt-4 pt-3 flex justify-between align-center flex-wrap gap-2"
-          style={{ borderTop: '1px solid #e4e4e7', background: '#fff', paddingTop: '1rem' }}
-        >
+        <div className="detail-footer">
           <div className="flex align-center gap-2 flex-wrap">
             {onAddBook && (
               <button
@@ -385,7 +285,7 @@ export default function BookDetailModal({
                 >
                   <BookOpen size={16} />
                   <span>📖 PDF 전자책 읽기</span>
-                  <span className="text-xs px-1.5 py-0.5 rounded font-normal" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+                  <span className="text-xs px-1.5 py-0.5 rounded font-normal" style={{ backgroundColor: 'color-mix(in srgb, var(--bg-card) 20%, transparent)' }}>
                     {pdfData.currentPage || 1}p
                   </span>
                 </button>
@@ -398,16 +298,7 @@ export default function BookDetailModal({
                 </button>
               </div>
             ) : (
-              <label
-                className="btn btn-outline btn-sm font-bold flex align-center gap-1.5 cursor-pointer"
-                style={{
-                  padding: '0.5rem 0.9rem',
-                  borderRadius: '8px',
-                  borderColor: '#4f46e5',
-                  color: '#4f46e5',
-                  backgroundColor: '#f5f7ff'
-                }}
-              >
+              <label className="btn btn-secondary btn-sm cursor-pointer">
                 <Upload size={15} />
                 <span>{isUploading ? '업로드 중...' : '📄 PDF 도서 첨부'}</span>
                 <input
@@ -434,7 +325,7 @@ export default function BookDetailModal({
             className="btn btn-secondary btn-sm"
             onClick={onClose}
           >
-            확인 닫기
+            닫기
           </button>
         </div>
 

@@ -14,6 +14,7 @@ import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock,
 import NewsTicker from './components/NewsTicker';
 import WeatherWidget from './components/WeatherWidget';
 import SharedLiveMemoModal from './components/SharedLiveMemoModal';
+import ThemePicker from './components/ThemePicker';
 import { registerServiceWorker, subscribeUserToPush, isNotificationSupported, getNotificationPermission } from './utils/webPush';
 
 
@@ -625,6 +626,8 @@ export default function App() {
               <FileText size={15} /> PDF 서재
             </button>
           )}
+
+          <ThemePicker />
 
           <WeatherWidget />
 

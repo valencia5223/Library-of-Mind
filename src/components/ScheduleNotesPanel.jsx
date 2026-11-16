@@ -95,7 +95,7 @@ export default function ScheduleNotesPanel({ schedules = [], onClose, onOpen, ge
 
         <div className="modal-body" style={{ gap: '0.9rem' }}>
           <div style={{ position: 'relative' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#a1a1aa' }} />
+            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
             <input
               type="search"
               className="input-field"
@@ -145,7 +145,7 @@ export default function ScheduleNotesPanel({ schedules = [], onClose, onOpen, ge
               <div key={group.key} style={{ marginBottom: '1rem' }}>
                 <div
                   className="text-xs font-bold"
-                  style={{ position: 'sticky', top: 0, background: '#ffffff', color: '#52525b', padding: '0.35rem 0', zIndex: 1, borderBottom: '1px solid #f4f4f5' }}
+                  style={{ position: 'sticky', top: 0, background: 'var(--bg-card)', color: 'var(--text-body)', padding: '0.35rem 0', zIndex: 1, borderBottom: '1px solid var(--border-color)' }}
                 >
                   {monthLabel(group.key)} · {group.items.length}개
                 </div>
@@ -162,25 +162,25 @@ export default function ScheduleNotesPanel({ schedules = [], onClose, onOpen, ge
                         display: 'block',
                         width: '100%',
                         textAlign: 'left',
-                        background: '#ffffff',
-                        border: '1px solid #e4e4e7',
+                        background: 'var(--bg-card)',
+                        border: '1px solid var(--border-color)',
                         borderLeft: `4px solid ${oneNote ? '#7719aa' : badge.color}`,
-                        borderRadius: '10px',
+                        borderRadius: 'var(--radius-lg)',
                         padding: '0.7rem 0.85rem',
                         marginTop: '0.5rem',
                         cursor: 'pointer'
                       }}
                     >
                       <div className="flex align-center gap-2" style={{ minWidth: 0 }}>
-                        <span className="text-xs font-bold flex align-center gap-1" style={{ color: '#71717a', flexShrink: 0 }}>
+                        <span className="text-xs font-bold flex align-center gap-1" style={{ color: 'var(--text-sub)', flexShrink: 0 }}>
                           <CalendarDays size={13} /> {dayLabel(s.date)}{!oneNote && s.time ? ` ${s.time}` : ''}
                         </span>
-                        <span className="text-sm font-bold" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#18181b', flex: 1, minWidth: 0 }}>
+                        <span className="text-sm font-bold" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-main)', flex: 1, minWidth: 0 }}>
                           {oneNote && '📓 '}<Highlight text={s.title} terms={terms} />
                         </span>
-                        {shared && <Users size={14} style={{ color: '#4f46e5', flexShrink: 0 }} title="공유 일정" />}
+                        {shared && <Users size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} title="공유 일정" />}
                         {!oneNote && (
-                          <span className="text-xs" style={{ color: badge.color, backgroundColor: badge.bg, borderRadius: '6px', padding: '0.05rem 0.4rem', flexShrink: 0 }}>
+                          <span className="text-xs" style={{ color: badge.color, backgroundColor: badge.bg, borderRadius: 'var(--radius-md)', padding: '0.05rem 0.4rem', flexShrink: 0 }}>
                             {badge.label}
                           </span>
                         )}
@@ -191,7 +191,7 @@ export default function ScheduleNotesPanel({ schedules = [], onClose, onOpen, ge
                         </div>
                       )}
                       {s.memo && (
-                        <div className="text-xs" style={{ color: '#52525b', marginTop: '0.35rem', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                        <div className="text-xs" style={{ color: 'var(--text-body)', marginTop: '0.35rem', lineHeight: 1.6, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                           <Highlight text={snippetOf(s.memo, terms)} terms={terms} />
                         </div>
                       )}

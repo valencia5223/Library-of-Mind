@@ -301,7 +301,7 @@ export default function AuthModal({
                 style={{
                   background: 'rgba(0, 0, 0, 0.03)',
                   border: '1px solid var(--border-color, rgba(0,0,0,0.1))',
-                  borderRadius: '12px',
+                  borderRadius: 'var(--radius-lg)',
                   textAlign: 'left'
                 }}
               >
@@ -542,7 +542,7 @@ export default function AuthModal({
                     onClick={() => changeMode('forgot')}
                     style={{
                       fontSize: '0.82rem',
-                      color: 'var(--primary-color, #4f46e5)',
+                      color: 'var(--primary-color, var(--primary))',
                       textDecoration: 'underline',
                       background: 'transparent',
                       border: 'none',

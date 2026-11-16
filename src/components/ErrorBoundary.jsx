@@ -38,7 +38,7 @@ export default class ErrorBoundary extends React.Component {
           <div style={{
             background: 'rgba(239, 68, 68, 0.1)',
             border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '16px',
+            borderRadius: 'var(--radius-lg)',
             padding: '2.5rem',
             maxWidth: '500px',
             boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
@@ -47,11 +47,11 @@ export default class ErrorBoundary extends React.Component {
             <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '0.75rem' }}>
               화면을 불러오는 중 잠시 오류가 발생했습니다
             </h2>
-            <p style={{ color: '#a1a1aa', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
               서비스 연결 또는 데이터 동기화 과정에서 일시적 문제가 발생했습니다. 아래 버튼을 눌러 새로고침해 주세요.
             </p>
             {this.state.error && (
-              <details style={{ textAlign: 'left', marginBottom: '1.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: '8px', fontSize: '0.75rem', color: '#fca5a5' }}>
+              <details style={{ textAlign: 'left', marginBottom: '1.5rem', background: 'rgba(0,0,0,0.3)', padding: '0.75rem', borderRadius: 'var(--radius-md)', fontSize: '0.75rem', color: '#fca5a5' }}>
                 <summary style={{ cursor: 'pointer', fontWeight: 'bold', outline: 'none' }}>🔍 상세 오류 메세지 확인 (개발용)</summary>
                 <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', marginTop: '0.5rem', fontFamily: 'monospace' }}>
                   {this.state.error.toString()}
@@ -66,11 +66,11 @@ export default class ErrorBoundary extends React.Component {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                backgroundColor: '#4f46e5',
-                color: '#ffffff',
+                backgroundColor: 'var(--primary)',
+                color: 'var(--on-primary)',
                 border: 'none',
                 padding: '0.75rem 1.5rem',
-                borderRadius: '10px',
+                borderRadius: 'var(--radius-lg)',
                 fontSize: '0.95rem',
                 fontWeight: 600,
                 cursor: 'pointer',

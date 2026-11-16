@@ -207,13 +207,7 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
         {/* 심플 깔끔 알림 갱신 캡슐 버튼 */}
         <button
           type="button"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition shadow-sm hover:opacity-80"
-          style={{
-            backgroundColor: 'rgba(234, 179, 8, 0.12)',
-            color: '#b45309',
-            border: '1px solid rgba(234, 179, 8, 0.4)',
-            cursor: 'pointer'
-          }}
+          className="btn btn-secondary btn-sm"
           onClick={async () => {
             if (!isNotificationSupported()) {
               alert('이 브라우저/기기는 데스크톱 푸시 알림을 지원하지 않습니다.');
@@ -235,7 +229,7 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
           }}
           title="인터넷 창이 닫혀 있어도 수신받는 데스크톱 푸시 알림 상태 켜기/갱신"
         >
-          <Zap size={14} className="text-amber-500" />
+          <Zap size={14} />
           <span>
             {!isNotificationSupported() ? '🔔 알림 미지원' : getNotificationPermission() === 'granted' ? '🔔 알림 ON (갱신)' : getNotificationPermission() === 'denied' ? '🔔 알림 차단됨' : '🔔 알림 켜기'}
           </span>

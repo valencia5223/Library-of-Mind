@@ -810,7 +810,7 @@ const getKoreanHoliday = (dateObj) => {
       case 'WORK':
         return { label: '💼 업무', bg: '#fef3c7', color: '#b45309', border: '#fde68a' };
       case 'READING':
-        return { label: '📖 독서', bg: '#eef2ff', color: '#4338ca', border: '#a5b4fc' };
+        return { label: '📖 독서', bg: '#eef2ff', color: 'var(--primary-hover)', border: 'var(--primary-300)' };
       case 'IMPORTANT':
         return { label: '🔥 중요', bg: '#ffe4e6', color: '#be123c', border: '#fecdd3' };
       default:
@@ -1053,7 +1053,7 @@ const getKoreanHoliday = (dateObj) => {
     <>
       {/* 📅 외부 캘린더 내보내기 버튼 (수정 모드에서만 노출) */}
       {editingSchedule && (
-        <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: '1px dashed #e4e4e7', marginBottom: '4px' }}>
+        <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: '1px dashed var(--border-color)', marginBottom: '4px' }}>
           <button
   className="btn btn-secondary btn-sm"
             type="button"
@@ -1107,10 +1107,10 @@ const getKoreanHoliday = (dateObj) => {
             <CalendarIcon size={24} className="text-primary" />
           </div>
           <div>
-            <h2 className="text-xl font-bold flex align-center gap-2 m-0" style={{ color: '#18181b' }}>
+            <h2 className="text-xl font-bold flex align-center gap-2 m-0" style={{ color: 'var(--text-main)' }}>
               {year}년 {month + 1}월 일정 관리
             </h2>
-            <p className="text-xs sub-text m-0 mt-1" style={{ color: '#71717a', fontWeight: 500 }}>
+            <p className="text-xs sub-text m-0 mt-1" style={{ color: 'var(--text-sub)', fontWeight: 500 }}>
               월별 일정을 손쉽게 등록하고 관리할 수 있습니다.
             </p>
           </div>
@@ -1221,7 +1221,7 @@ const getKoreanHoliday = (dateObj) => {
                       backgroundColor: '#fee2e2',
                       border: '1px solid #fca5a5',
                       padding: '0.1rem 0.35rem',
-                      borderRadius: '6px',
+                      borderRadius: 'var(--radius-md)',
                       whiteSpace: 'nowrap'
                     }}>
                       🚩 {holidayName}
@@ -1273,7 +1273,7 @@ const getKoreanHoliday = (dateObj) => {
                       {!isOneNoteId(sch.id) && <span className="schedule-time">{sch.time}</span>}
                       <span className="schedule-title">
                         {isOneNoteId(sch.id) && <span style={{ marginRight: '3px' }} title="OneNote 노트">📓</span>}
-                        {isSharedItem && <Users size={12} style={{ color: '#4f46e5', marginRight: '4px', verticalAlign: 'middle', display: 'inline' }} title="공유 일정" />}
+                        {isSharedItem && <Users size={12} style={{ color: 'var(--primary)', marginRight: '4px', verticalAlign: 'middle', display: 'inline' }} title="공유 일정" />}
                         {sch.title}
                       </span>
                       <button
@@ -1332,8 +1332,8 @@ const getKoreanHoliday = (dateObj) => {
               {isOneNoteSchedule ? (
                 <>
                   {scheduleMemoField}
-                  <details style={{ border: '1px solid #e4e4e7', borderRadius: '10px', padding: '0.6rem 0.85rem' }}>
-                    <summary className="text-xs font-bold" style={{ cursor: 'pointer', color: '#52525b' }}>
+                  <details style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '0.6rem 0.85rem' }}>
+                    <summary className="text-xs font-bold" style={{ cursor: 'pointer', color: 'var(--text-body)' }}>
                       일정 정보 · {scheduleDate} · {getCategoryBadge(category).label} (눌러서 수정)
                     </summary>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.9rem' }}>

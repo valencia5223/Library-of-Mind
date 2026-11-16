@@ -508,7 +508,7 @@ export default function BookshelfView({
   const [newTotalPages, setNewTotalPages] = useState(300);
 
   const statusCategories = [
-    { key: 'READING', title: '📖 지금 읽고 있는 책', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.12)' },
+    { key: 'READING', title: '📖 지금 읽고 있는 책', color: 'var(--primary)', bg: 'var(--primary-soft)' },
     { key: 'READ', title: '🏆 완독한 보물상자', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
     { key: 'TO_READ', title: '✨ 읽고 싶은 위시리스트', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' }
   ];
@@ -623,7 +623,7 @@ export default function BookshelfView({
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
           {/* 내 서재 전용 도서 실시간 검색창 */}
           <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-            <Search size={15} style={{ position: 'absolute', left: '10px', color: '#a1a1aa', pointerEvents: 'none' }} />
+            <Search size={15} style={{ position: 'absolute', left: '10px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
             <input
               type="text"
               placeholder="내 서재 도서 검색 (제목, 저자, 출판사)..."
@@ -634,10 +634,10 @@ export default function BookshelfView({
                 paddingLeft: '32px',
                 paddingRight: searchQuery ? '30px' : '12px',
                 fontSize: '0.825rem',
-                borderRadius: '8px',
+                borderRadius: 'var(--radius-md)',
                 border: '1px solid var(--border-color)',
-                backgroundColor: '#ffffff',
-                color: '#18181b',
+                backgroundColor: 'var(--bg-card)',
+                color: 'var(--text-main)',
                 fontWeight: 600,
                 outline: 'none',
                 width: '230px',
@@ -652,7 +652,7 @@ export default function BookshelfView({
                   right: '8px',
                   background: 'none',
                   border: 'none',
-                  color: '#a1a1aa',
+                  color: 'var(--text-muted)',
                   cursor: 'pointer',
                   padding: '2px',
                   display: 'flex',
@@ -693,10 +693,10 @@ export default function BookshelfView({
                   height: '36px',
                   padding: '0 0.75rem',
                   fontSize: '0.825rem',
-                  borderRadius: '8px',
+                  borderRadius: 'var(--radius-md)',
                   border: '1px solid var(--border-color)',
-                  backgroundColor: '#ffffff',
-                  color: '#18181b',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-main)',
                   fontWeight: 700,
                   cursor: 'pointer',
                   whiteSpace: 'nowrap',
@@ -787,12 +787,12 @@ export default function BookshelfView({
 
         if (searchQuery.trim() && filteredBooks.length === 0) {
           return (
-            <div style={{ padding: '3rem 1rem', textAlign: 'center', backgroundColor: '#ffffff', borderRadius: '16px', border: '1.5px dashed #d4d4d8', marginTop: '1.5rem' }}>
-              <Search size={36} style={{ margin: '0 auto 0.75rem', color: '#a1a1aa', display: 'block' }} />
-              <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#3f3f46' }}>
+            <div style={{ padding: '3rem 1rem', textAlign: 'center', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1.5px dashed var(--border-strong)', marginTop: '1.5rem' }}>
+              <Search size={36} style={{ margin: '0 auto 0.75rem', color: 'var(--text-muted)', display: 'block' }} />
+              <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-body)' }}>
                 '{searchQuery}' 검색 결과와 일치하는 도서가 없습니다.
               </h4>
-              <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.85rem', color: '#71717a' }}>
+              <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-sub)' }}>
                 제목, 저자, 출판사 키워드를 확인하시거나 검색어를 지워 전체 목록을 확인하세요.
               </p>
             </div>
@@ -836,7 +836,7 @@ export default function BookshelfView({
                                 backgroundColor: colorObj.bg,
                                 color: colorObj.text,
                                 border: `1.5px solid ${colorObj.border}`,
-                                borderRadius: '7px',
+                                borderRadius: 'var(--radius-md)',
                                 padding: '0.3rem 0.55rem',
                                 width: '105px',
                                 fontSize: '0.72rem',
@@ -860,7 +860,7 @@ export default function BookshelfView({
                               {/* 포스트잇 테이프 연출 */}
                               <div style={{
                                 position: 'absolute', top: '-5px', left: '50%', transform: 'translateX(-50%)',
-                                width: '30px', height: '9px', backgroundColor: 'rgba(255,255,255,0.7)', border: '1px solid rgba(0,0,0,0.08)'
+                                width: '30px', height: '9px', backgroundColor: 'color-mix(in srgb, var(--bg-card) 70%, transparent)', border: '1px solid rgba(0,0,0,0.08)'
                               }} />
                               <div style={{ fontSize: '0.68rem', opacity: 0.85, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 📌 {note.authorName}
@@ -876,13 +876,13 @@ export default function BookshelfView({
 
                     {/* 포차코 & 헬로키티 캐릭터 전용 귀여운 3D 데코 스티커 */}
                     {shelfTheme === 'pochacco' && (
-                      <div className="pochacco-decor" style={{ position: 'absolute', top: '-24px', right: '18px', zIndex: 12, background: 'rgba(255,255,255,0.95)', padding: '4px 10px', borderRadius: '16px', border: '2px solid #5ba8b7', boxShadow: '0 6px 14px rgba(0,0,0,0.12)', fontWeight: 800, fontSize: '0.82rem', color: '#2c6e7a', display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
+                      <div className="pochacco-decor" style={{ position: 'absolute', top: '-24px', right: '18px', zIndex: 12, background: 'color-mix(in srgb, var(--bg-card) 95%, transparent)', padding: '4px 10px', borderRadius: 'var(--radius-lg)', border: '2px solid #5ba8b7', boxShadow: '0 6px 14px rgba(0,0,0,0.12)', fontWeight: 800, fontSize: '0.82rem', color: '#2c6e7a', display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
                         <img src="/assets/pochacco_sticker.png" alt="Pojangmacha" style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '50%' }} />
                         <span>POJANGMACHA 🐾</span>
                       </div>
                     )}
                     {shelfTheme === 'kitty' && (
-                      <div className="kitty-decor" style={{ position: 'absolute', top: '-24px', right: '18px', zIndex: 12, background: 'rgba(255,255,255,0.95)', padding: '4px 10px', borderRadius: '16px', border: '2px solid #f472b6', boxShadow: '0 6px 14px rgba(0,0,0,0.12)', fontWeight: 800, fontSize: '0.82rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
+                      <div className="kitty-decor" style={{ position: 'absolute', top: '-24px', right: '18px', zIndex: 12, background: 'color-mix(in srgb, var(--bg-card) 95%, transparent)', padding: '4px 10px', borderRadius: 'var(--radius-lg)', border: '2px solid #f472b6', boxShadow: '0 6px 14px rgba(0,0,0,0.12)', fontWeight: 800, fontSize: '0.82rem', color: '#be123c', display: 'flex', alignItems: 'center', gap: '8px', userSelect: 'none' }}>
                         <img src="/assets/hello_kitty_sticker.png" alt="Annyeong Kitty" style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '50%' }} />
                         <span>ANNYEONG KITTY 🎀</span>
                       </div>
@@ -1127,7 +1127,7 @@ export default function BookshelfView({
                 <p className="detail-author">
                   {selectedBook.author} | {selectedBook.publisher || '출판사 정보'}
                   {selectedBook.pub_date ? (
-                    <span className="ml-2 font-bold text-slate-600" style={{ marginLeft: '0.4rem', color: '#52525b' }}>
+                    <span className="ml-2 font-bold text-slate-600" style={{ marginLeft: '0.4rem', color: 'var(--text-body)' }}>
                       · 📅 출간일: {selectedBook.pub_date}
                     </span>
                   ) : ''}
@@ -1268,8 +1268,8 @@ export default function BookshelfView({
                             style={{
                               width: '100%',
                               padding: '0.4rem 0.5rem',
-                              borderRadius: '6px',
-                              border: '1px solid #d4d4d8',
+                              borderRadius: 'var(--radius-md)',
+                              border: '1px solid var(--border-strong)',
                               fontSize: '0.85rem',
                               fontFamily: 'inherit',
                               outline: 'none'
@@ -1499,8 +1499,8 @@ export default function BookshelfView({
               maxHeight: '90vh',
               overflowY: 'auto',
               padding: '1.75rem',
-              borderRadius: '16px',
-              backgroundColor: '#ffffff',
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: 'var(--bg-card)',
               boxShadow: '0 25px 50px -12px rgba(0,0,0,0.3)',
               position: 'relative'
             }}
@@ -1511,7 +1511,7 @@ export default function BookshelfView({
                 position: 'absolute',
                 top: '1.25rem',
                 right: '1.25rem',
-                background: '#f4f4f5',
+                background: 'var(--bg-subtle)',
                 border: 'none',
                 borderRadius: '50%',
                 width: '36px',
@@ -1520,7 +1520,7 @@ export default function BookshelfView({
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: 'pointer',
-                color: '#71717a',
+                color: 'var(--text-sub)',
                 zIndex: 10
               }}
             >

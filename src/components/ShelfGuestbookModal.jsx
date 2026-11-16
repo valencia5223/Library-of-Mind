@@ -6,7 +6,7 @@ export const POSTIT_COLORS = [
   { id: 'pink', name: '🩷 핑크 러블리', bg: '#fbcfe8', border: '#ec4899', text: '#831843', shadow: 'rgba(236, 72, 153, 0.3)' },
   { id: 'mint', name: '🟢 마일드 민트', bg: '#a7f3d0', border: '#10b981', text: '#064e3b', shadow: 'rgba(16, 185, 129, 0.3)' },
   { id: 'purple', name: '🟣 바이올렛', bg: '#e9d5ff', border: '#a855f7', text: '#581c87', shadow: 'rgba(168, 85, 247, 0.3)' },
-  { id: 'blue', name: '🔵 스카이 블루', bg: '#c7d2fe', border: '#4f46e5', text: '#312e81', shadow: 'rgba(79, 70, 229, 0.3)' }
+  { id: 'blue', name: '🔵 스카이 블루', bg: '#c7d2fe', border: 'var(--primary)', text: '#312e81', shadow: 'rgba(79, 70, 229, 0.3)' }
 ];
 
 export default function ShelfGuestbookModal({
@@ -53,7 +53,7 @@ export default function ShelfGuestbookModal({
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '1rem'
     }}>
       <div style={{
-        backgroundColor: '#ffffff', borderRadius: '20px', width: '100%', maxWidth: '640px', maxHeight: '90vh',
+        backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', width: '100%', maxWidth: '640px', maxHeight: '90vh',
         boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)', display: 'flex', flexDirection: 'column', overflow: 'hidden'
       }}>
         {/* 헤더 */}
@@ -67,30 +67,30 @@ export default function ShelfGuestbookModal({
               <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>
                 {viewedFriend ? `${targetOwnerName} 서재 포스트잇 방명록` : '💌 내 서재 방명록 관리'}
               </h3>
-              <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.78rem', color: '#a1a1aa' }}>
+              <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                 {viewedFriend ? '책장에 남길 따뜻한 인사를 포스트잇에 적어보세요!' : '이웃들이 내 책장에 남겨둔 메시지들입니다.'}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            style={{ background: 'none', border: 'none', color: '#a1a1aa', cursor: 'pointer', padding: '4px', borderRadius: '50%' }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px', borderRadius: '50%' }}
           >
             <X size={20} />
           </button>
         </div>
 
         {/* 바디 컨텐츠 (작성 폼 + 목록) */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', backgroundColor: '#fafafa', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', backgroundColor: 'var(--bg-card-hover)', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           
           {/* 작성 폼 (이웃 서재 방문 중이거나 테스트 작성 지원) */}
           <form onSubmit={handleSubmit} style={{
-            backgroundColor: '#ffffff', padding: '1.25rem', borderRadius: '16px', border: '1.5px solid #e4e4e7',
+            backgroundColor: 'var(--bg-card)', padding: '1.25rem', borderRadius: 'var(--radius-lg)', border: '1.5px solid var(--border-color)',
             boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', display: 'flex', flexDirection: 'column', gap: '0.85rem'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#3f3f46', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <MessageCircle size={16} style={{ color: '#4f46e5' }} />
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-body)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <MessageCircle size={16} style={{ color: 'var(--primary)' }} />
                 {viewedFriend ? `${targetOwnerName}에게 포스트잇 남기기` : '내 서재에 방명록 메모 남기기'}
               </span>
 
@@ -114,7 +114,7 @@ export default function ShelfGuestbookModal({
             </div>
 
             <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.78rem', color: '#71717a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-sub)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}>
                 <User size={13} /> 작성자:
               </span>
               <input
@@ -123,8 +123,8 @@ export default function ShelfGuestbookModal({
                 onChange={(e) => setAuthorName(e.target.value)}
                 placeholder="닉네임 입력"
                 style={{
-                  padding: '0.35rem 0.6rem', fontSize: '0.82rem', borderRadius: '8px', border: '1px solid #d4d4d8',
-                  outline: 'none', backgroundColor: '#f4f4f5', fontWeight: 600, color: '#18181b'
+                  padding: '0.35rem 0.6rem', fontSize: '0.82rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-strong)',
+                  outline: 'none', backgroundColor: 'var(--bg-subtle)', fontWeight: 600, color: 'var(--text-main)'
                 }}
               />
             </div>
@@ -135,7 +135,7 @@ export default function ShelfGuestbookModal({
               placeholder="따뜻한 인사말이나 감명 깊게 읽은 책 추천을 적어보세요..."
               rows={3}
               style={{
-                width: '100%', padding: '0.85rem', borderRadius: '12px', border: '1.5px solid #d4d4d8',
+                width: '100%', padding: '0.85rem', borderRadius: 'var(--radius-lg)', border: '1.5px solid var(--border-strong)',
                 fontSize: '0.88rem', lineHeight: '1.5', outline: 'none', resize: 'none',
                 backgroundColor: POSTIT_COLORS.find(c => c.id === selectedColor)?.bg || '#fef08a',
                 color: POSTIT_COLORS.find(c => c.id === selectedColor)?.text || '#713f12',
@@ -151,7 +151,7 @@ export default function ShelfGuestbookModal({
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '0.55rem 1.2rem',
                   backgroundColor: content.trim() ? '#4f46e5' : '#a1a1aa', color: '#ffffff',
-                  border: 'none', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700, cursor: content.trim() ? 'pointer' : 'not-allowed',
+                  border: 'none', borderRadius: 'var(--radius-lg)', fontSize: '0.85rem', fontWeight: 700, cursor: content.trim() ? 'pointer' : 'not-allowed',
                   boxShadow: content.trim() ? '0 4px 12px rgba(79, 70, 229, 0.3)' : 'none', transition: 'all 0.15s ease'
                 }}
               >
@@ -162,13 +162,13 @@ export default function ShelfGuestbookModal({
 
           {/* 남겨진 포스트잇 방명록 목록 그리드 */}
           <div>
-            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', fontWeight: 800, color: '#18181b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Heart size={16} style={{ color: '#ef4444' }} />
               남겨진 포스트잇 목록 ({guestbookNotes.length}개)
             </h4>
 
             {guestbookNotes.length === 0 ? (
-              <div style={{ padding: '3rem 1rem', textAlign: 'center', color: '#a1a1aa', backgroundColor: '#ffffff', borderRadius: '16px', border: '1.5px dashed #d4d4d8' }}>
+              <div style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--text-muted)', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1.5px dashed var(--border-strong)' }}>
                 <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}>아직 남겨진 포스트잇이 없습니다.</p>
                 <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.78rem' }}>첫 번째 방명록 포스트잇을 붙여보세요!</p>
               </div>
@@ -183,7 +183,7 @@ export default function ShelfGuestbookModal({
                         backgroundColor: colorObj.bg,
                         color: colorObj.text,
                         border: `1.5px solid ${colorObj.border}`,
-                        borderRadius: '12px',
+                        borderRadius: 'var(--radius-lg)',
                         padding: '1rem',
                         position: 'relative',
                         boxShadow: `3px 6px 12px ${colorObj.shadow}`,
@@ -198,7 +198,7 @@ export default function ShelfGuestbookModal({
                       {/* 상단 테이프 연출 */}
                       <div style={{
                         position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%) rotate(1deg)',
-                        width: '50px', height: '14px', backgroundColor: 'rgba(255, 255, 255, 0.65)',
+                        width: '50px', height: '14px', backgroundColor: 'color-mix(in srgb, var(--bg-card) 65%, transparent)',
                         border: '1px solid rgba(0,0,0,0.08)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
                       }} />
 

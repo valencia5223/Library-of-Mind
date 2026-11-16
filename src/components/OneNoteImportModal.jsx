@@ -322,8 +322,8 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
               </div>
 
               {section && (
-                <div style={{ border: `1px solid ${sectionFriend ? '#a5b4fc' : '#e4e4e7'}`, backgroundColor: sectionFriend ? '#f5f7ff' : 'transparent', borderRadius: '10px', padding: '0.7rem 0.85rem' }}>
-                  <label className="form-label font-bold text-xs flex align-center gap-1" style={{ color: '#4338ca' }}>
+                <div style={{ border: `1px solid ${sectionFriend ? '#a5b4fc' : '#e4e4e7'}`, backgroundColor: sectionFriend ? '#f5f7ff' : 'transparent', borderRadius: 'var(--radius-lg)', padding: '0.7rem 0.85rem' }}>
+                  <label className="form-label font-bold text-xs flex align-center gap-1" style={{ color: 'var(--primary-hover)' }}>
                     <Users size={14} /> 이 섹션을 함께 볼 친구{section.notebookShared ? ' · 공유 노트북' : ''}
                   </label>
                   <select
@@ -350,7 +350,7 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
               {section && (
                 <div
                   className="flex align-center justify-between gap-2"
-                  style={{ border: `1px solid ${sectionAutoSync ? '#c4b5fd' : '#e4e4e7'}`, backgroundColor: sectionAutoSync ? '#f5f3ff' : 'transparent', borderRadius: '10px', padding: '0.6rem 0.85rem' }}
+                  style={{ border: `1px solid ${sectionAutoSync ? '#c4b5fd' : '#e4e4e7'}`, backgroundColor: sectionAutoSync ? '#f5f3ff' : 'transparent', borderRadius: 'var(--radius-lg)', padding: '0.6rem 0.85rem' }}
                 >
                   <div style={{ minWidth: 0 }}>
                     <div className="text-xs font-bold flex align-center gap-1" style={{ color: '#7719aa' }}>
@@ -407,7 +407,7 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
                     </button>
                   )}
                 </div>
-                <div style={{ maxHeight: '300px', overflowY: 'auto', marginTop: '6px', border: '1px solid #e4e4e7', borderRadius: '10px' }}>
+                <div style={{ maxHeight: '300px', overflowY: 'auto', marginTop: '6px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)' }}>
                   {pages.length === 0 && (
                     <p className="text-xs sub-text" style={{ padding: '1rem', textAlign: 'center' }}>
                       {loading ? '불러오는 중…' : '페이지가 없습니다.'}
@@ -421,9 +421,9 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
                         key={p.id}
                         onClick={() => toggle(p.id)}
                         className="flex align-center gap-2"
-                        style={{ padding: '0.55rem 0.75rem', cursor: 'pointer', borderBottom: '1px solid #f4f4f5', background: checked ? '#f5f3ff' : 'transparent' }}
+                        style={{ padding: '0.55rem 0.75rem', cursor: 'pointer', borderBottom: '1px solid var(--border-color)', background: checked ? '#f5f3ff' : 'transparent' }}
                       >
-                        {checked ? <CheckSquare size={18} style={{ color: '#7719aa', flexShrink: 0 }} /> : <Square size={18} style={{ color: '#a1a1aa', flexShrink: 0 }} />}
+                        {checked ? <CheckSquare size={18} style={{ color: '#7719aa', flexShrink: 0 }} /> : <Square size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
                         <div style={{ minWidth: 0, flex: 1 }}>
                           <div className="text-sm font-bold" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
                           <div className="text-xs sub-text">{fmt(dateBasis === 'created' ? p.created : p.modified)}</div>
@@ -452,7 +452,7 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
           )}
 
           {!busy && loading && (
-            <p className="text-xs flex align-center gap-1" style={{ color: '#a1a1aa' }}>
+            <p className="text-xs flex align-center gap-1" style={{ color: 'var(--text-muted)' }}>
               <Loader2 size={14} /> {loading}
             </p>
           )}
@@ -465,8 +465,8 @@ export default function OneNoteImportModal({ onClose, onImport, importedIds = ne
           {info && <p className="text-xs" style={{ color: '#059669', fontWeight: 700 }}>{info}</p>}
 
           {account && (
-            <details style={{ border: '1px solid #e4e4e7', borderRadius: '10px', padding: '0.5rem 0.8rem' }}>
-              <summary className="text-xs font-bold" style={{ cursor: 'pointer', color: '#52525b' }}>
+            <details style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '0.5rem 0.8rem' }}>
+              <summary className="text-xs font-bold" style={{ cursor: 'pointer', color: 'var(--text-body)' }}>
                 동기화 기록 (최근 {syncLog.length}번)
                 {syncLog[0] && ` · 마지막 ${fmt(syncLog[0].at)} ${TRIGGER_LABEL[syncLog[0].trigger] || ''}`}
               </summary>

@@ -692,8 +692,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           display: 'flex',
           flexDirection: 'column',
           padding: '1.2rem 1.35rem',
-          borderRadius: '16px',
-          background: 'linear-gradient(135deg, #ffffff 0%, #fafafa 100%)',
+          borderRadius: 'var(--radius-lg)',
+          background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-hover) 100%)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           position: 'relative',
           transform: `translate(${modalPos.x}px, ${modalPos.y}px)`,
@@ -709,7 +709,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             position: 'absolute',
             top: '1.1rem',
             right: '1.1rem',
-            background: '#f4f4f5',
+            background: 'var(--bg-subtle)',
             border: 'none',
             borderRadius: '50%',
             width: '34px',
@@ -718,7 +718,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: '#71717a',
+            color: 'var(--text-sub)',
             zIndex: 10
           }}
         >
@@ -730,7 +730,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           onMouseDown={handleMouseDownHeader}
           style={{
             paddingBottom: '0.85rem',
-            borderBottom: '1px solid #e4e4e7',
+            borderBottom: '1px solid var(--border-color)',
             marginBottom: '1rem',
             cursor: 'move',
             userSelect: 'none',
@@ -738,9 +738,9 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           }}
         >
           <div className="flex align-center justify-between" style={{ paddingRight: '6.5rem' }}>
-            <h3 className="flex align-center gap-2" style={{ fontSize: '1.25rem', fontWeight: 800, color: '#18181b', margin: 0 }}>
+            <h3 className="flex align-center gap-2" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
               <GripHorizontal size={20} className="text-slate-400 me-1" />
-              <MessageSquare size={22} className="text-primary" style={{ color: '#4f46e5' }} />
+              <MessageSquare size={22} className="text-primary" style={{ color: 'var(--primary)' }} />
               <span>실시간 1:1 라이브 채팅</span>
             </h3>
 
@@ -781,26 +781,26 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                       width: '270px',
                       maxHeight: '300px',
                       overflowY: 'auto',
-                      backgroundColor: '#ffffff',
-                      borderRadius: '12px',
+                      backgroundColor: 'var(--bg-card)',
+                      borderRadius: 'var(--radius-lg)',
                       padding: '10px 12px',
                       boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3), 0 8px 10px -6px rgba(0,0,0,0.2)',
-                      border: '1px solid #f4f4f5'
+                      border: '1px solid var(--border-color)'
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', borderBottom: '1px solid #f4f4f5', paddingBottom: '4px' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#3f3f46' }}>이모티콘 팔레트</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', borderBottom: '1px solid var(--border-color)', paddingBottom: '4px' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-body)' }}>이모티콘 팔레트</span>
                       <button
                         type="button"
                         onClick={() => setShowEmojiPicker(false)}
-                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#a1a1aa', padding: 0 }}
+                        style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0 }}
                       >
                         <X size={14} />
                       </button>
                     </div>
 
                     {/* 🎀 인기 캐릭터 스티커 (키티, 포챠코, 짱구) */}
-                    <div style={{ marginBottom: '10px', background: '#fff5f5', padding: '8px 10px', borderRadius: '8px', border: '1px dashed #fbcfe8' }}>
+                    <div style={{ marginBottom: '10px', background: '#fff5f5', padding: '8px 10px', borderRadius: 'var(--radius-md)', border: '1px dashed #fbcfe8' }}>
                       <div style={{ fontSize: '0.74rem', fontWeight: 800, color: '#db2777', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         🎀 인기 캐릭터 스티커 (키티 · 포챠코 · 짱구)
                       </div>
@@ -816,8 +816,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                             title={`${stk.name} 스티커 입력`}
                             style={{
                               border: '1px solid #fbcfe8',
-                              background: '#ffffff',
-                              borderRadius: '8px',
+                              background: 'var(--bg-card)',
+                              borderRadius: 'var(--radius-md)',
                               padding: '6px 4px',
                               cursor: 'pointer',
                               display: 'flex',
@@ -839,7 +839,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
 
                     {EMOJI_CATEGORIES.map((cat, idx) => (
                       <div key={idx} style={{ marginBottom: '8px' }}>
-                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#71717a', marginBottom: '4px' }}>{cat.name}</div>
+                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-sub)', marginBottom: '4px' }}>{cat.name}</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '4px' }}>
                           {cat.emojis.map((emoji, eIdx) => (
                             <button
@@ -851,8 +851,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                               }}
                               style={{
                                 border: 'none',
-                                background: '#fafafa',
-                                borderRadius: '6px',
+                                background: 'var(--bg-card-hover)',
+                                borderRadius: 'var(--radius-md)',
                                 fontSize: '1.15rem',
                                 padding: '4px 0',
                                 cursor: 'pointer',
@@ -876,12 +876,12 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
 
 
               {/* 글씨 크기 조절 수평 캡슐 (제일 오른쪽에 배치) */}
-              <div className="flex align-center gap-1" style={{ background: '#f4f4f5', padding: '0 8px', borderRadius: '8px', border: '1px solid #d4d4d8', height: '28px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}>
+              <div className="flex align-center gap-1" style={{ background: 'var(--bg-subtle)', padding: '0 8px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-strong)', height: '28px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}>
                 <span className="text-xs font-bold text-slate-600" style={{ fontSize: '0.72rem' }}>글씨:</span>
                 <button
                   type="button"
                   onClick={() => handleFontSizePxChange(fontSizePx - 1)}
-                  style={{ width: '18px', height: '18px', borderRadius: '4px', border: '1px solid #d4d4d8', background: '#ffffff', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: '18px', height: '18px', borderRadius: '4px', border: '1px solid var(--border-strong)', background: 'var(--bg-card)', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                   -
                 </button>
@@ -892,14 +892,14 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                     max="100"
                     value={fontSizePx}
                     onChange={(e) => handleFontSizePxChange(e.target.value)}
-                    style={{ width: '36px', height: '20px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 700, color: '#4f46e5', border: '1px solid #818cf8', borderRadius: '4px', outline: 'none', background: '#ffffff', padding: '0 1px' }}
+                    style={{ width: '36px', height: '20px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 700, color: 'var(--primary)', border: '1px solid var(--primary-400)', borderRadius: '4px', outline: 'none', background: 'var(--bg-card)', padding: '0 1px' }}
                   />
                   <span className="text-xs font-bold text-slate-500" style={{ fontSize: '0.7rem' }}>px</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => handleFontSizePxChange(fontSizePx + 1)}
-                  style={{ width: '18px', height: '18px', borderRadius: '4px', border: '1px solid #d4d4d8', background: '#ffffff', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: '18px', height: '18px', borderRadius: '4px', border: '1px solid var(--border-strong)', background: 'var(--bg-card)', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                   +
                 </button>
@@ -908,7 +908,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           </div>
 
           {/* 상태 표시 1줄 */}
-          <div className="flex align-center justify-between mt-2" style={{ fontSize: '0.82rem', color: '#71717a' }}>
+          <div className="flex align-center justify-between mt-2" style={{ fontSize: '0.82rem', color: 'var(--text-sub)' }}>
             <span className="flex align-center gap-1 font-semibold flex-shrink-0" style={{ color: isConnected ? '#059669' : '#d97706' }}>
               <span
                 style={{
@@ -935,7 +935,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           {/* 상태 표시 2줄: 작성 중 안내 줄 (고정 높이 20px) */}
           <div style={{ height: '20px', marginTop: '4px', display: 'flex', alignItems: 'center', fontSize: '0.78rem' }}>
             {typingPartner ? (
-              <span className="animate-pulse flex align-center gap-1 font-bold" style={{ color: '#4f46e5' }}>
+              <span className="animate-pulse flex align-center gap-1 font-bold" style={{ color: 'var(--primary)' }}>
                 <Sparkles size={13} /> {typingPartner}님이 오른쪽 메모장에서 실시간 작성 중...
               </span>
             ) : null}
@@ -975,7 +975,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                         top: '1rem',
                         left: '1rem',
                         right: '1rem',
-                        color: '#a1a1aa',
+                        color: 'var(--text-muted)',
                         fontSize: `${fontSizePx}px`,
                         lineHeight: 1.7,
                         pointerEvents: 'none',
@@ -1000,10 +1000,10 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                       padding: '1rem',
                       fontSize: `${fontSizePx}px`,
                       lineHeight: 1.7,
-                      color: '#18181b',
-                      background: '#ffffff',
-                      border: '2px solid #c7d2fe',
-                      borderRadius: '12px',
+                      color: 'var(--text-main)',
+                      background: 'var(--bg-card)',
+                      border: '2px solid var(--primary-200)',
+                      borderRadius: 'var(--radius-lg)',
                       outline: 'none',
                       overflowY: 'auto',
                       whiteSpace: 'pre-wrap',
@@ -1050,10 +1050,10 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                         padding: '1rem',
                         fontSize: `${fontSizePx}px`,
                         lineHeight: 1.7,
-                        color: '#a1a1aa',
-                        background: '#fafafa',
-                        border: '1.5px dashed #d4d4d8',
-                        borderRadius: '12px',
+                        color: 'var(--text-muted)',
+                        background: 'var(--bg-card-hover)',
+                        border: '1.5px dashed var(--border-strong)',
+                        borderRadius: 'var(--radius-lg)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1071,10 +1071,10 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                         padding: '1rem',
                         fontSize: `${fontSizePx}px`,
                         lineHeight: 1.7,
-                        color: '#3f3f46',
-                        background: '#fafafa',
-                        border: '1.5px solid #e4e4e7',
-                        borderRadius: '12px',
+                        color: 'var(--text-body)',
+                        background: 'var(--bg-card-hover)',
+                        border: '1.5px solid var(--border-color)',
+                        borderRadius: 'var(--radius-lg)',
                         overflowY: 'auto',
                         whiteSpace: 'pre-wrap',
                         wordBreak: 'break-word',
@@ -1092,10 +1092,10 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         {/* 하단 푸터 바 */}
         <div
           className="mt-3 pt-3 flex justify-between align-center"
-          style={{ borderTop: '1px solid #e4e4e7', background: 'transparent', flexShrink: 0, paddingRight: '1rem' }}
+          style={{ borderTop: '1px solid var(--border-color)', background: 'transparent', flexShrink: 0, paddingRight: '1rem' }}
         >
           <div className="flex align-center gap-4 text-slate-500" style={{ fontSize: '0.78rem', fontWeight: 500 }}>
-            <span>내 글자 수: <b style={{ color: '#4f46e5' }}>{myCharCount}</b>자 ({myLineCount}줄)</span>
+            <span>내 글자 수: <b style={{ color: 'var(--primary)' }}>{myCharCount}</b>자 ({myLineCount}줄)</span>
             <span style={{ color: '#d4d4d8' }}>|</span>
             <span>상대방 글자 수: <b style={{ color: '#059669' }}>{partnerCharCount}</b>자</span>
           </div>
@@ -1143,10 +1143,10 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#4f46e5',
-            background: '#eef2ff',
-            borderRadius: '8px',
-            border: '1.5px solid #4f46e5',
+            color: 'var(--primary)',
+            background: 'var(--primary-soft)',
+            borderRadius: 'var(--radius-md)',
+            border: '1.5px solid var(--primary)',
             boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)',
             zIndex: 50,
             userSelect: 'none',
