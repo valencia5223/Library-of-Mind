@@ -4,8 +4,11 @@ import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, GripHorizontal
 import { sendWebPushNotification } from '../utils/webPush';
 
 import { confirmDialog } from '../utils/notify';
+import useIsMobile from '../utils/useIsMobile';
 export default function SharedLiveMemoModal({ user, friend, onClose }) {
   if (!user || !friend) return null;
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- 아래 다른 훅들과 같은 자리 (user·friend 는 창이 열린 동안 바뀌지 않음)
+  const isMobile = useIsMobile();
 
   // 1:1 대화방 고유 룸 ID (두 사용자 UUID 오름차순 정렬 연결)
   const sortedUserIds = [user.id, friend.friend_id].sort();
@@ -676,6 +679,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
     }
   };
 
+  const partnerLabel = friend.name || (friend.email || '').split('@')[0];
+
   return (
     <div
       className="modal-overlay"
@@ -684,20 +689,20 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
       onMouseUp={handleOverlayMouseUp}
     >
       <div
-        className={`modal-card animate-scale-in ${isLocalShaking ? 'app-nudge-shake' : ''}`}
+        className={`modal-card animate-scale-in live-chat-card ${isLocalShaking ? 'app-nudge-shake' : ''}`}
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: `${panelSize.width * 2 + 64}px`,
+          width: isMobile ? '100%' : `${panelSize.width * 2 + 64}px`,
           maxWidth: '98vw',
-          maxHeight: '96vh',
+          maxHeight: isMobile ? '94dvh' : '96vh',
           display: 'flex',
           flexDirection: 'column',
-          padding: '1.2rem 1.35rem',
+          padding: isMobile ? '1rem 0.9rem' : '1.2rem 1.35rem',
           borderRadius: 'var(--radius-lg)',
           background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-hover) 100%)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           position: 'relative',
-          transform: `translate(${modalPos.x}px, ${modalPos.y}px)`,
+          transform: isMobile ? 'none' : `translate(${modalPos.x}px, ${modalPos.y}px)`,
           transition: isDraggingRef.current || isResizingRef.current ? 'none' : 'transform 0.05s ease-out'
         }}
       >
@@ -728,27 +733,27 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
 
         {/* 상단 타이틀 및 상태 헤더 */}
         <div
-          onMouseDown={handleMouseDownHeader}
+          onMouseDown={isMobile ? undefined : handleMouseDownHeader}
           style={{
-            paddingBottom: '0.85rem',
+            paddingBottom: isMobile ? '0.6rem' : '0.85rem',
             borderBottom: '1px solid var(--border-color)',
-            marginBottom: '1rem',
-            cursor: 'move',
+            marginBottom: isMobile ? '0.7rem' : '1rem',
+            cursor: isMobile ? 'default' : 'move',
             userSelect: 'none',
             flexShrink: 0
           }}
         >
-          <div className="flex align-center justify-between" style={{ paddingRight: '6.5rem' }}>
-            <h3 className="flex align-center gap-2" style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
-              <GripHorizontal size={20} className="text-slate-400 me-1" />
-              <MessageSquare size={22} className="text-primary" style={{ color: 'var(--primary)' }} />
-              <span>실시간 1:1 라이브 채팅</span>
+          <div className="flex align-center justify-between" style={{ paddingRight: isMobile ? 0 : '6.5rem', flexWrap: isMobile ? 'wrap' : 'nowrap', gap: isMobile ? '0.6rem' : undefined }}>
+            <h3 className="flex align-center gap-2" style={{ fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: 800, color: 'var(--text-main)', margin: 0, whiteSpace: 'nowrap', paddingRight: isMobile ? '2.75rem' : 0 }}>
+              {!isMobile && <GripHorizontal size={20} className="text-slate-400 me-1" />}
+              <MessageSquare size={isMobile ? 20 : 22} className="text-primary" style={{ color: 'var(--primary)' }} />
+              <span>{isMobile ? `${partnerLabel}님과 채팅` : '실시간 1:1 라이브 채팅'}</span>
             </h3>
 
 
 
             {/* 컨트롤러 수평 정렬 영역 (절대 줄바꿈 금지, 단일 1행 수평 고정) */}
-            <div className="flex align-center gap-2" style={{ flexWrap: 'nowrap', alignItems: 'center', whiteSpace: 'nowrap' }}>
+            <div className="flex align-center gap-2" style={{ flexWrap: isMobile ? 'wrap' : 'nowrap', alignItems: 'center', whiteSpace: 'nowrap' }}>
               <button
                 type="button"
                 className="btn btn-danger btn-xs"
@@ -757,7 +762,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                 title="상대방의 메모창/전체 화면을 진동시키고 붉은색 테두리 알람을 보냅니다!"
               >
                 <Zap size={14} className={nudgeCooldown > 0 ? '' : 'animate-bounce'} />
-                {nudgeCooldown > 0 ? `${nudgeCooldown}초 대기...` : '⚡ 흔들기 알람'}
+                {nudgeCooldown > 0 ? `${nudgeCooldown}초 대기...` : '흔들기'}
               </button>
 
               {/* 😀 이모티콘 팝업 드롭다운 버튼 */}
@@ -777,7 +782,8 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                     style={{
                       position: 'absolute',
                       top: '110%',
-                      right: 0,
+                      right: isMobile ? 'auto' : 0,
+                      left: isMobile ? 0 : 'auto',
                       zIndex: 999,
                       width: '270px',
                       maxHeight: '300px',
@@ -921,7 +927,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                   boxShadow: isConnected ? '0 0 8px #10b981' : 'none'
                 }}
               />
-              {isConnected ? '실시간 동기화 연결됨 (2인 독립 동시 작성)' : '연결 준비 중...'}
+              {isConnected ? (isMobile ? '실시간 연결됨' : '실시간 동기화 연결됨 (2인 독립 동시 작성)') : '연결 준비 중...'}
             </span>
 
             {isSaving ? (
@@ -929,7 +935,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                 <RefreshCw size={13} className="animate-spin" /> 저장 중...
               </span>
             ) : lastSavedTime ? (
-              <span className="text-slate-400 flex-shrink-0">최근 동기화: {lastSavedTime}</span>
+              <span className="text-slate-400 flex-shrink-0">{isMobile ? '' : '최근 동기화: '}{lastSavedTime}</span>
             ) : null}
           </div>
 
@@ -937,23 +943,23 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           <div style={{ height: '20px', marginTop: '4px', display: 'flex', alignItems: 'center', fontSize: '0.78rem' }}>
             {typingPartner ? (
               <span className="animate-pulse flex align-center gap-1 font-bold" style={{ color: 'var(--primary)' }}>
-                <Sparkles size={13} /> {typingPartner}님이 오른쪽 메모장에서 실시간 작성 중...
+                <Sparkles size={13} /> {typingPartner}님이 {isMobile ? '' : '오른쪽 메모장에서 실시간 '}작성 중...
               </span>
             ) : null}
           </div>
         </div>
 
         {/* 2열 듀얼 실시간 분리 메모 영역 */}
-        <div style={{ flex: 1, display: 'flex', gap: '1.2rem', minHeight: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.75rem' : '1.2rem', minHeight: 0 }}>
           {loading ? (
-            <div className="empty-search p-5 text-center flex-1 flex flex-col align-center justify-center" style={{ width: `${panelSize.width * 2 + 20}px`, height: `${panelSize.height}px` }}>
+            <div className="empty-search p-5 text-center flex-1 flex flex-col align-center justify-center" style={{ width: isMobile ? '100%' : `${panelSize.width * 2 + 20}px`, height: isMobile ? '40dvh' : `${panelSize.height}px` }}>
               <RefreshCw size={28} className="animate-spin text-primary mb-2" />
               <p>독립 1:1 라이브 메모장을 준비하는 중입니다...</p>
             </div>
           ) : (
             <>
-              {/* 좌측: 내 메모보드 */}
-              <div style={{ display: 'flex', flexDirection: 'column', width: `${panelSize.width}px` }}>
+              {/* 좌측: 내 메모보드 (핸드폰은 아래) */}
+              <div style={{ display: 'flex', flexDirection: 'column', width: isMobile ? '100%' : `${panelSize.width}px`, order: isMobile ? 2 : 0 }}>
                 <div className="flex align-center justify-between mb-2">
                   <span className="font-bold flex align-center gap-1 text-slate-800" style={{ fontSize: '0.88rem' }}>
                     <User size={16} className="text-sky-600" /> 내 메모
@@ -964,11 +970,11 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                     disabled={isMyEditorEmpty}
                     title="내 메모 내용만 지우기(초기화)"
                   >
-                    <Trash2 size={12} /> 내 메모 초기화
+                    <Trash2 size={12} /> {isMobile ? '지우기' : '내 메모 초기화'}
                   </button>
                 </div>
 
-                <div style={{ position: 'relative', width: '100%', height: `${panelSize.height}px` }}>
+                <div style={{ position: 'relative', width: '100%', height: isMobile ? '26dvh' : `${panelSize.height}px` }}>
                   {isMyEditorEmpty && (
                     <div
                       style={{
@@ -1016,11 +1022,11 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                 </div>
               </div>
 
-              {/* 우측: 상대방 실시간 메모보드 */}
-              <div style={{ display: 'flex', flexDirection: 'column', width: `${panelSize.width}px` }}>
+              {/* 우측: 상대방 실시간 메모보드 (핸드폰은 위) */}
+              <div style={{ display: 'flex', flexDirection: 'column', width: isMobile ? '100%' : `${panelSize.width}px`, order: isMobile ? 1 : 0 }}>
                 <div className="flex align-center justify-between mb-2">
                   <span className="font-bold flex align-center gap-1 text-slate-800" style={{ fontSize: '0.88rem' }}>
-                    <MessageSquare size={16} className="text-emerald-600" /> {friend.email} 님의 메모
+                    <MessageSquare size={16} className="text-emerald-600" /> {isMobile ? partnerLabel : friend.email} 님의 메모
                   </span>
                   <div className="flex align-center gap-1">
                     <button
@@ -1037,12 +1043,12 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                       disabled={isPartnerEmpty}
                       title="상대방 메모장 내용을 초기화(지우기)합니다"
                     >
-                      <Trash2 size={12} /> 상대 메모 초기화
+                      <Trash2 size={12} /> {isMobile ? '지우기' : '상대 메모 초기화'}
                     </button>
                   </div>
                 </div>
 
-                <div style={{ position: 'relative', width: '100%', height: `${panelSize.height}px` }}>
+                <div style={{ position: 'relative', width: '100%', height: isMobile ? '26dvh' : `${panelSize.height}px` }}>
                   {isPartnerEmpty ? (
                     <div
                       style={{
@@ -1061,7 +1067,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
                         textAlign: 'center'
                       }}
                     >
-                      상대방({friend.email})이 메모를 작성하면<br />0.1초 만에 실시간으로 여기에 노출됩니다.
+                      {partnerLabel}님이 메모를 작성하면<br />실시간으로 여기에 보입니다.
                     </div>
                   ) : (
                     <div
@@ -1093,22 +1099,23 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
         {/* 하단 푸터 바 */}
         <div
           className="mt-3 pt-3 flex justify-between align-center"
-          style={{ borderTop: '1px solid var(--border-color)', background: 'transparent', flexShrink: 0, paddingRight: '1rem' }}
+          style={{ borderTop: '1px solid var(--border-color)', background: 'transparent', flexShrink: 0, paddingRight: isMobile ? 0 : '1rem' }}
         >
-          <div className="flex align-center gap-4 text-slate-500" style={{ fontSize: '0.78rem', fontWeight: 500 }}>
+          <div className="flex align-center gap-4 text-slate-500" style={{ fontSize: '0.78rem', fontWeight: 500, display: isMobile ? 'none' : 'flex' }}>
             <span>내 글자 수: <b style={{ color: 'var(--primary)' }}>{myCharCount}</b>자 ({myLineCount}줄)</span>
             <span style={{ color: '#d4d4d8' }}>|</span>
             <span>상대방 글자 수: <b style={{ color: '#059669' }}>{partnerCharCount}</b>자</span>
           </div>
 
-          <div className="flex align-center gap-2">
+          <div className="flex align-center gap-2" style={isMobile ? { width: '100%', flexWrap: 'wrap' } : undefined}>
             <button
               className="btn btn-outline btn-sm font-bold flex align-center gap-1"
+              style={isMobile ? { flex: 1, justifyContent: 'center' } : undefined}
               onClick={handleCopyMyContent}
               disabled={isMyEditorEmpty}
             >
               {copySuccess ? <CheckCircle2 size={15} color="#059669" /> : <Copy size={15} />}
-              {copySuccess ? '복사 완료!' : '내 메모 전체 복사'}
+              {copySuccess ? '복사 완료!' : isMobile ? '내 메모 복사' : '내 메모 전체 복사'}
             </button>
 
             <button
@@ -1117,20 +1124,22 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
               disabled={isMyEditorEmpty && isPartnerEmpty}
               title="내 메모와 상대방 메모를 포함한 전체 메모장 내용을 한 번에 초기화합니다"
             >
-              <Trash2 size={15} /> 💥 전체 메모 초기화
+              <Trash2 size={15} /> {isMobile ? '전체 지우기' : '전체 메모 초기화'}
             </button>
 
-            <button
-              className="btn btn-secondary btn-sm"
-              onClick={onClose}
-            >
-              닫기
-            </button>
+            {!isMobile && (
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={onClose}
+              >
+                닫기
+              </button>
+            )}
           </div>
         </div>
 
         {/* 📐 전체 백그라운드 창 & 입력창 우측 하단 자유 크기 조절 손잡이 (60fps 마우스 & 터치 드래그 지원) */}
-        <div
+        {!isMobile && <div
           onMouseDown={handleMouseDownResize}
           onTouchStart={handleTouchStartResize}
           title="드래그하여 백그라운드 창 & 메모장 전체 크기를 자유롭게 조절합니다 (마우스/터치 지원)"
@@ -1157,7 +1166,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
           <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
             <path d="M10 2L2 10M10 6L6 10M10 10H10.01" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"/>
           </svg>
-        </div>
+        </div>}
       </div>
     </div>
   );
