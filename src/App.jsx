@@ -10,7 +10,7 @@ import FriendManager from './components/FriendManager';
 import AdminApprovalModal from './components/AdminApprovalModal';
 import ScheduleCalendarView from './components/ScheduleCalendarView';
 import PdfLibraryModal from './components/PdfLibraryModal';
-import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon, FileText, CheckSquare, Zap } from 'lucide-react';
+import { BookOpen, Search, MessageSquare, Timer, BarChart2, User, Library, Lock, Sparkles, LogIn, ArrowRight, Users, ShieldCheck, Calendar as CalendarIcon, FileText, CheckSquare, Zap, MoreHorizontal } from 'lucide-react';
 import NewsTicker from './components/NewsTicker';
 import WeatherWidget from './components/WeatherWidget';
 import SharedLiveMemoModal from './components/SharedLiveMemoModal';
@@ -18,8 +18,19 @@ import ThemePicker from './components/ThemePicker';
 import { registerServiceWorker, subscribeUserToPush, isNotificationSupported, getNotificationPermission } from './utils/webPush';
 
 
+// 메인 탭 (위쪽 탭 = label, 핸드폰 아래쪽 탭 바 = short, 앞 4개만 바에 두고 나머지는 '더보기')
+const MAIN_TABS = [
+  { id: 'schedule', label: '일정관리', short: '일정', icon: CalendarIcon },
+  { id: 'bookshelf', label: '내 서재', short: '서재', icon: BookOpen },
+  { id: 'search', label: '탐색', short: '탐색', icon: Search },
+  { id: 'focus', label: '몰입 스튜디오', short: '몰입', icon: Timer },
+  { id: 'stats', label: '독서 리포트', short: '리포트', icon: BarChart2 },
+  { id: 'social', label: '이웃 서재', short: '이웃', icon: Users },
+];
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('schedule'); // 기본 메인화면: 일정관리
+  const [showMoreMenu, setShowMoreMenu] = useState(false); // 핸드폰 아래쪽 '더보기'
   const [user, setUser] = useState(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -571,47 +582,15 @@ export default function App() {
 
         {user && (
           <nav className="navbar-tabs-container">
-            <button
-              className={`nav-tab-capsule ${activeTab === 'schedule' ? 'active' : ''}`}
-              onClick={() => setActiveTab('schedule')}
-            >
-              <CalendarIcon size={16} /> 일정관리
-            </button>
-
-            <button
-              className={`nav-tab-capsule ${activeTab === 'bookshelf' ? 'active' : ''}`}
-              onClick={() => setActiveTab('bookshelf')}
-            >
-              <BookOpen size={16} /> 내 서재
-            </button>
-
-            <button
-              className={`nav-tab-capsule ${activeTab === 'search' ? 'active' : ''}`}
-              onClick={() => setActiveTab('search')}
-            >
-              <Search size={16} /> 탐색
-            </button>
-
-            <button
-              className={`nav-tab-capsule ${activeTab === 'focus' ? 'active' : ''}`}
-              onClick={() => setActiveTab('focus')}
-            >
-              <Timer size={16} /> 몰입 스튜디오
-            </button>
-
-            <button
-              className={`nav-tab-capsule ${activeTab === 'stats' ? 'active' : ''}`}
-              onClick={() => setActiveTab('stats')}
-            >
-              <BarChart2 size={16} /> 독서 리포트
-            </button>
-
-            <button
-              className={`nav-tab-capsule ${activeTab === 'social' ? 'active' : ''}`}
-              onClick={() => setActiveTab('social')}
-            >
-              <Users size={16} /> 이웃 서재
-            </button>
+            {MAIN_TABS.map(({ id, label, icon: TabIcon }) => (
+              <button
+                key={id}
+                className={`nav-tab-capsule ${activeTab === id ? 'active' : ''}`}
+                onClick={() => setActiveTab(id)}
+              >
+                <TabIcon size={16} /> {label}
+              </button>
+            ))}
           </nav>
         )}
 
@@ -623,13 +602,13 @@ export default function App() {
               onClick={() => setShowPdfLibrary(true)}
               style={{ flexShrink: 0 }}
             >
-              <FileText size={15} /> PDF 서재
+              <FileText size={15} /> <span className="hide-mobile">PDF 서재</span>
             </button>
           )}
 
           <ThemePicker />
 
-          <WeatherWidget />
+          <div className="hide-mobile"><WeatherWidget /></div>
 
           <button type="button" className="btn btn-secondary btn-sm user-profile-btn" onClick={() => setIsAuthOpen(true)}>
             <User size={15} style={{ flexShrink: 0 }} />
@@ -639,7 +618,7 @@ export default function App() {
       </header>
 
       {/* 뉴스 티커 (탭 상단) */}
-      {user && <NewsTicker />}
+      {user && <div className="hide-mobile"><NewsTicker /></div>}
 
       {/* 비로그인 시 강제 게이트키퍼 랜딩 화면 */}
       {!user ? (
@@ -721,6 +700,54 @@ export default function App() {
             />
           )}
         </main>
+      )}
+
+      {/* 핸드폰: 아래쪽 탭 바 (위쪽 탭은 CSS 로 숨김) */}
+      {user && (
+        <nav className="mobile-tabbar" aria-label="메뉴">
+          {MAIN_TABS.slice(0, 4).map(({ id, short, icon: TabIcon }) => (
+            <button
+              key={id}
+              type="button"
+              className={`mobile-tab ${activeTab === id ? 'active' : ''}`}
+              onClick={() => { setActiveTab(id); setShowMoreMenu(false); window.scrollTo({ top: 0 }); }}
+            >
+              <TabIcon size={22} />
+              <span>{short}</span>
+            </button>
+          ))}
+          <button
+            type="button"
+            className={`mobile-tab ${showMoreMenu || MAIN_TABS.slice(4).some((t) => t.id === activeTab) ? 'active' : ''}`}
+            onClick={() => setShowMoreMenu((v) => !v)}
+            aria-expanded={showMoreMenu}
+          >
+            <MoreHorizontal size={22} />
+            <span>더보기</span>
+          </button>
+        </nav>
+      )}
+      {user && showMoreMenu && (
+        <div className="mobile-more-backdrop" onClick={() => setShowMoreMenu(false)}>
+          <div className="mobile-more-sheet" onClick={(e) => e.stopPropagation()}>
+            {MAIN_TABS.slice(4).map(({ id, label, icon: TabIcon }) => (
+              <button
+                key={id}
+                type="button"
+                className={`mobile-more-item ${activeTab === id ? 'active' : ''}`}
+                onClick={() => { setActiveTab(id); setShowMoreMenu(false); window.scrollTo({ top: 0 }); }}
+              >
+                <TabIcon size={20} /> {label}
+              </button>
+            ))}
+            <button type="button" className="mobile-more-item" onClick={() => { setShowPdfLibrary(true); setShowMoreMenu(false); }}>
+              <FileText size={20} /> PDF 서재
+            </button>
+            <button type="button" className="mobile-more-item" onClick={() => { setIsAuthOpen(true); setShowMoreMenu(false); }}>
+              <User size={20} /> 내 계정
+            </button>
+          </div>
+        </div>
       )}
 
       {/* 인증 모달 */}

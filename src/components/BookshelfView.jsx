@@ -621,9 +621,9 @@ export default function BookshelfView({
         </div>
 
         {/* 우측 정렬 툴바 제어 수평 행 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+        <div className="shelf-toolbar" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
           {/* 내 서재 전용 도서 실시간 검색창 */}
-          <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+          <div className="shelf-search" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
             <Search size={15} style={{ position: 'absolute', left: '10px', color: 'var(--text-muted)', pointerEvents: 'none' }} />
             <input
               type="text"
@@ -667,7 +667,7 @@ export default function BookshelfView({
           </div>
 
           {/* 1. 3D / 그리드 뷰 토글 모듈 */}
-          <div className="toggle-group" style={{ height: '36px', display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box' }}>
+          <div className="toggle-group shelf-view-toggle" style={{ height: '36px', display: 'inline-flex', alignItems: 'center', boxSizing: 'border-box' }}>
             <button
               className={`toggle-btn ${viewMode === '3d' ? 'active' : ''}`}
               onClick={() => setViewMode('3d')}
@@ -686,7 +686,7 @@ export default function BookshelfView({
 
           {/* 2. 책장 테마 셀렉트 드롭다운 */}
           {viewMode === '3d' && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap' }}>
+            <div className="shelf-theme-wrap" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', whiteSpace: 'nowrap' }}>
               <select
                 value={shelfTheme}
                 onChange={(e) => handleShelfThemeChange(e.target.value)}
@@ -721,7 +721,7 @@ export default function BookshelfView({
           )}
 
           {/* 3. 이웃 방명록 & 독서 기록장 & 수동 책 추가 액션 버튼 */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', whiteSpace: 'nowrap' }}>
+          <div className="shelf-actions" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.6rem', whiteSpace: 'nowrap' }}>
             <button
               className="btn btn-outline"
               onClick={() => setShowGuestbookModal(true)}
@@ -746,7 +746,7 @@ export default function BookshelfView({
                   onClick={() => setShowThoughtLedgerModal(true)}
                   style={{ display: 'inline-flex' }}
                 >
-                  <NotebookPen size={15} /> 독서 기록장 (문장 & 생각)
+                  <NotebookPen size={15} /> 독서 기록장<span className="hide-mobile"> (문장 & 생각)</span>
                 </button>
 
                 <button

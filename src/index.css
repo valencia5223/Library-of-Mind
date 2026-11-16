@@ -4277,3 +4277,251 @@ html[data-theme="gallery"] .search-card:not(.skeleton-card):hover {
 .meta-chip svg { color: var(--text-muted); flex-shrink: 0; }
 .meta-chip-accent svg { color: currentColor; }
 .shelf-badge-title { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ==========================================================================
+   핸드폰 화면 (640px 이하, src/utils/useIsMobile.js 와 같은 기준)
+   위쪽: 로고 + 아이콘 버튼 한 줄 / 메뉴: 아래쪽 탭 바 / 창: 아래에서 올라오는 시트
+   ========================================================================== */
+.mobile-tabbar,
+.mobile-more-backdrop,
+.day-dots,
+.mobile-day-panel {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .hide-mobile { display: none !important; }
+
+  .app-container {
+    padding: 0.6rem 0.75rem calc(80px + env(safe-area-inset-bottom)) !important;
+  }
+
+  /* 머리말 한 줄 */
+  .navbar {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: space-between;
+    padding: 0.55rem 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+  .navbar .brand-logo { font-size: 1.05rem; gap: 0.4rem; min-width: 0; }
+  .navbar .brand-logo svg { width: 22px; height: 22px; }
+  .navbar .navbar-tabs-container { display: none !important; }
+  .navbar > .flex.align-center { width: auto !important; gap: 0.35rem !important; justify-content: flex-end !important; }
+  .navbar .btn-sm { padding: 0 0.55rem; }
+  .navbar .user-email-text { display: none !important; }
+
+  /* 아래쪽 탭 바 */
+  .mobile-tabbar {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border-color);
+  }
+  .mobile-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 52px;
+    background: none;
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mobile-tab.active { color: var(--primary); }
+  .mobile-tab.active svg { stroke-width: 2.4; }
+
+  .mobile-more-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 899;
+    background: rgba(24, 24, 27, 0.35);
+    animation: fade-in 0.15s ease-out;
+  }
+  .mobile-more-sheet {
+    position: absolute;
+    right: 8px;
+    bottom: calc(72px + env(safe-area-inset-bottom));
+    min-width: 200px;
+    padding: 6px;
+    display: grid;
+    gap: 2px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    animation: dialog-in 0.18s ease-out;
+  }
+  .mobile-more-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 46px;
+    padding: 0 12px;
+    background: none;
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--text-main);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+  }
+  .mobile-more-item:active,
+  .mobile-more-item.active { background: var(--primary-soft); color: var(--primary); }
+
+  /* 알림은 탭 바 위로 */
+  .toast-stack { bottom: calc(84px + env(safe-area-inset-bottom)); }
+
+  /* 창은 아래에서 올라오는 시트 */
+  .modal-overlay,
+  .modal-backdrop {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+  .modal-overlay > .modal-card,
+  .modal-backdrop > .modal-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92dvh !important;
+    overflow-y: auto;
+    margin: 0 !important;
+    border-radius: var(--radius-modal) var(--radius-modal) 0 0 !important;
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom)) !important;
+    animation: sheet-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .notify-overlay { align-items: flex-end; padding: 0; }
+  .notify-dialog {
+    width: 100%;
+    max-width: 100%;
+    border-radius: var(--radius-modal) var(--radius-modal) 0 0;
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+    animation: sheet-up 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .notify-dialog-actions .btn { flex: 1; height: 44px; }
+
+  /* 탐색 */
+  .search-header-banner h2 { font-size: 1.2rem; line-height: 1.35; }
+  .search-header-banner h2 svg { width: 20px; height: 20px; }
+  .search-header-banner .sub-text { display: none; }
+  .search-bar-wrapper .btn { padding: 0 0.85rem; flex-shrink: 0; }
+  .tab-bar { flex-wrap: wrap; gap: 0.5rem; }
+  .tab-bar > .flex { min-width: 0; }
+  .tab-item { white-space: nowrap; font-size: 0.85rem; padding-left: 0.4rem; padding-right: 0.4rem; }
+  .search-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .search-card { min-width: 0; }
+
+  /* 내 서재 도구줄 */
+  .bookshelf-header .sub-text { display: none; }
+  .bookshelf-header > div { min-width: 0; max-width: 100%; }
+  .shelf-toolbar { width: 100%; }
+  .shelf-search { width: 100%; }
+  .shelf-search input { width: 100% !important; height: 40px !important; }
+  .shelf-view-toggle { flex: 1 1 auto; }
+  .shelf-view-toggle .toggle-btn { flex: 1; justify-content: center; }
+  .shelf-theme-wrap { flex: 1 1 140px; }
+  .shelf-theme-wrap select { width: 100%; }
+  .shelf-actions { flex-wrap: wrap; white-space: normal !important; width: 100%; }
+  .shelf-actions .btn { flex: 1 1 calc(50% - 0.6rem); justify-content: center; }
+
+  /* 달력: 칸에는 날짜와 점, 고른 날 일정은 아래 목록 */
+  .calendar-grid { gap: 4px !important; }
+  .calendar-day-cell {
+    min-height: 54px !important;
+    padding: 5px 2px !important;
+    align-items: center;
+    gap: 3px;
+    border-radius: var(--radius-md) !important;
+  }
+  .calendar-day-cell .day-cell-top { justify-content: center !important; width: 100%; }
+  .calendar-day-cell .add-schedule-mini-btn,
+  .calendar-day-cell .holiday-badge,
+  .calendar-day-cell .day-schedules-list { display: none !important; }
+  .calendar-day-cell .day-number {
+    font-size: 0.85rem;
+    min-width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .calendar-day-cell.is-picked { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+  .day-dots { display: flex; gap: 3px; align-items: center; justify-content: center; height: 6px; }
+  .day-dot { width: 5px; height: 5px; border-radius: 50%; }
+  .day-dot-more { font-size: 9px; line-height: 1; color: var(--text-muted); font-weight: 700; }
+  .week-cell { font-size: 0.75rem; }
+
+  .mobile-day-panel {
+    display: block;
+    margin-top: 0.9rem;
+    padding: 0.85rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+  }
+  .mobile-day-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.6rem; }
+  .mobile-day-head strong { font-size: 1rem; color: var(--text-main); }
+  .mobile-day-empty { margin: 0.4rem 0 0.2rem; color: var(--text-muted); font-size: 0.875rem; }
+  .mobile-day-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .mobile-day-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 52px;
+    padding: 6px 4px 6px 6px;
+    background: var(--bg-subtle);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+  }
+  .mobile-day-item.completed .mobile-day-title { text-decoration: line-through; color: var(--text-muted); }
+  .mobile-day-check,
+  .mobile-day-del {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    border-radius: var(--radius-sm);
+  }
+  .mobile-day-item.completed .mobile-day-check { color: var(--accent-green); }
+  .mobile-day-bar { width: 3px; align-self: stretch; border-radius: 2px; flex-shrink: 0; }
+  .mobile-day-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+  .mobile-day-title {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text-main);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mobile-day-title svg { flex-shrink: 0; color: var(--text-muted); }
+  .mobile-day-sub { font-size: 0.75rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}

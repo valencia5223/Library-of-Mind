@@ -3,6 +3,7 @@ import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, Check
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { createScheduleTools } from '../utils/aiAssistant';
 import { toast, confirmDialog } from '../utils/notify';
+import useIsMobile from '../utils/useIsMobile';
 const OneNoteImportModal = lazy(() => import('./OneNoteImportModal'));
 const ScheduleNotesPanel = lazy(() => import('./ScheduleNotesPanel'));
 const NoteRichView = lazy(() => import('./NoteRichView'));
@@ -186,6 +187,9 @@ export default function ScheduleCalendarView({ userId = null }) {
   const [selectedDate, setSelectedDate] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState(null);
+  // 핸드폰: 날짜를 누르면 그날 일정을 달력 아래 목록으로 (칸에는 점만)
+  const isMobile = useIsMobile();
+  const [pickedDate, setPickedDate] = useState(null);
 
   // Form states
   const [scheduleDate, setScheduleDate] = useState('');
@@ -1196,8 +1200,8 @@ const getKoreanHoliday = (dateObj) => {
           return (
             <div
               key={dateStr}
-              className={`calendar-day-cell ${isToday ? 'is-today' : ''} ${isHoliday ? 'is-sun' : ''} ${dayOfWeek === 6 ? 'is-sat' : ''}`}
-              onClick={() => handleOpenAddModal(dateObj)}
+              className={`calendar-day-cell ${isToday ? 'is-today' : ''} ${isHoliday ? 'is-sun' : ''} ${dayOfWeek === 6 ? 'is-sat' : ''} ${isMobile && dateStr === (pickedDate || todayStr) ? 'is-picked' : ''}`}
+              onClick={() => (isMobile ? setPickedDate(dateStr) : handleOpenAddModal(dateObj))}
               style={holidayName ? { backgroundColor: 'rgba(254, 242, 242, 0.6)' } : {}}
             >
               <div className="day-cell-top flex justify-between align-center">
@@ -1231,6 +1235,16 @@ const getKoreanHoliday = (dateObj) => {
                   <Plus size={13} />
                 </button>
               </div>
+
+              {/* 핸드폰: 일정 수만큼 점 (최대 3개) */}
+              {daySchedules.length > 0 && (
+                <div className="day-dots" aria-label={`일정 ${daySchedules.length}개`}>
+                  {daySchedules.slice(0, 3).map((sch) => (
+                    <span key={sch.id} className="day-dot" style={{ backgroundColor: getCategoryBadge(sch.category).color }} />
+                  ))}
+                  {daySchedules.length > 3 && <span className="day-dot-more">+</span>}
+                </div>
+              )}
 
               {/* 일정 스케줄 목록 */}
               <div className="day-schedules-list">
@@ -1283,6 +1297,57 @@ const getKoreanHoliday = (dateObj) => {
           );
         })}
       </div>
+
+      {/* 핸드폰: 고른 날의 일정 목록 */}
+      {isMobile && (() => {
+        const dayStr = pickedDate || todayStr;
+        const [py, pm, pd] = dayStr.split('-').map(Number);
+        const dayObj = new Date(py, pm - 1, pd);
+        const list = schedules
+          .filter((s) => s.date === dayStr)
+          .sort((a, b) => String(a.time || '').localeCompare(String(b.time || '')));
+        return (
+          <div className="mobile-day-panel">
+            <div className="mobile-day-head">
+              <strong>{pm}월 {pd}일 ({'일월화수목금토'[dayObj.getDay()]})</strong>
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => handleOpenAddModal(dayObj)}>
+                <Plus size={14} /> 일정 추가
+              </button>
+            </div>
+            {list.length === 0 ? (
+              <p className="mobile-day-empty">이 날은 일정이 없어요.</p>
+            ) : (
+              <ul className="mobile-day-list">
+                {list.map((sch) => {
+                  const badge = getCategoryBadge(sch.category);
+                  const isSharedItem = sch.is_shared || sch.shared_friend_id;
+                  return (
+                    <li key={sch.id} className={`mobile-day-item ${sch.is_completed ? 'completed' : ''}`} onClick={() => handleOpenAddModal(dayObj, sch)}>
+                      <button type="button" className="mobile-day-check" onClick={(e) => handleToggleComplete(sch.id, e)} aria-label="완료 표시">
+                        {sch.is_completed ? <CheckCircle2 size={20} /> : <Circle size={20} />}
+                      </button>
+                      <span className="mobile-day-bar" style={{ backgroundColor: badge.color }} />
+                      <span className="mobile-day-text">
+                        <span className="mobile-day-title">
+                          {isOneNoteId(sch.id) && <NotebookText size={14} />}
+                          {isSharedItem && <Users size={14} />}
+                          {sch.title}
+                        </span>
+                        <span className="mobile-day-sub">
+                          {!isOneNoteId(sch.id) && sch.time ? `${sch.time} · ` : ''}{sch.onenote_path || (badge.label || '').replace(/^\S+\s/, '')}
+                        </span>
+                      </span>
+                      <button type="button" className="mobile-day-del" onClick={(e) => handleDeleteSchedule(sch.id, e)} aria-label="삭제">
+                        <Trash2 size={16} />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        );
+      })()}
 
       {/* 일정 추가 / 편집 모달 (화면 중앙 정렬) */}
       {showModal && (
