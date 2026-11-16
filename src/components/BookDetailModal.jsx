@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Plus, RefreshCw, Trash2, X, BookOpen, Layers, FileText, Upload, Eye } from 'lucide-react';
+import { ExternalLink, Plus, RefreshCw, Trash2, X, BookOpen, Layers, FileText, Upload, Eye, PenLine, Globe, Building2, CalendarDays } from 'lucide-react';
 import PdfBookViewerModal from './PdfBookViewerModal';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { findBookDetail, yes24SearchUrl } from '../utils/yes24';
 import { savePdfBlobToIDB, getFreshPdfUrl, deletePdfBlobFromIDB } from '../utils/pdfStorage';
 
+import { toast, confirmDialog } from '../utils/notify';
 const parseAuthorAndTranslator = (authorStr = '') => {
   if (!authorStr) return { author: '저자 미상', translator: null };
 
@@ -87,7 +88,7 @@ export default function BookDetailModal({
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
-      alert('PDF 파일만 첨부할 수 있습니다.');
+      toast('PDF 파일만 첨부할 수 있습니다.');
       return;
     }
 
@@ -131,7 +132,7 @@ export default function BookDetailModal({
   };
 
   const handleRemovePdf = async () => {
-    if (window.confirm('첨부된 PDF 파일을 제거하시겠습니까?')) {
+    if (await confirmDialog('첨부된 PDF 파일을 제거하시겠습니까?')) {
       if (pdfData && pdfData.id) {
         await deletePdfBlobFromIDB(pdfData.id);
       }
@@ -157,6 +158,11 @@ export default function BookDetailModal({
           overflow: 'hidden'
         }}
       >
+        {/* 표지를 흐리게 펼친 배경 */}
+        {(book.cover_url || book.cover) && (
+          <div className="detail-cover-glow" style={{ backgroundImage: `url("${book.cover_url || book.cover}")` }} aria-hidden="true" />
+        )}
+
         {/* 모달 닫기 버튼 */}
         <button type="button" className="modal-close book-detail-close" onClick={onClose} aria-label="닫기">
           <X size={18} />
@@ -210,26 +216,26 @@ export default function BookDetailModal({
               {/* 뱃지 태그 메타 정보 (가로 단일 flex wrap) */}
               <div className="book-meta-badges">
                 <span className="meta-chip">
-                  ✍️ <b>지은이:</b> {info.author}
+                  <PenLine size={13} /> <b>지은이</b> {info.author}
                 </span>
                 {info.translator && (
                   <span className="meta-chip">
-                    🌐 <b>옮긴이:</b> {info.translator}
+                    <Globe size={13} /> <b>옮긴이</b> {info.translator}
                   </span>
                 )}
                 {book.publisher && (
                   <span className="meta-chip">
-                    🏢 <b>출판사:</b> {book.publisher}
+                    <Building2 size={13} /> <b>출판사</b> {book.publisher}
                   </span>
                 )}
                 {book.pub_date && (
                   <span className="meta-chip">
-                    📅 <b>출간일:</b> {book.pub_date}
+                    <CalendarDays size={13} /> <b>출간일</b> {book.pub_date}
                   </span>
                 )}
                 {(realPageCount || book.total_pages || book.itemPage) && (
                   <span className="meta-chip meta-chip-accent">
-                    📄 <b>분량:</b> {realPageCount || book.total_pages || book.itemPage}쪽
+                    <FileText size={13} /> <b>분량</b> {realPageCount || book.total_pages || book.itemPage}쪽
                   </span>
                 )}
               </div>
@@ -242,7 +248,11 @@ export default function BookDetailModal({
               </h4>
               <div className="desc-text detail-desc">
                 {loadingDesc ? (
-                  <span className="detail-loading">예스24에서 도서 상세 소개를 불러오는 중입니다...</span>
+                  <span className="detail-loading" aria-label="도서 소개를 불러오는 중">
+                    {[92, 100, 96, 70, 88, 60].map((w, i) => (
+                      <span key={i} className="skeleton skeleton-line" style={{ width: `${w}%` }} />
+                    ))}
+                  </span>
                 ) : (
                   description || book.description || '등록된 도서 소개 정보가 없습니다.'
                 )}
@@ -284,7 +294,7 @@ export default function BookDetailModal({
                   onClick={() => setShowPdfViewer(true)}
                 >
                   <BookOpen size={16} />
-                  <span>📖 PDF 전자책 읽기</span>
+                  <span>PDF 전자책 읽기</span>
                   <span className="text-xs px-1.5 py-0.5 rounded font-normal" style={{ backgroundColor: 'color-mix(in srgb, var(--bg-card) 20%, transparent)' }}>
                     {pdfData.currentPage || 1}p
                   </span>
@@ -300,7 +310,7 @@ export default function BookDetailModal({
             ) : (
               <label className="btn btn-secondary btn-sm cursor-pointer">
                 <Upload size={15} />
-                <span>{isUploading ? '업로드 중...' : '📄 PDF 도서 첨부'}</span>
+                <span>{isUploading ? '업로드 중...' : 'PDF 도서 첨부'}</span>
                 <input
                   type="file"
                   accept="application/pdf"

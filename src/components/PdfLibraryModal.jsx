@@ -5,6 +5,7 @@ import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 import { openPdfIDB, savePdfBlobToIDB, getPdfBlobFromIDB, deletePdfBlobFromIDB, getFreshPdfUrl } from '../utils/pdfStorage';
 
+import { toast, confirmDialog } from '../utils/notify';
 const STORAGE_KEY = 'standalone_pdf_library_v1';
 
 export default function PdfLibraryModal({ onClose }) {
@@ -56,7 +57,7 @@ export default function PdfLibraryModal({ onClose }) {
     if (item.url) {
       setSelectedPdf(item);
     } else {
-      alert('⚠️ 저장된 PDF 파일 데이터를 찾을 수 없습니다. 다시 등록해 주세요.');
+      toast('⚠️ 저장된 PDF 파일 데이터를 찾을 수 없습니다. 다시 등록해 주세요.');
     }
   };
 
@@ -65,7 +66,7 @@ export default function PdfLibraryModal({ onClose }) {
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
-      alert('PDF 파일만 첨부할 수 있습니다.');
+      toast('PDF 파일만 첨부할 수 있습니다.');
       return;
     }
 
@@ -106,14 +107,14 @@ export default function PdfLibraryModal({ onClose }) {
         }).catch(() => {});
       }
     } catch (err) {
-      alert('PDF 업로드 중 오류가 발생했습니다.');
+      toast('PDF 업로드 중 오류가 발생했습니다.');
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleDeletePdf = async (id, title) => {
-    if (window.confirm(`'${title}' PDF 문서를 삭제하시겠습니까?`)) {
+    if (await confirmDialog(`'${title}' PDF 문서를 삭제하시겠습니까?`)) {
       await deletePdfBlobFromIDB(id);
       const filtered = pdfList.filter(item => item.id !== id);
       savePdfList(filtered);

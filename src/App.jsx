@@ -666,7 +666,7 @@ export default function App() {
         </div>
       ) : (
         /* 로그인 후 접속 허용 메인 뷰 */
-        <main className="main-content">
+        <main className="main-content tab-enter" key={activeTab}>
           {activeTab === 'schedule' && (
             <ScheduleCalendarView userId={user?.id} />
           )}

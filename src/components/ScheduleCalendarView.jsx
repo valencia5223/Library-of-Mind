@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'rea
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Plus, Clock, CheckCircle2, Circle, Trash2, Edit2, Tag, X, BookOpen, AlertCircle, ShieldCheck, Users, ExternalLink, Download, NotebookText, Search, Sparkles, FolderOpen } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { createScheduleTools } from '../utils/aiAssistant';
+import { toast, confirmDialog } from '../utils/notify';
 const OneNoteImportModal = lazy(() => import('./OneNoteImportModal'));
 const ScheduleNotesPanel = lazy(() => import('./ScheduleNotesPanel'));
 const NoteRichView = lazy(() => import('./NoteRichView'));
@@ -700,7 +701,7 @@ const getKoreanHoliday = (dateObj) => {
     }
     if (imported.length === 0) {
       if (silent) return [];
-      window.alert('선택한 페이지는 이미 친구가 공유해 준 일정이라 따로 가져오지 않았습니다.');
+      toast('선택한 페이지는 이미 친구가 공유해 준 일정이라 따로 가져오지 않았습니다.');
       return;
     }
     const importedIds = new Set(imported.map(s => s.id));
@@ -768,7 +769,7 @@ const getKoreanHoliday = (dateObj) => {
       const f = friendsList.find(fr => fr.id === id);
       return f ? (f.name || f.email.split('@')[0]) : '친구';
     };
-    window.alert(
+    toast(
       `OneNote 페이지 ${imported.length}개를 일정으로 가져왔습니다.` +
       (sharedCount > 0 ? `\n그중 ${sharedCount}개는 ${friendName(imported.find(s => s.is_shared).shared_friend_id)}님 달력에도 공유됩니다.` : '') +
       (sharedToMe.length > 0 ? `\n${sharedToMe.length}개는 이미 친구가 공유해 준 일정이라 건너뛰었습니다.` : '')
@@ -800,7 +801,7 @@ const getKoreanHoliday = (dateObj) => {
   // 일정 삭제
   const handleDeleteSchedule = async (scheduleId, e) => {
     e.stopPropagation();
-    if (!window.confirm('이 일정을 삭제하시겠습니까?')) return;
+    if (!await confirmDialog('이 일정을 삭제하시겠습니까?')) return;
     await removeSchedule(scheduleId);
   };
 

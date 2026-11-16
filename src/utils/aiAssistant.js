@@ -2,6 +2,7 @@
 // Gemini 가 요청한 도구(일정 찾기·노트 읽기·일정 추가/수정/삭제·첨부 엑셀 찾기)는 브라우저에서 사용자 권한으로 실행한다.
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
+import { confirmDialog } from './notify';
 const MAX_STEPS = 10; // 한 번의 질문에서 도구를 부르고 다시 묻는 최대 횟수
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const CATEGORIES = ['WORK', 'READING', 'PERSONAL', 'IMPORTANT'];
@@ -161,7 +162,7 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
       ].filter(Boolean);
       if (changes.length === 0) return { ok: true, unchanged: true };
       const warn = isOneNoteId(s.id) ? '\n\n※ OneNote 노트라 OneNote 에서 다시 동기화되면 덮어써질 수 있습니다.' : '';
-      if (!window.confirm(`AI 비서가 일정을 고치려고 합니다.\n\n${describe(s)}\n- ${changes.join('\n- ')}${warn}\n\n진행할까요?`)) {
+      if (!await confirmDialog(`AI 비서가 일정을 고치려고 합니다.\n\n${describe(s)}\n- ${changes.join('\n- ')}${warn}\n\n진행할까요?`)) {
         return { ok: false, declined_by_user: true };
       }
       await persistSchedule(next);
@@ -172,7 +173,7 @@ export const createScheduleTools = ({ getSchedules, persistSchedule, removeSched
       const s = find(id);
       if (!s) throw new Error(`id 가 ${id} 인 일정을 찾을 수 없습니다.`);
       if (s.user_id && s.user_id !== userId) throw new Error('친구가 공유해 준 일정은 삭제할 수 없습니다.');
-      if (!window.confirm(`AI 비서가 일정을 삭제하려고 합니다.\n\n${describe(s)}\n\n삭제할까요?`)) {
+      if (!await confirmDialog(`AI 비서가 일정을 삭제하려고 합니다.\n\n${describe(s)}\n\n삭제할까요?`)) {
         return { ok: false, declined_by_user: true };
       }
       await removeSchedule(s.id);

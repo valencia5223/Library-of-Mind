@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Sparkles, Send, Loader2, History, SquarePen, Trash2, ChevronLeft, FileSpreadsheet, Copy, Check } from 'lucide-react';
 import { runAssistantTurn, isAssistantAvailable } from '../utils/aiAssistant';
+import { toast, confirmDialog } from '../utils/notify';
 import {
   newConversationId,
   listConversations,
@@ -122,7 +123,7 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
       setCopiedIndex(i);
       setTimeout(() => setCopiedIndex(cur => (cur === i ? null : cur)), 1500);
     } else {
-      window.alert('복사하지 못했습니다.');
+      toast('복사하지 못했습니다.');
     }
   };
 
@@ -177,7 +178,7 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
       await saveExcel(userId, file, handle);
       refreshExcel();
     } catch (e) {
-      window.alert(e.message || String(e));
+      toast(e.message || String(e));
     } finally {
       setExcelBusy(false);
     }
@@ -205,7 +206,7 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
   };
 
   const detachExcel = async () => {
-    if (!window.confirm(`첨부한 엑셀(${excel?.name})을 이 브라우저에서 뺄까요? 원본 파일은 그대로입니다.`)) return;
+    if (!await confirmDialog(`첨부한 엑셀(${excel?.name})을 이 브라우저에서 뺄까요? 원본 파일은 그대로입니다.`)) return;
     await removeExcel(userId).catch(() => {});
     setExcel(null);
   };
@@ -286,7 +287,7 @@ export default function AiChatPanel({ open, onClose, tools, userId }) {
 
   const removeConversation = async (id, e) => {
     e.stopPropagation();
-    if (!window.confirm('이 대화를 지울까요?')) return;
+    if (!await confirmDialog('이 대화를 지울까요?')) return;
     await deleteConversation(id).catch(() => {});
     if (convRef.current?.id === id) {
       convRef.current = null;

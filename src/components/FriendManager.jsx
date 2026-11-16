@@ -4,6 +4,7 @@ import { Users, UserPlus, Heart, ExternalLink, Trash2, ShieldAlert, Sparkles, Ma
 import SharedLiveMemoModal from './SharedLiveMemoModal';
 import { subscribeUserToPush, isNotificationSupported, getNotificationPermission } from '../utils/webPush';
 
+import { toast, confirmDialog, alertDialog } from '../utils/notify';
 export default function FriendManager({ user, onViewFriendBookshelf, currentViewedFriend, onBackToMyBookshelf }) {
   const [friendEmail, setFriendEmail] = useState('');
   const [friendsList, setFriendsList] = useState([]);
@@ -178,7 +179,7 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
 
   const handleDeleteFriend = async (friendshipId, email, name) => {
     const displayName = name ? `${name} (${email})` : email;
-    if (!window.confirm(`${displayName} 님을 친구 목록에서 삭제하시겠습니까?`)) return;
+    if (!await confirmDialog(`${displayName} 님을 친구 목록에서 삭제하시겠습니까?`)) return;
 
     setLoading(true);
     try {
@@ -210,20 +211,20 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
           className="btn btn-secondary btn-sm"
           onClick={async () => {
             if (!isNotificationSupported()) {
-              alert('이 브라우저/기기는 데스크톱 푸시 알림을 지원하지 않습니다.');
+              toast('이 브라우저/기기는 데스크톱 푸시 알림을 지원하지 않습니다.');
               return;
             }
             const perm = getNotificationPermission();
             if (perm === 'granted') {
               if (user) await subscribeUserToPush(user.id, user.email, true);
-              alert('✅ [데스크톱 알림 활성화 완수]\nVAPID 푸시 키가 최신 상태로 갱신되었습니다! 인터넷 창이 닫혀 있어도 흔들기 및 라이브 채팅 알림을 팝업으로 수신받으실 수 있습니다.');
+              toast('알림이 켜져 있습니다. 창을 닫아 두어도 흔들기·채팅 알림을 받을 수 있어요.', { type: 'success' });
             } else if (perm === 'denied') {
-              alert('⚠️ [브라우저 알림이 차단되어 있습니다]\n\n해결 방법:\n1. 브라우저 주소창 맨 좌측의 🔒(자물쇠/설정) 아이콘 클릭\n2. [알림] 권한을 [허용]으로 변경\n3. 페이지 새로고침(F5) 실행');
+              alertDialog('주소창 왼쪽 자물쇠(사이트 정보) → 알림을 "허용"으로 바꾼 뒤 새로고침해 주세요.', { title: '브라우저에서 알림이 차단되어 있어요' });
             } else {
               const res = await Notification.requestPermission();
               if (res === 'granted' && user) {
                 await subscribeUserToPush(user.id, user.email, true);
-                alert('🎉 데스크톱 알림 권한이 정상적으로 허용되었습니다!');
+                toast('알림을 허용했습니다.', { type: 'success' });
               }
             }
           }}

@@ -3,6 +3,7 @@ import { X, BookOpen, ChevronLeft, ChevronRight, FileText, CheckCircle2, Columns
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { getFreshPdfUrl } from '../utils/pdfStorage';
 
+import { confirmDialog } from '../utils/notify';
 const PDFJS_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
 const PDFJS_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const PDFJS_CMAP_URL = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/';
@@ -184,12 +185,12 @@ export default function PdfBookViewerModal({ book, pdfData, onClose, onProgressU
     });
   };
 
-  const handleDeletePageNote = (targetPage, e) => {
+  const handleDeletePageNote = async (targetPage, e) => {
     if (e) {
       e.stopPropagation();
       e.preventDefault();
     }
-    if (window.confirm(`${targetPage}페이지의 모든 메모를 삭제하시겠습니까?`)) {
+    if (await confirmDialog(`${targetPage}페이지의 모든 메모를 삭제하시겠습니까?`)) {
       setPageNotes((prev) => {
         const updated = { ...prev };
         delete updated[targetPage];

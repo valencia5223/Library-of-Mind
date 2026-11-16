@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { X, ShieldCheck, UserCheck, UserX, Clock, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 
+import { confirmDialog } from '../utils/notify';
 export default function AdminApprovalModal({ isOpen, onClose, user }) {
   const [pendingUsers, setPendingUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +99,7 @@ export default function AdminApprovalModal({ isOpen, onClose, user }) {
 
   // 가입 요청 거절
   const handleReject = async (targetUser) => {
-    if (!window.confirm(`${targetUser.email} 님의 회원가입 신청을 거절하시겠습니까?`)) return;
+    if (!await confirmDialog(`${targetUser.email} 님의 회원가입 신청을 거절하시겠습니까?`)) return;
 
     setProcessingId(targetUser.id);
     try {

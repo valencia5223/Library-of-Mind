@@ -1,22 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, ShoppingBag, Plus, CheckCircle2, Flame, ExternalLink, RefreshCw, BookOpen, Sparkles, Star } from 'lucide-react';
+import { Search, ShoppingBag, Plus, CheckCircle2, Flame, ExternalLink, RefreshCw, BookOpen, Sparkles, Star, TrendingUp, Lightbulb, Landmark, FlaskConical, PenLine, Palette, Baby, Plane, CookingPot, GraduationCap } from 'lucide-react';
 import { fetchBestsellers, searchBooks, findBookDetail } from '../utils/yes24';
+import { toast } from '../utils/notify';
 import BookDetailModal from './BookDetailModal';
 
 // 예스24 분류 코드 (GET /v1/category/list 로 확인, '001' = 국내도서 종합)
 const BESTSELLER_CATEGORIES = [
-  { id: '001', name: '🌟 종합' },
-  { id: '001001046', name: '📖 소설/시' },
-  { id: '001001025', name: '📈 경제경영' },
-  { id: '001001026', name: '💡 자기계발' },
-  { id: '001001019', name: '🏛️ 인문' },
-  { id: '001001002', name: '🔬 과학' },
-  { id: '001001047', name: '✍️ 에세이' },
-  { id: '001001008', name: '🎨 만화' },
-  { id: '001001016', name: '👶 어린이' },
-  { id: '001001009', name: '✈️ 여행' },
-  { id: '001001001', name: '🍳 가정/살림' },
-  { id: '001001015', name: '📝 수험서/자격증' }
+  { id: '001', name: '종합', icon: Star },
+  { id: '001001046', name: '소설/시', icon: BookOpen },
+  { id: '001001025', name: '경제경영', icon: TrendingUp },
+  { id: '001001026', name: '자기계발', icon: Lightbulb },
+  { id: '001001019', name: '인문', icon: Landmark },
+  { id: '001001002', name: '과학', icon: FlaskConical },
+  { id: '001001047', name: '에세이', icon: PenLine },
+  { id: '001001008', name: '만화', icon: Palette },
+  { id: '001001016', name: '어린이', icon: Baby },
+  { id: '001001009', name: '여행', icon: Plane },
+  { id: '001001001', name: '가정/살림', icon: CookingPot },
+  { id: '001001015', name: '수험서/자격증', icon: GraduationCap }
 ];
 
 const SEARCH_PAGE_SIZE = 30;
@@ -36,6 +37,8 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
   const [page, setPage] = useState(1);
   const [sortOption, setSortOption] = useState('DEFAULT');
   const [hasMore, setHasMore] = useState(false);
+  const [addingId, setAddingId] = useState(null); // 쪽수 받아 오는 중
+  const [justAddedId, setJustAddedId] = useState(null); // 방금 담음 (체크 표시 반응)
 
   // 1. 예스24 분야별 베스트셀러 (Edge Function 'yes24' 중계)
   const loadBestsellers = useCallback(async (catId = selectedCategory) => {
@@ -115,18 +118,26 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
 
   // 서재에 도서를 추가 (예스24 상세에서 실제 쪽수·소개를 받아 함께 저장)
   const handleAddToShelf = async (book) => {
+    if (addingId) return;
+    setAddingId(book.id);
     let detail = null;
-    if (!book.total_pages) {
-      detail = await findBookDetail(book);
+    try {
+      if (!book.total_pages) {
+        detail = await findBookDetail(book);
+      }
+      await onAddBook({
+        ...book,
+        total_pages: detail?.total_pages || book.total_pages || 0,
+        description: book.description || detail?.description || '',
+        status: 'TO_READ',
+        rating: 0
+      });
+      setJustAddedId(book.id);
+      setTimeout(() => setJustAddedId((cur) => (cur === book.id ? null : cur)), 1600);
+      toast(`'${book.title}'을(를) 책장에 담았어요.`, { type: 'success' });
+    } finally {
+      setAddingId(null);
     }
-
-    onAddBook({
-      ...book,
-      total_pages: detail?.total_pages || book.total_pages || 0,
-      description: book.description || detail?.description || '',
-      status: 'TO_READ',
-      rating: 0
-    });
   };
 
   const isAlreadyInShelf = (title) => {
@@ -234,7 +245,7 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
               }}
               style={{ flexShrink: 0 }}
             >
-              {cat.name}
+              <cat.icon size={14} /> {cat.name}
             </button>
           ))}
         </div>
@@ -248,10 +259,16 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
 
       <div className="search-grid mt-4">
         {(activeTab === 'bestseller' && bestsellerLoading) || (activeTab === 'search' && loading && currentList.length === 0) ? (
-          <div className="empty-search p-5 text-center w-full col-span-full">
-            <RefreshCw size={32} className="animate-spin text-primary mx-auto mb-2" />
-            <p>예스24에서 도서 정보를 불러오는 중입니다...</p>
-          </div>
+          // 불러오는 동안 책 카드 모양의 뼈대
+          Array.from({ length: 12 }, (_, i) => (
+            <div key={`sk-${i}`} className="search-card skeleton-card" aria-hidden="true">
+              <div className="skeleton skeleton-cover" />
+              <div className="skeleton skeleton-line" style={{ width: '85%' }} />
+              <div className="skeleton skeleton-line" style={{ width: '55%' }} />
+              <div className="skeleton skeleton-line skeleton-line-sm" style={{ width: '70%' }} />
+              <div className="skeleton skeleton-btn" />
+            </div>
+          ))
         ) : currentList.length === 0 && !errorMsg ? (
           <div className="empty-search p-5 text-center col-span-full">
             {activeTab === 'search' ? '검색 결과가 없습니다. 다른 키워드로 검색해 보세요.' : '베스트셀러를 불러오지 못했습니다. 새로고침을 눌러주세요.'}
@@ -285,10 +302,13 @@ export default function BookSearch({ onAddBook, existingBooks = [] }) {
                   )}
                   <div className="card-btn-group mt-3" onClick={(e) => e.stopPropagation()}>
                     {added ? (
-                      <button className="btn btn-sm btn-secondary" disabled><CheckCircle2 size={14} /> 내 책장에 있음</button>
+                      <button className={`btn btn-sm btn-secondary ${justAddedId === book.id ? 'btn-pop' : ''}`} disabled>
+                        <CheckCircle2 size={14} /> 내 책장에 있음
+                      </button>
                     ) : (
-                      <button className="btn btn-sm btn-primary" onClick={() => handleAddToShelf(book)}>
-                        <Plus size={14} /> 책장에 담기
+                      <button className="btn btn-sm btn-primary" onClick={() => handleAddToShelf(book)} disabled={addingId === book.id}>
+                        {addingId === book.id ? <RefreshCw size={14} className="animate-spin" /> : <Plus size={14} />}
+                        {addingId === book.id ? '담는 중' : '책장에 담기'}
                       </button>
                     )}
                     <a href={book.buy_link} target="_blank" rel="noopener noreferrer" className="btn btn-sm btn-secondary">

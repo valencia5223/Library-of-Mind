@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Star, ExternalLink, PlusCircle, Plus, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw, X, Sparkles, Search, Compass } from 'lucide-react';
+import { BookOpen, Star, ExternalLink, PlusCircle, Plus, CheckCircle, Clock, Bookmark, Trash2, Edit3, Grid, Layers, MessageSquare, RefreshCw, X, Sparkles, Search, Compass, Trophy, Heart, Mail, Pin, CalendarDays, NotebookPen } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import BookDetailModal from './BookDetailModal';
 import { findBookDetail } from '../utils/yes24';
@@ -7,6 +7,7 @@ import ThoughtLedger from './ThoughtLedger';
 import ShelfGuestbookModal, { POSTIT_COLORS } from './ShelfGuestbookModal';
 import ReadingTasteGalaxyModal from './ReadingTasteGalaxyModal';
 
+import { toast } from '../utils/notify';
 export default function BookshelfView({ 
   books, 
   notes = [],
@@ -285,7 +286,7 @@ export default function BookshelfView({
     if (input !== null) {
       const pageNum = parseInt(input.trim());
       if (isNaN(pageNum) || pageNum <= 0) {
-        alert('올바른 페이지 숫자를 입력해 주세요.');
+        toast('올바른 페이지 숫자를 입력해 주세요.');
         return;
       }
 
@@ -294,7 +295,7 @@ export default function BookshelfView({
         await onUpdateBookDetails(selectedBook.id, updated);
       }
       setSelectedBook(updated);
-      alert(`✅ 페이지 수가 ${pageNum}p로 변경되었습니다!`);
+      toast(`✅ 페이지 수가 ${pageNum}p로 변경되었습니다!`);
     }
   };
 
@@ -437,13 +438,13 @@ export default function BookshelfView({
           await onUpdateBookDetails(book.id, updated);
         }
         setSelectedBook(updated);
-        alert(`✅ 페이지 수 동기화 완료! (${source})\n실제 페이지 수: ${fetchedPages}p`);
+        toast(`✅ 페이지 수 동기화 완료! (${source})\n실제 페이지 수: ${fetchedPages}p`);
       } else {
-        alert('⚠️ 해당 도서의 실제 페이지 수 정보를 찾지 못했습니다.\n도서 정보가 미등록되었거나 일시적 프록시 지연일 수 있습니다. 옆의 [✏️ 수동 입력] 버튼으로도 수정하실 수 있습니다.');
+        toast('⚠️ 해당 도서의 실제 페이지 수 정보를 찾지 못했습니다.\n도서 정보가 미등록되었거나 일시적 프록시 지연일 수 있습니다. 옆의 [✏️ 수동 입력] 버튼으로도 수정하실 수 있습니다.');
       }
     } catch (err) {
       console.error('도서 정보 동기화 중 오류 발생:', err);
-      alert('❌ 동기화 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+      toast('❌ 동기화 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
     } finally {
       setSyncingGoogleInfo(false);
     }
@@ -508,9 +509,9 @@ export default function BookshelfView({
   const [newTotalPages, setNewTotalPages] = useState(300);
 
   const statusCategories = [
-    { key: 'READING', title: '📖 지금 읽고 있는 책', color: 'var(--primary)', bg: 'var(--primary-soft)' },
-    { key: 'READ', title: '🏆 완독한 보물상자', color: '#10b981', bg: 'rgba(16, 185, 129, 0.12)' },
-    { key: 'TO_READ', title: '✨ 읽고 싶은 위시리스트', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' }
+    { key: 'READING', icon: BookOpen, title: '지금 읽고 있는 책', color: 'var(--primary)', bg: 'var(--primary-soft)' },
+    { key: 'READ', icon: Trophy, title: '완독한 보물상자', color: 'var(--accent-green)', bg: 'color-mix(in srgb, var(--accent-green) 12%, transparent)' },
+    { key: 'TO_READ', icon: Heart, title: '읽고 싶은 위시리스트', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' }
   ];
 
   const handleManualSubmit = (e) => {
@@ -726,7 +727,7 @@ export default function BookshelfView({
               onClick={() => setShowGuestbookModal(true)}
               style={{ display: 'inline-flex' }}
             >
-              <Sparkles size={15} /> {viewedFriend ? '📌 이웃 방명록 남기기' : `💌 내 방명록 (${guestbookNotes.length})`}
+              {viewedFriend ? <><Pin size={15} /> 이웃 방명록 남기기</> : <><Mail size={15} /> 내 방명록 ({guestbookNotes.length})</>}
             </button>
 
             {!viewedFriend && (
@@ -737,7 +738,7 @@ export default function BookshelfView({
                   style={{ display: 'inline-flex' }}
                   title="내 서재 카테고리별 독서 성향 및 취향 성운 시각화"
                 >
-                  <Compass size={15} /> 🌌 내 취향 지도
+                  <Compass size={15} /> 내 취향 지도
                 </button>
 
                 <button
@@ -745,7 +746,7 @@ export default function BookshelfView({
                   onClick={() => setShowThoughtLedgerModal(true)}
                   style={{ display: 'inline-flex' }}
                 >
-                  <MessageSquare size={15} /> 📝 독서 기록장 (문장 & 생각)
+                  <NotebookPen size={15} /> 독서 기록장 (문장 & 생각)
                 </button>
 
                 <button
@@ -803,7 +804,7 @@ export default function BookshelfView({
           return (
             <div key={cat.key} className="shelf-section">
               <div className="shelf-badge" style={{ borderColor: cat.color, color: cat.color, backgroundColor: cat.bg }}>
-                <span>{cat.title}</span>
+                <span className="shelf-badge-title"><cat.icon size={15} /> {cat.title}</span>
                 <span className="shelf-count">{catBooks.length}권</span>
               </div>
 
@@ -1058,7 +1059,7 @@ export default function BookshelfView({
                                     pub_date: book.pub_date,
                                     description: book.description
                                   });
-                                  alert(`✅ '${book.title}' 도서가 내 서재에 성공적으로 추가되었습니다!`);
+                                  toast(`✅ '${book.title}' 도서가 내 서재에 성공적으로 추가되었습니다!`);
                                 }
                               }}
                             >
@@ -1080,7 +1081,12 @@ export default function BookshelfView({
       {selectedBook && (
         <div className="modal-overlay" onClick={() => setSelectedBook(null)}>
           <div className="modal-card book-detail-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setSelectedBook(null)}>✕</button>
+            {selectedBook.cover_url && (
+              <div className="detail-cover-glow" style={{ backgroundImage: `url("${selectedBook.cover_url}")` }} aria-hidden="true" />
+            )}
+            <button type="button" className="modal-close book-detail-close" onClick={() => setSelectedBook(null)} aria-label="닫기">
+              <X size={18} />
+            </button>
 
             <div className="detail-grid">
               <div className="detail-cover-side">
@@ -1116,7 +1122,7 @@ export default function BookshelfView({
                   {selectedBook.author} | {selectedBook.publisher || '출판사 정보'}
                   {selectedBook.pub_date ? (
                     <span className="ml-2 font-bold text-slate-600" style={{ marginLeft: '0.4rem', color: 'var(--text-body)' }}>
-                      · 📅 출간일: {selectedBook.pub_date}
+                      · 출간일 {selectedBook.pub_date}
                     </span>
                   ) : ''}
                   <button 
@@ -1125,7 +1131,7 @@ export default function BookshelfView({
                     onClick={() => handleFetchBookDescription(selectedBook)}
                     title="클릭 시 도서 상세 소개글 팝업창을 엽니다."
                   >
-                    📖 도서소개 팝업 {loadingDesc ? <RefreshCw size={12} className="animate-spin" /> : '🔍'}
+                    {loadingDesc ? <RefreshCw size={12} className="animate-spin" /> : <BookOpen size={12} />} 도서 소개
                   </button>
                 </p>
 
@@ -1138,7 +1144,7 @@ export default function BookshelfView({
                       title="예스24에서 실제 페이지 수 정보를 가져와 자동 동기화합니다."
                     >
                       <RefreshCw size={13} className={syncingGoogleInfo ? 'animate-spin' : ''} />
-                      {syncingGoogleInfo ? '페이지 수 동기화 중...' : '📖 자동 페이지 수 동기화'}
+                      {syncingGoogleInfo ? '페이지 수 동기화 중...' : '자동 페이지 수 동기화'}
                     </button>
 
                     <button 
@@ -1247,7 +1253,7 @@ export default function BookshelfView({
                       {/* 완독 일자 선택기 추가 (status가 READ이거나 완독 페이지 달성 시 표시) */}
                       {(selectedBook.status === 'READ' || editCurrentPages >= editTotalPages) && (
                         <div className="mb-2" style={{ marginTop: '0.5rem' }}>
-                          <label className="sub-text font-bold" style={{ fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>🏆 완독 날짜 지정</label>
+                          <label className="sub-text font-bold" style={{ fontSize: '0.85rem', display: 'block', marginBottom: '4px' }}>완독 날짜 지정</label>
                           <input
                             type="date"
                             value={editCompletedAt}
@@ -1291,8 +1297,8 @@ export default function BookshelfView({
                         </span>
                       </div>
                       {selectedBook.status === 'READ' && selectedBook.completed_at && (
-                        <p className="sub-text font-bold mb-2" style={{ color: '#16a34a', fontSize: '0.8rem' }}>
-                          🏆 완독 일자: {(() => {
+                        <p className="sub-text font-bold mb-2" style={{ color: 'var(--accent-green)', fontSize: '0.8rem' }}>
+                          <Trophy size={13} style={{ verticalAlign: '-2px' }} /> 완독 일자: {(() => {
                             try {
                               const d = new Date(selectedBook.completed_at);
                               return isNaN(d.getTime()) ? String(selectedBook.completed_at) : d.toLocaleDateString();
@@ -1336,7 +1342,7 @@ export default function BookshelfView({
                             pub_date: selectedBook.pub_date,
                             description: selectedBook.description
                           });
-                          alert(`✅ '${selectedBook.title}' 도서가 내 서재에 성공적으로 추가되었습니다!`);
+                          toast(`✅ '${selectedBook.title}' 도서가 내 서재에 성공적으로 추가되었습니다!`);
                           setSelectedBook(null);
                         }
                       }}
@@ -1383,7 +1389,7 @@ export default function BookshelfView({
                 pub_date: selectedBook.pub_date,
                 description: selectedBook.description || bookDescription
               });
-              alert(`✅ '${selectedBook.title}' 도서가 내 서재에 추가되었습니다!`);
+              toast(`✅ '${selectedBook.title}' 도서가 내 서재에 추가되었습니다!`);
               setShowDescModal(false);
               setSelectedBook(null);
             }

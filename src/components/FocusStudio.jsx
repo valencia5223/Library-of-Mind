@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, Volume2, VolumeX, CloudRain, Flame, Coffee, FileText, CheckCircle2, Timer, Zap, Coffee as RestIcon } from 'lucide-react';
 
+import { toast } from '../utils/notify';
 export default function FocusStudio({ books = [], onSaveSession }) {
   // 모드: 'stopwatch' | 'pomodoro'
   const [timerMode, setTimerMode] = useState('stopwatch');
@@ -48,14 +49,14 @@ export default function FocusStudio({ books = [], onSaveSession }) {
           accumulatedSecRef.current = 0;
           startTimeRef.current = Date.now();
           setSeconds(5 * 60);
-          alert('🎉 25분 독서 몰입 세션이 완료되었습니다! 5분간 달콤한 휴식을 가지세요.');
+          toast('🎉 25분 독서 몰입 세션이 완료되었습니다! 5분간 달콤한 휴식을 가지세요.');
         } else {
           setIsRestPhase(false);
           setIsActive(false);
           accumulatedSecRef.current = 0;
           startTimeRef.current = null;
           setSeconds(pomodoroMins * 60);
-          alert('☕ 휴식 시간이 끝났습니다. 다시 독서를 시작해 보세요!');
+          toast('☕ 휴식 시간이 끝났습니다. 다시 독서를 시작해 보세요!');
         }
       } else {
         setSeconds(remaining);

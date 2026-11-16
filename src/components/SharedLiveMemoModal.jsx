@@ -3,6 +3,7 @@ import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, GripHorizontal, ArrowRightLeft, User, MessageSquare } from 'lucide-react';
 import { sendWebPushNotification } from '../utils/webPush';
 
+import { confirmDialog } from '../utils/notify';
 export default function SharedLiveMemoModal({ user, friend, onClose }) {
   if (!user || !friend) return null;
 
@@ -539,9 +540,9 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   };
 
   // 내 메모 지우기 (초기화)
-  const handleClearMyContent = () => {
+  const handleClearMyContent = async () => {
     if (isMyEditorEmpty) return;
-    if (window.confirm('내 메모장 내용을 모두 초기화(지우기)하시겠습니까?')) {
+    if (await confirmDialog('내 메모장 내용을 모두 초기화(지우기)하시겠습니까?')) {
       if (myEditorRef.current) {
         myEditorRef.current.innerHTML = '';
       }
@@ -552,7 +553,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   // 상대방 메모 초기화 (상대방 영역 지우기 & DB 실시간 연동)
   const handleClearPartnerContent = async () => {
     if (isPartnerEmpty) return;
-    if (window.confirm(`${friend.email} 님의 메모장 내용을 초기화(지우기)하시겠습니까?`)) {
+    if (await confirmDialog(`${friend.email} 님의 메모장 내용을 초기화(지우기)하시겠습니까?`)) {
       const updatedDict = {
         ...allMemosDictRef.current,
         [friend.friend_id]: ''
@@ -579,7 +580,7 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   // 전체 메모 초기화 (내 메모 + 상대방 메모 둘 다 삭제)
   const handleClearAllContent = async () => {
     if (isMyEditorEmpty && isPartnerEmpty) return;
-    if (window.confirm('🚨 내 메모와 상대방 메모를 모두 초기화(전체 지우기)하시겠습니까?')) {
+    if (await confirmDialog('🚨 내 메모와 상대방 메모를 모두 초기화(전체 지우기)하시겠습니까?')) {
       if (myEditorRef.current) {
         myEditorRef.current.innerHTML = '';
       }
@@ -607,9 +608,9 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
   };
 
   // 상대방 메모를 내 메모로 전체 가져오기 복사
-  const handleImportPartnerContent = () => {
+  const handleImportPartnerContent = async () => {
     if (!partnerContent || isPartnerEmpty) return;
-    if (window.confirm(`${friend.email}님의 라이브 메모 내용을 내 메모장으로 가져올까요? (기존 내 메모 뒤에 추가됩니다)`)) {
+    if (await confirmDialog(`${friend.email}님의 라이브 메모 내용을 내 메모장으로 가져올까요? (기존 내 메모 뒤에 추가됩니다)`)) {
       const newMyContent = (myContent ? myContent + '<br><br>' : '') + partnerContent;
       setMyContent(newMyContent);
       updateMyEditorDOM(newMyContent);
