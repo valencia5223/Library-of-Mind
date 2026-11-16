@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
-import { Users, UserPlus, Heart, ExternalLink, Trash2, ShieldAlert, Sparkles, Mail, Zap, MessageSquare } from 'lucide-react';
+import { Users, UserPlus, Heart, ExternalLink, Trash2, ShieldAlert, Sparkles, Mail, Bell, MessageSquare } from 'lucide-react';
 import SharedLiveMemoModal from './SharedLiveMemoModal';
 import { subscribeUserToPush, isNotificationSupported, getNotificationPermission } from '../utils/webPush';
 
@@ -230,9 +230,9 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
           }}
           title="인터넷 창이 닫혀 있어도 수신받는 데스크톱 푸시 알림 상태 켜기/갱신"
         >
-          <Zap size={14} />
+          <Bell size={14} />
           <span>
-            {!isNotificationSupported() ? '🔔 알림 미지원' : getNotificationPermission() === 'granted' ? '🔔 알림 ON (갱신)' : getNotificationPermission() === 'denied' ? '🔔 알림 차단됨' : '🔔 알림 켜기'}
+            {!isNotificationSupported() ? '알림 미지원' : getNotificationPermission() === 'granted' ? '알림 켜짐 (갱신)' : getNotificationPermission() === 'denied' ? '알림 차단됨' : '알림 켜기'}
           </span>
         </button>
       </div>
@@ -273,13 +273,11 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
           <form onSubmit={handleAddFriend}>
             <div className="mb-3">
               <label className="form-label font-semibold text-xs">친구 이메일 주소</label>
-              <div className="relative mt-1">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail size={16} className="text-gray-400" />
-                </span>
+              <div className="input-with-icon mt-1">
+                <Mail size={16} className="input-icon" />
                 <input
                   type="email"
-                  className="form-control pl-10"
+                  className="form-control"
                   placeholder="friend@example.com"
                   value={friendEmail}
                   onChange={(e) => setFriendEmail(e.target.value)}
@@ -314,37 +312,30 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
           ) : (
             <div className="friend-list-wrapper mt-3">
               {friendsList.map((friend) => (
-                <div key={friend.id} className="friend-item-card flex justify-between align-middle border-b py-3 transition hover:bg-slate-50 px-2 rounded mb-2">
-                  <div className="friend-details">
-                    <div className="flex align-center gap-2">
-                      {friend.name && (
-                        <span className="font-extrabold text-slate-800" style={{ fontSize: '0.98rem' }}>{friend.name}</span>
-                      )}
-                      <span className="text-slate-500 text-xs font-medium">({friend.email})</span>
-                    </div>
-                    <div className="flex text-xs text-sub mt-1">
-                      <span className="me-3">총 책 수: <strong>{friend.bookCount}권</strong></span>
-                      <span>완독 수: <strong className="text-green">{friend.completedCount}권</strong></span>
+                <div key={friend.id} className="friend-row">
+                  <div className="friend-avatar" aria-hidden="true">
+                    {(friend.name || friend.email || '?').trim().charAt(0).toUpperCase()}
+                  </div>
+                  <div className="friend-info">
+                    <div className="friend-name">{friend.name || friend.email.split('@')[0]}</div>
+                    <div className="friend-email">{friend.email}</div>
+                    <div className="friend-stats">
+                      책 <strong>{friend.bookCount}</strong>권 · 완독 <strong className="text-green">{friend.completedCount}</strong>권
                     </div>
                   </div>
-                  <div className="friend-actions flex gap-2">
-                    <button
-                      className="btn btn-outline-primary btn-sm flex align-middle px-2.5 font-bold"
-                      onClick={() => setActiveFriendForMemo(friend)}
-                    >
-                      <MessageSquare className="me-1 text-sky-600" size={14} /> 실시간 채팅
+                  <div className="friend-row-actions">
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => setActiveFriendForMemo(friend)}>
+                      <MessageSquare size={14} /> 채팅
                     </button>
-
-                    <button
-                      className="btn btn-outline-primary btn-sm flex align-middle px-3"
-                      onClick={() => onViewFriendBookshelf(friend.friend_id, friend.email, friend.name)}
-                    >
-                      <ExternalLink className="me-1" size={14} /> 서재 방문
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => onViewFriendBookshelf(friend.friend_id, friend.email, friend.name)}>
+                      <ExternalLink size={14} /> 서재 방문
                     </button>
-
                     <button
-                      className="btn btn-outline-danger btn-sm p-1.5"
+                      type="button"
+                      className="btn btn-ghost btn-sm friend-delete"
                       onClick={() => handleDeleteFriend(friend.id, friend.email, friend.name)}
+                      title="친구 삭제"
+                      aria-label="친구 삭제"
                     >
                       <Trash2 size={15} />
                     </button>

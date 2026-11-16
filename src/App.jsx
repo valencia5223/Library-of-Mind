@@ -18,7 +18,7 @@ import ThemePicker from './components/ThemePicker';
 import { registerServiceWorker, subscribeUserToPush, isNotificationSupported, getNotificationPermission } from './utils/webPush';
 
 
-// 메인 탭 (위쪽 탭 = label, 핸드폰 아래쪽 탭 바 = short, 앞 4개만 바에 두고 나머지는 '더보기')
+// 메인 탭 (위쪽 탭 = label, 핸드폰 아래쪽 탭 바 = short)
 const MAIN_TABS = [
   { id: 'schedule', label: '일정관리', short: '일정', icon: CalendarIcon },
   { id: 'bookshelf', label: '내 서재', short: '서재', icon: BookOpen },
@@ -27,6 +27,10 @@ const MAIN_TABS = [
   { id: 'stats', label: '독서 리포트', short: '리포트', icon: BarChart2 },
   { id: 'social', label: '이웃 서재', short: '이웃', icon: Users },
 ];
+// 핸드폰 아래쪽 탭 바에 바로 두는 탭 (나머지는 '더보기')
+const MOBILE_BAR_IDS = ['schedule', 'bookshelf', 'search', 'social'];
+const MOBILE_BAR_TABS = MAIN_TABS.filter((t) => MOBILE_BAR_IDS.includes(t.id));
+const MOBILE_MORE_TABS = MAIN_TABS.filter((t) => !MOBILE_BAR_IDS.includes(t.id));
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('schedule'); // 기본 메인화면: 일정관리
@@ -705,7 +709,7 @@ export default function App() {
       {/* 핸드폰: 아래쪽 탭 바 (위쪽 탭은 CSS 로 숨김) */}
       {user && (
         <nav className="mobile-tabbar" aria-label="메뉴">
-          {MAIN_TABS.slice(0, 4).map(({ id, short, icon: TabIcon }) => (
+          {MOBILE_BAR_TABS.map(({ id, short, icon: TabIcon }) => (
             <button
               key={id}
               type="button"
@@ -718,7 +722,7 @@ export default function App() {
           ))}
           <button
             type="button"
-            className={`mobile-tab ${showMoreMenu || MAIN_TABS.slice(4).some((t) => t.id === activeTab) ? 'active' : ''}`}
+            className={`mobile-tab ${showMoreMenu || MOBILE_MORE_TABS.some((t) => t.id === activeTab) ? 'active' : ''}`}
             onClick={() => setShowMoreMenu((v) => !v)}
             aria-expanded={showMoreMenu}
           >
@@ -730,7 +734,7 @@ export default function App() {
       {user && showMoreMenu && (
         <div className="mobile-more-backdrop" onClick={() => setShowMoreMenu(false)}>
           <div className="mobile-more-sheet" onClick={(e) => e.stopPropagation()}>
-            {MAIN_TABS.slice(4).map(({ id, label, icon: TabIcon }) => (
+            {MOBILE_MORE_TABS.map(({ id, label, icon: TabIcon }) => (
               <button
                 key={id}
                 type="button"
