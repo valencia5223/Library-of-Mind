@@ -12,7 +12,7 @@
     <script>
       try {
         var t = localStorage.getItem('lom_theme');
-        if (t && t !== 'modern') document.documentElement.setAttribute('data-theme', t);
+        if (['paper', 'gallery', 'lavender'].indexOf(t) >= 0) document.documentElement.setAttribute('data-theme', t);
       } catch (e) {}
     </script>
   </head>

@@ -4,8 +4,8 @@
 export const THEMES = [
   { id: 'modern', name: '모던 미니멀', swatch: ['#f7f7f8', '#4f46e5'] },
   { id: 'paper', name: '따뜻한 종이 서재', swatch: ['#f6f1e7', '#8b2e3c'] },
-  { id: 'night', name: '밤의 도서관', swatch: ['#0f1420', '#e0b45c'] },
-  { id: 'forest', name: '숲속 북카페', swatch: ['#f1f4ee', '#2f6b4f'] },
+  { id: 'gallery', name: '갤러리 모노', swatch: ['#ffffff', '#111111'] },
+  { id: 'lavender', name: '새벽 라벤더', swatch: ['#f5f3fb', '#7c6cf0'] },
 ];
 
 const KEY = 'lom_theme';

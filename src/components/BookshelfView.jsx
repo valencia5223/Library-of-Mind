@@ -689,20 +689,8 @@ export default function BookshelfView({
               <select
                 value={shelfTheme}
                 onChange={(e) => handleShelfThemeChange(e.target.value)}
-                style={{
-                  height: '36px',
-                  padding: '0 0.75rem',
-                  fontSize: '0.825rem',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-card)',
-                  color: 'var(--text-main)',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                  boxSizing: 'border-box',
-                  outline: 'none'
-                }}
+                className="shelf-theme-select"
+                style={{ height: 'var(--btn-h)', paddingTop: 0, paddingBottom: 0, fontSize: '0.825rem', fontWeight: 700, whiteSpace: 'nowrap' }}
               >
                 <optgroup label="✨ 캐릭터 테마">
                   <option value="pochacco">🐾 포장마차 파스텔 블루</option>

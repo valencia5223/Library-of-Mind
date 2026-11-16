@@ -962,11 +962,7 @@ const getKoreanHoliday = (dateObj) => {
           className="input-field mt-1 font-bold"
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          style={{
-            padding: '0.65rem 0.85rem',
-            fontSize: '0.9rem',
-            height: '42px'
-          }}
+          style={{ height: '42px', fontSize: '0.9rem' }}
         >
           <option value="WORK">💼 업무</option>
           <option value="READING">📖 독서</option>
@@ -980,14 +976,9 @@ const getKoreanHoliday = (dateObj) => {
           <Users size={14} className="text-sky-600" /> 등록된 친구와 일정 공유 (선택)
         </label>
         <select
-          className="input-field mt-1 font-bold"
+          className={`input-field mt-1 font-bold ${sharedFriendId ? 'is-selected' : ''}`}
           value={sharedFriendId}
           onChange={(e) => setSharedFriendId(e.target.value)}
-          style={{
-            backgroundColor: sharedFriendId ? '#f5f7ff' : '#ffffff',
-            borderColor: sharedFriendId ? '#4f46e5' : '#d4d4d8',
-            color: sharedFriendId ? '#4338ca' : '#3f3f46'
-          }}
         >
           <option value="">🔒 공유 안함 (나만의 개인 일정)</option>
           {friendsList.map(f => (
