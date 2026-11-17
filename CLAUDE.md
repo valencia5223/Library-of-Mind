@@ -12,7 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `baby-play-studio/` | 유아용 놀이 앱 (동물·과일·차량 소리/퀴즈, 실로폰, 그림그리기, 동요 등) | React 18 + Vite 5 (백엔드 없음) |
 | `Family_MatZip/` | 가족 맛집 앱. Library of Mind와 무관한 별개 프로젝트이므로 루트 앱 작업 시 참고하지 않는다 | React 19 + Vite |
 | `lotto-gacha/` | 로또 6/45 캡슐 뽑기 (당첨 번호 분석 + 번호 뽑기) | React 19 + Vite 5 (백엔드 없음) |
-| `parent-dashboard/` | **Parent Dashboard** — 부모를 위한 대시보드. 다른 프로젝트와 무관한 별개 앱. **자체 `.git` 을 가진 별도 저장소**(`github.com/valencia5223/parent-dashboard`, 루트 `.gitignore` 로 제외)라 커밋·push 는 반드시 `parent-dashboard/` 안에서. Render 정적 사이트(`parent-dashboard/render.yaml`), main push 로 자동 배포 | React 19 + Vite 5 |
+| `parent-dashboard/` | **Parent Dashboard** — 부모님용 생활정보 대시보드(날씨·미세먼지·버스 도착·싼 주유소·산본 삼익소월 실거래가). 다른 프로젝트와 무관한 별개 앱. **자체 `.git` 을 가진 별도 저장소**(`github.com/valencia5223/parent-dashboard`, 루트 `.gitignore` 로 제외)라 커밋·push 는 반드시 `parent-dashboard/` 안에서. Render Node 웹 서비스(`render.yaml`): `server.js` 가 dist 를 내보내고 `/api/*` 로 경기버스·오피넷·국토부 실거래가를 중계(키는 환경변수 `DATA_GO_KR_KEY`·`OPINET_KEY`, 로컬은 `.env`). 날씨·미세먼지는 Open-Meteo 를 브라우저에서 바로. 개발은 `npm run server` + `npm run dev` 두 개를 켬 | React 19 + Vite 5 + Node 서버 |
 | `yuna_nutrition_tracker/` | 영양/수면 기록 웹앱 | Flask + Supabase + Gemini, gunicorn 배포 |
 | `flask_app/` | DB 쿼리/프로시저 분석 데스크톱 도구 | Flask, PyInstaller exe |
 | `road_to_threez/`, `creep_company_game/`, 루트 `game.py`/`sprites.py` | 파이썬 게임 | pygame, PyInstaller(`.spec`) |
