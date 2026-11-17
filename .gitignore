@@ -48,3 +48,6 @@ npm-debug.log*
 /connection*.json
 /snippets.json
 -DESKTOP-ACMQULK.gitignore
+
+# 별도 저장소 (github.com/valencia5223/parent-dashboard)
+/parent-dashboard/
