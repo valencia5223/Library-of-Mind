@@ -5,7 +5,8 @@ export const THEMES = [
   { id: 'modern', name: '모던 미니멀', swatch: ['#f7f7f8', '#4f46e5'] },
   { id: 'paper', name: '따뜻한 종이 서재', swatch: ['#f6f1e7', '#8b2e3c'] },
   { id: 'gallery', name: '갤러리 모노', swatch: ['#ffffff', '#111111'] },
-  { id: 'lavender', name: '새벽 라벤더', swatch: ['#f5f3fb', '#7c6cf0'] },
+  { id: 'mint', name: '민트 소다', swatch: ['#f3faf8', '#0f9d8a'] },
+  { id: 'pop', name: '팝 스티커', swatch: ['#fff8e1', '#ffcf33'] },
 ];
 
 const KEY = 'lom_theme';

@@ -188,60 +188,119 @@ html[data-theme="gallery"] {
   --card-shadow: none;
 }
 
-/* 새벽 라벤더: 연한 라벤더 파스텔, 둥글고 폭신한 버튼, 채운 입력창 */
-html[data-theme="lavender"] {
-  --bg-dark: #f5f3fb;
+/* 민트 소다: 민트 바탕 + 청록 포인트, 알약 버튼·탭, 크게 둥근 카드 */
+html[data-theme="mint"] {
+  --bg-dark: #f3faf8;
   --bg-card: #ffffff;
-  --bg-card-hover: #faf9fe;
-  --bg-subtle: #efecf9;
-  --border-color: #e7e3f5;
-  --border-strong: #d6d0ee;
-  --primary: #7c6cf0;
-  --primary-hover: #6a59e6;
-  --primary-soft: #efecff;
-  --primary-ring: rgba(124, 108, 240, 0.2);
-  --primary-200: #d9d3fb;
-  --primary-300: #bdb3f8;
-  --primary-400: #9d90f4;
-  --accent-blue: #7c6cf0;
-  --text-main: #2b2540;
-  --text-body: #4a4463;
-  --text-sub: #7a7491;
-  --text-muted: #a6a1bb;
-  --shadow-sm: 0 2px 6px rgba(124, 108, 240, 0.07);
-  --shadow-md: 0 8px 24px rgba(124, 108, 240, 0.1), 0 2px 6px rgba(124, 108, 240, 0.05);
-  --shadow-lg: 0 24px 56px rgba(76, 60, 160, 0.18);
-  --radius-lg: 18px;
+  --bg-card-hover: #f7fcfb;
+  --bg-subtle: #e4f2ee;
+  --border-color: #d7ebe5;
+  --border-strong: #b9dcd2;
+  --primary: #0f9d8a;
+  --primary-hover: #0b8575;
+  --primary-soft: #dcf3ee;
+  --primary-ring: rgba(15, 157, 138, 0.2);
+  --primary-200: #b3e4da;
+  --primary-300: #7fd0c0;
+  --primary-400: #3fb6a2;
+  --accent-blue: #0f9d8a;
+  --text-main: #12302b;
+  --text-body: #33504a;
+  --text-sub: #5b7a73;
+  --text-muted: #93ada7;
+  --shadow-sm: 0 1px 3px rgba(18, 48, 43, 0.05);
+  --shadow-md: 0 6px 18px rgba(15, 157, 138, 0.08), 0 1px 3px rgba(18, 48, 43, 0.04);
+  --shadow-lg: 0 24px 52px rgba(18, 48, 43, 0.16);
+  --radius-lg: 16px;
   --radius-md: 12px;
-  --radius-btn: 14px;
-  --radius-sm: 12px;
+  --radius-btn: 999px;
+  --radius-sm: 999px;
   --radius-xs: 999px;
-  --radius-btn-lg: 16px;
-  --radius-modal: 24px;
-  --radius-tab: 14px;
-  --radius-tab-inner: 11px;
-  --radius-input: 12px;
-  --btn-primary-bg: linear-gradient(135deg, #9283f6 0%, #6f5ff0 100%);
-  --btn-primary-bg-hover: linear-gradient(135deg, #8576f3 0%, #604fe8 100%);
-  --btn-primary-shadow: 0 4px 12px rgba(124, 108, 240, 0.32);
-  --btn-border-w: 0px;
-  --btn-secondary-bg: #efecfb;
-  --btn-secondary-border: transparent;
-  --btn-secondary-color: #4a3fb0;
-  --btn-secondary-hover-bg: #e4dffa;
-  --btn-secondary-hover-border: transparent;
-  --btn-secondary-hover-color: #3a2fa0;
+  --radius-btn-lg: 999px;
+  --radius-modal: 22px;
+  --radius-tab: 999px;
+  --radius-tab-inner: 999px;
+  --radius-input: 999px;
+  --btn-primary-shadow: 0 2px 8px rgba(15, 157, 138, 0.25);
+  --btn-secondary-bg: #ffffff;
+  --btn-secondary-border: #cfe7e0;
+  --btn-secondary-color: #0b6f62;
+  --btn-secondary-hover-bg: #eef9f6;
+  --btn-secondary-hover-border: #9fd8cb;
+  --btn-secondary-hover-color: #085a50;
   --btn-secondary-shadow: none;
-  --input-bg: #f3f1fb;
-  --input-border: transparent;
+  --input-bg: #f7fcfb;
+  --input-border: #cfe7e0;
   --input-focus-bg: #ffffff;
   --select-arrow: var(--primary);
-  --seg-bg: #ebe8f8;
+  --seg-bg: #e4f2ee;
   --seg-border: transparent;
-  --seg-active-shadow: 0 2px 8px rgba(124, 108, 240, 0.16);
-  --seg-active-color: #4a3fb0;
-  --card-border: rgba(124, 108, 240, 0.1);
-  --card-shadow: 0 6px 20px rgba(124, 108, 240, 0.07);
+  --seg-active-color: #0b6f62;
+  --seg-active-shadow: 0 1px 4px rgba(15, 157, 138, 0.18);
+  --card-border: #d7ebe5;
+  --card-shadow: 0 2px 10px rgba(15, 157, 138, 0.05);
+}
+
+/* 팝 스티커: 크림 바탕 + 굵은 먹선 + 노란 포인트 + 아래로 밀린 그림자
+   (노랑은 글자로 쓰면 안 보여서 --primary 는 먹색, 노랑은 버튼·선택 면에만) */
+html[data-theme="pop"] {
+  --bg-dark: #fff8e1;
+  --bg-card: #ffffff;
+  --bg-card-hover: #fffbea;
+  --bg-subtle: #fff1c2;
+  --border-color: #1a1a1a;
+  --border-strong: #1a1a1a;
+  --primary: #1a1a1a;
+  --primary-hover: #000000;
+  --primary-soft: #fff1c2;
+  --primary-ring: rgba(255, 207, 51, 0.55);
+  --primary-200: #ffe58a;
+  --primary-300: #ffd84f;
+  --primary-400: #3a3a3a;
+  --on-primary: #1a1a1a;
+  --accent-blue: #1a1a1a;
+  --text-main: #1a1a1a;
+  --text-body: #2e2b24;
+  --text-sub: #5c5546;
+  --text-muted: #8f8670;
+  --shadow-sm: 2px 2px 0 #1a1a1a;
+  --shadow-md: 3px 3px 0 #1a1a1a;
+  --shadow-lg: 6px 6px 0 #1a1a1a;
+  --radius-lg: 10px;
+  --radius-md: 8px;
+  --radius-btn: 8px;
+  --radius-sm: 7px;
+  --radius-xs: 6px;
+  --radius-btn-lg: 10px;
+  --radius-modal: 14px;
+  --radius-tab: 10px;
+  --radius-tab-inner: 7px;
+  --radius-input: 8px;
+  --btn-weight: 700;
+  --btn-border-w: 2px;
+  --btn-primary-bg: #ffcf33;
+  --btn-primary-bg-hover: #ffc107;
+  --btn-primary-shadow: 2px 2px 0 #1a1a1a;
+  --btn-secondary-bg: #ffffff;
+  --btn-secondary-border: #1a1a1a;
+  --btn-secondary-color: #1a1a1a;
+  --btn-secondary-hover-bg: #fff1c2;
+  --btn-secondary-hover-border: #1a1a1a;
+  --btn-secondary-hover-color: #1a1a1a;
+  --btn-secondary-shadow: 2px 2px 0 #1a1a1a;
+  --input-bg: #ffffff;
+  --input-border: #1a1a1a;
+  --input-border-w: 2px;
+  --input-focus-bg: #fffdf3;
+  --input-focus-ring: 3px 3px 0 #ffcf33;
+  --select-arrow: #1a1a1a;
+  --seg-bg: #ffffff;
+  --seg-border: #1a1a1a;
+  --seg-active-bg: #ffcf33;
+  --seg-active-color: #1a1a1a;
+  --seg-active-shadow: inset 0 0 0 2px #1a1a1a;
+  --card-border: #1a1a1a;
+  --card-shadow: 3px 3px 0 #1a1a1a;
 }
 
 
@@ -3950,46 +4009,83 @@ html[data-theme="gallery"] h2 {
   letter-spacing: -0.01em;
 }
 
-/* ---------- 새벽 라벤더: 폭신한 버튼·채운 입력창·은은한 빛 ---------- */
-html[data-theme="lavender"] body {
-  background:
-    radial-gradient(1200px 600px at 0% -10%, rgba(196, 181, 253, 0.35), transparent 60%),
-    radial-gradient(900px 500px at 100% 0%, rgba(186, 230, 253, 0.35), transparent 60%),
-    var(--bg-dark);
-  background-attachment: fixed;
-}
-html[data-theme="lavender"] .navbar {
-  background: rgba(255, 255, 255, 0.72);
-  border-color: rgba(124, 108, 240, 0.12);
-  box-shadow: 0 8px 24px rgba(124, 108, 240, 0.08);
-}
-html[data-theme="lavender"] .btn-primary:hover:not(:disabled) {
-  box-shadow: 0 6px 16px rgba(124, 108, 240, 0.4);
-}
-html[data-theme="lavender"] .btn-danger {
-  background: #fff1f2;
-  color: #e11d48;
-}
-html[data-theme="lavender"] select,
-html[data-theme="lavender"] .select-sort {
-  border-radius: 999px;
+/* ---------- 민트 소다: 알약 콤보박스 ---------- */
+html[data-theme="mint"] select,
+html[data-theme="mint"] .select-sort {
   padding-left: 1rem;
 }
-html[data-theme="lavender"] input:focus,
-html[data-theme="lavender"] select:focus,
-html[data-theme="lavender"] textarea:focus,
-html[data-theme="lavender"] .input-field:focus {
+html[data-theme="mint"] textarea {
+  border-radius: 14px;
+}
+html[data-theme="mint"] input:focus,
+html[data-theme="mint"] select:focus,
+html[data-theme="mint"] textarea:focus,
+html[data-theme="mint"] .input-field:focus {
   border-color: var(--primary-300);
 }
-html[data-theme="lavender"] .modal-card {
-  border-color: rgba(124, 108, 240, 0.12);
+html[data-theme="mint"] .modal-card {
+  border-color: #d7ebe5;
 }
-html[data-theme="lavender"] .meta-chip {
-  border-color: transparent;
+
+/* ---------- 팝 스티커: 2px 먹선 + 밀린 그림자, 누르면 쏙 들어감 ---------- */
+html[data-theme="pop"] .navbar {
+  border: 2px solid #1a1a1a;
+  box-shadow: 3px 3px 0 #1a1a1a;
+  background: #ffffff;
+  backdrop-filter: none;
 }
-html[data-theme="lavender"] .search-header-banner {
-  background: linear-gradient(135deg, #efeaff 0%, #e8f4ff 100%);
-  border-color: transparent;
+html[data-theme="pop"] .schedule-calendar-wrapper,
+html[data-theme="pop"] .book-card,
+html[data-theme="pop"] .thought-card,
+html[data-theme="pop"] .stat-card,
+html[data-theme="pop"] .auth-gate-card,
+html[data-theme="pop"] .search-card,
+html[data-theme="pop"] .modal-card {
+  border: 2px solid #1a1a1a;
+}
+html[data-theme="pop"] .navbar-tabs-container,
+html[data-theme="pop"] .toggle-group {
+  border-width: 2px;
+}
+html[data-theme="pop"] .nav-tab-capsule.active svg,
+html[data-theme="pop"] .toggle-btn.active svg {
+  color: #1a1a1a;
+}
+html[data-theme="pop"] .btn-primary,
+html[data-theme="pop"] .btn-danger,
+html[data-theme="pop"] .btn-success,
+html[data-theme="pop"] .btn-warning {
+  border-color: #1a1a1a;
+}
+html[data-theme="pop"] .btn-danger {
+  box-shadow: 2px 2px 0 #1a1a1a;
+}
+html[data-theme="pop"] .btn-ghost {
+  font-weight: 600;
+}
+html[data-theme="pop"] .btn:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+html[data-theme="pop"] input:focus,
+html[data-theme="pop"] select:focus,
+html[data-theme="pop"] textarea:focus,
+html[data-theme="pop"] .input-field:focus {
+  box-shadow: 3px 3px 0 #ffcf33;
+  outline: none;
+}
+html[data-theme="pop"] .meta-chip {
+  border: 1.5px solid #1a1a1a;
+}
+html[data-theme="pop"] .search-header-banner {
+  background: #ffcf33;
+  border: 2px solid #1a1a1a;
+  box-shadow: 3px 3px 0 #1a1a1a;
+}
+html[data-theme="pop"] .modal-overlay,
+html[data-theme="pop"] .modal-backdrop {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 /* 링크로 만든 버튼은 밑줄 없이 */
