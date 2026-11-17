@@ -12,6 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `baby-play-studio/` | 유아용 놀이 앱 (동물·과일·차량 소리/퀴즈, 실로폰, 그림그리기, 동요 등) | React 18 + Vite 5 (백엔드 없음) |
 | `Family_MatZip/` | 가족 맛집 앱. Library of Mind와 무관한 별개 프로젝트이므로 루트 앱 작업 시 참고하지 않는다 | React 19 + Vite |
 | `lotto-gacha/` | 로또 6/45 캡슐 뽑기 (당첨 번호 분석 + 번호 뽑기) | React 19 + Vite 5 (백엔드 없음) |
+| `parent-dashboard/` | **Parent Dashboard** — 부모를 위한 대시보드. 다른 프로젝트와 무관한 별개 앱. Render 정적 사이트(`parent-dashboard/render.yaml`, Root Directory `parent-dashboard`) | React 19 + Vite 5 |
 | `yuna_nutrition_tracker/` | 영양/수면 기록 웹앱 | Flask + Supabase + Gemini, gunicorn 배포 |
 | `flask_app/` | DB 쿼리/프로시저 분석 데스크톱 도구 | Flask, PyInstaller exe |
 | `road_to_threez/`, `creep_company_game/`, 루트 `game.py`/`sprites.py` | 파이썬 게임 | pygame, PyInstaller(`.spec`) |
