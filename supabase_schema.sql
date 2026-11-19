@@ -152,3 +152,30 @@ create policy "부재중 흔들기 기록 전체 조회 및 저장 허용" on nu
   for all using (true) with check (true);
 
 
+
+-- ===== profiles 노출 막기 (2026-11-19): 나·친구만 보기, 친구 추가는 이메일 정확히 일치 1명 RPC =====
+-- 친구 추가용: 이메일을 정확히 아는 계정 한 명만 찾는다(전체 목록은 못 봄). 로그인한 사람만.
+create or replace function public.find_profile_by_email(p_email text)
+returns table (id uuid, email text, name text)
+language sql stable security definer set search_path = public as $$
+  select p.id, p.email, p.name from public.profiles p
+  where auth.uid() is not null and lower(p.email) = lower(trim(p_email))
+  limit 1;
+$$;
+revoke all on function public.find_profile_by_email(text) from public, anon;
+grant execute on function public.find_profile_by_email(text) to authenticated;
+-- profiles: 나와 친구(내가 등록했거나 나를 등록한 사람)만 보인다. 로그인 안 한 접근은 막음.
+create or replace function public.profile_visible(p uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select auth.uid() is not null and (
+    p = auth.uid()
+    or exists (select 1 from public.user_friends f
+               where (f.user_id = auth.uid() and f.friend_id = p) or (f.friend_id = auth.uid() and f.user_id = p))
+  );
+$$;
+revoke all on function public.profile_visible(uuid) from public, anon;
+grant execute on function public.profile_visible(uuid) to authenticated;
+drop policy if exists "Allow public select for profiles" on public.profiles;
+drop policy if exists profiles_select_self_or_friends on public.profiles;
+create policy profiles_select_self_or_friends on public.profiles for select to authenticated using (public.profile_visible(id));
+revoke select on public.profiles from anon;
