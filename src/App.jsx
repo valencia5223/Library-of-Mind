@@ -15,6 +15,7 @@ import NewsTicker from './components/NewsTicker';
 import WeatherWidget from './components/WeatherWidget';
 import SharedLiveMemoModal from './components/SharedLiveMemoModal';
 import ThemePicker from './components/ThemePicker';
+import { alertDialog } from './utils/notify';
 import { registerServiceWorker, subscribeUserToPush, isNotificationSupported, getNotificationPermission } from './utils/webPush';
 
 
@@ -44,6 +45,24 @@ export default function App() {
 
   // 알림 클릭 시 바로 열리는 1:1 채팅 룸 친구 상태
   const [activeMemoFriend, setActiveMemoFriend] = useState(null);
+
+  // 가입 승인 확인: 승인 여부는 사용자가 못 바꾸는 표 lom_members 에 있고(supabase_schema.sql 끝), 모든 표의 RLS 도
+  // 승인된 사람만 통과시킨다. 자동 로그인으로 들어와도 여기서 확인해 승인 전이면 로그아웃한다.
+  const isAuthOpenRef = useRef(false);
+  isAuthOpenRef.current = isAuthOpen;
+  useEffect(() => {
+    if (!user?.id || !isSupabaseConfigured()) return;
+    let alive = true;
+    supabase.rpc('lom_my_status').then(({ data, error }) => {
+      if (!alive || error) return; // 연결 오류면 그대로 둔다(어차피 DB 가 승인 전 접근을 막음)
+      if (data !== true) {
+        supabase.auth.signOut();
+        setUser(null);
+        if (!isAuthOpenRef.current) alertDialog('관리자의 가입 승인 대기 중입니다. 관리자가 승인한 뒤 이용할 수 있어요.', { title: '승인 대기' });
+      }
+    });
+    return () => { alive = false; };
+  }, [user?.id]);
 
   // 관리자 권한 확인 (지정된 관리자 이메일만 허용, 데모 모드는 로컬 전용이므로 허용)
   // 주의: 이메일에 'admin' 이 포함됐다는 이유로 관리자 권한을 주면 누구나 가입만으로 관리자가 될 수 있다.

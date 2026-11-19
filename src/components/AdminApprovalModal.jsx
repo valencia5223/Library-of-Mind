@@ -75,12 +75,7 @@ export default function AdminApprovalModal({ isOpen, onClose, user }) {
       // 1. RPC 함수로 가입 승인 갱신 시도
       const { error: rpcErr } = await supabase.rpc('approve_user_signup', { target_user_id: targetUser.id });
 
-      if (rpcErr) {
-        // Fallback: user_profiles 테이블 승인 상태 갱신
-        await supabase
-          .from('user_profiles')
-          .upsert({ id: targetUser.id, email: targetUser.email, is_approved: true });
-      }
+      if (rpcErr) throw rpcErr;
 
       // 로컬 스토리지 대기 리스트에서도 삭제
       const localPending = JSON.parse(localStorage.getItem('pending_signup_requests') || '[]');
@@ -103,6 +98,10 @@ export default function AdminApprovalModal({ isOpen, onClose, user }) {
 
     setProcessingId(targetUser.id);
     try {
+      if (isSupabaseConfigured()) {
+        const { error } = await supabase.rpc('reject_user_signup', { target_user_id: targetUser.id });
+        if (error) throw error;
+      }
       const localPending = JSON.parse(localStorage.getItem('pending_signup_requests') || '[]');
       const updatedLocal = localPending.filter(u => u.email !== targetUser.email);
       localStorage.setItem('pending_signup_requests', JSON.stringify(updatedLocal));

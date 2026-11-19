@@ -169,8 +169,25 @@ const thinkingChoice = new Map<string, number>(); // 모델 → THINKING_OPTIONS
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
+// Library 가입 승인된 사람만 (lom_members, 같은 프로젝트의 우리 동네 가입자 등은 못 씀). 결과는 토큰별로 5분 기억.
+const approvedCache = new Map<string, number>();
+async function isApproved(req: Request): Promise<boolean> {
+  const auth = req.headers.get('Authorization') || '';
+  if (!auth.startsWith('Bearer ')) return false;
+  const hit = approvedCache.get(auth);
+  if (hit && Date.now() - hit < 5 * 60e3) return true;
+  const url = Deno.env.get('SUPABASE_URL');
+  const anon = Deno.env.get('SUPABASE_ANON_KEY');
+  if (!url || !anon) return false;
+  const r = await fetch(`${url}/rest/v1/rpc/lom_ok`, { method: 'POST', headers: { apikey: anon, Authorization: auth, 'Content-Type': 'application/json' }, body: '{}' }).catch(() => null);
+  const ok = !!r && r.ok && (await r.json().catch(() => false)) === true;
+  if (ok) { approvedCache.set(auth, Date.now()); if (approvedCache.size > 500) approvedCache.clear(); }
+  return ok;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (!(await isApproved(req))) return json({ error: '가입 승인된 사용자만 쓸 수 있습니다.' }, 403);
   if (req.method !== 'POST') return json({ error: 'POST 만 지원합니다.' }, 405);
 
   const apiKey = Deno.env.get('GEMINI_API_KEY');

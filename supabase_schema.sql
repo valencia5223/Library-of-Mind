@@ -179,3 +179,94 @@ drop policy if exists "Allow public select for profiles" on public.profiles;
 drop policy if exists profiles_select_self_or_friends on public.profiles;
 create policy profiles_select_self_or_friends on public.profiles for select to authenticated using (public.profile_visible(id));
 revoke select on public.profiles from anon;
+
+-- ===== Library of Mind 가입 승인 (2026-11-19) =====
+-- 승인 여부는 사용자가 바꿀 수 없는 표 lom_members 에 둔다(예전 user_metadata.is_approved 는 본인이 고칠 수 있어 우회됨).
+-- 모든 Library 표의 RLS 에 lom_ok()(승인됨)를 더해, 승인 전에는 API 를 직접 불러도 아무것도 읽고 쓸 수 없다.
+create table if not exists public.lom_members (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  email text,
+  approved boolean not null default false,
+  rejected boolean not null default false,
+  created_at timestamptz not null default now(),
+  approved_at timestamptz
+);
+alter table public.lom_members enable row level security;
+drop policy if exists lom_members_select on public.lom_members;
+create policy lom_members_select on public.lom_members for select to authenticated using (auth.uid() = user_id);
+revoke all on public.lom_members from anon, authenticated;
+grant select on public.lom_members to authenticated;
+
+-- 기존 Library 사용자(우리 동네 가입자가 아닌 계정)는 승인된 상태로
+insert into public.lom_members (user_id, email, approved, approved_at)
+select id, email, true, now() from auth.users where coalesce(raw_user_meta_data->>'app', '') <> 'parent-dashboard'
+on conflict (user_id) do nothing;
+
+create or replace function public.lom_ok() returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.lom_members where user_id = auth.uid() and approved);
+$$;
+create or replace function public.lom_is_admin() returns boolean
+language sql stable security definer set search_path = public, auth as $$
+  select exists (select 1 from auth.users where id = auth.uid() and email = 'valencia5223@gmail.com');
+$$;
+-- 로그인 직후 부름: 내 줄이 없으면 승인 대기로 만들고 승인 여부를 돌려준다
+create or replace function public.lom_my_status() returns boolean
+language plpgsql volatile security definer set search_path = public, auth as $$
+declare ok boolean;
+begin
+  if auth.uid() is null then return false; end if;
+  insert into public.lom_members (user_id, email)
+  select id, email from auth.users where id = auth.uid()
+  on conflict (user_id) do nothing;
+  select approved into ok from public.lom_members where user_id = auth.uid();
+  return coalesce(ok, false);
+end $$;
+create or replace function public.get_pending_approval_users()
+returns table (id uuid, email text, full_name text, created_at timestamptz)
+language sql stable security definer set search_path = public, auth as $$
+  select m.user_id, m.email, u.raw_user_meta_data->>'full_name', m.created_at
+  from public.lom_members m join auth.users u on u.id = m.user_id
+  where public.lom_is_admin() and not m.approved and not m.rejected
+  order by m.created_at;
+$$;
+create or replace function public.approve_user_signup(target_user_id uuid) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.lom_is_admin() then raise exception 'not allowed'; end if;
+  update public.lom_members set approved = true, rejected = false, approved_at = now() where user_id = target_user_id;
+end $$;
+create or replace function public.reject_user_signup(target_user_id uuid) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.lom_is_admin() then raise exception 'not allowed'; end if;
+  update public.lom_members set approved = false, rejected = true, approved_at = null where user_id = target_user_id;
+end $$;
+revoke all on function public.lom_ok(), public.lom_is_admin(), public.lom_my_status(), public.get_pending_approval_users(),
+  public.approve_user_signup(uuid), public.reject_user_signup(uuid) from public, anon;
+grant execute on function public.lom_ok(), public.lom_is_admin(), public.lom_my_status(), public.get_pending_approval_users(),
+  public.approve_user_signup(uuid), public.reject_user_signup(uuid) to authenticated;
+
+-- 친구 찾기도 승인된 사람만
+create or replace function public.find_profile_by_email(p_email text)
+returns table (id uuid, email text, name text)
+language sql stable security definer set search_path = public as $$
+  select p.id, p.email, p.name from public.profiles p
+  where public.lom_ok() and lower(p.email) = lower(trim(p_email))
+  limit 1;
+$$;
+
+-- Library 표의 모든 정책에 lom_ok() 를 더한다(한 번만)
+do $$
+declare r record; q text; c text;
+begin
+  for r in select * from pg_policies where schemaname = 'public'
+    and tablename in ('book_notes','nudge_history','profiles','push_subscriptions','reading_sessions','shared_memos','user_books','user_friends','user_schedules')
+  loop
+    if coalesce(r.qual, '') like '%lom_ok()%' or coalesce(r.with_check, '') like '%lom_ok()%' then continue; end if;
+    q := case when r.qual is null then '' else format(' using ((%s) and public.lom_ok())', r.qual) end;
+    c := case when r.with_check is null then '' else format(' with check ((%s) and public.lom_ok())', r.with_check) end;
+    if q = '' and c = '' then continue; end if;
+    execute format('alter policy %I on public.%I%s%s', r.policyname, r.tablename, q, c);
+  end loop;
+end $$;

@@ -75,8 +75,25 @@ function buildRequest(b: any): { path: string; params: Record<string, string> } 
   }
 }
 
+// Library 가입 승인된 사람만 (lom_members, 같은 프로젝트의 우리 동네 가입자 등은 못 씀). 결과는 토큰별로 5분 기억.
+const approvedCache = new Map<string, number>();
+async function isApproved(req: Request): Promise<boolean> {
+  const auth = req.headers.get('Authorization') || '';
+  if (!auth.startsWith('Bearer ')) return false;
+  const hit = approvedCache.get(auth);
+  if (hit && Date.now() - hit < 5 * 60e3) return true;
+  const url = Deno.env.get('SUPABASE_URL');
+  const anon = Deno.env.get('SUPABASE_ANON_KEY');
+  if (!url || !anon) return false;
+  const r = await fetch(`${url}/rest/v1/rpc/lom_ok`, { method: 'POST', headers: { apikey: anon, Authorization: auth, 'Content-Type': 'application/json' }, body: '{}' }).catch(() => null);
+  const ok = !!r && r.ok && (await r.json().catch(() => false)) === true;
+  if (ok) { approvedCache.set(auth, Date.now()); if (approvedCache.size > 500) approvedCache.clear(); }
+  return ok;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (!(await isApproved(req))) return json({ success: false, message: '가입 승인된 사용자만 쓸 수 있습니다.', errorCode: 'NOT_APPROVED' }, 403);
 
   const apiKey = Deno.env.get('YES24_API_KEY');
   if (!apiKey) return json({ success: false, message: 'YES24_API_KEY 가 Supabase Secrets 에 없습니다.', errorCode: 'NO_KEY' }, 500);

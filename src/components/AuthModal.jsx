@@ -90,9 +90,10 @@ export default function AuthModal({
         });
         if (error) throw error;
 
-        // 관리자 승인 여부 검사 (is_approved가 false인 경우 승인 대기 처리)
-        const userMeta = data.user?.user_metadata || {};
-        if (userMeta.is_approved === false && data.user.email !== 'valencia5223@gmail.com') {
+        // 관리자 승인 여부 검사: 사용자가 못 바꾸는 표 lom_members 를 RPC 로 확인(내 줄이 없으면 승인 대기로 만들어 줌)
+        const { data: approved, error: approvalError } = await supabase.rpc('lom_my_status');
+        if (approvalError) throw approvalError;
+        if (approved !== true) {
           await supabase.auth.signOut();
           setMessage({
             type: 'error',
