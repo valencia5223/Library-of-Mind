@@ -270,3 +270,17 @@ begin
     execute format('alter policy %I on public.%I%s%s', r.policyname, r.tablename, q, c);
   end loop;
 end $$;
+
+-- ===== 우리 동네 가입자는 Library profiles 에 넣지 않기 (2026-11-19) =====
+-- Library 를 쓰게 되면(승인 후) Library 앱이 로그인할 때 자기 프로필을 만든다(App.jsx upsert).
+create or replace function public.handle_new_user() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if coalesce(new.raw_user_meta_data->>'app', '') = 'parent-dashboard' then return new; end if;
+  insert into public.profiles (id, email) values (new.id, new.email)
+  on conflict (id) do update set email = excluded.email;
+  return new;
+end $$;
+delete from public.profiles p using auth.users u
+where u.id = p.id and u.raw_user_meta_data->>'app' = 'parent-dashboard'
+  and not exists (select 1 from public.lom_members m where m.user_id = u.id and m.approved);
