@@ -115,11 +115,10 @@ export default function FriendManager({ user, onViewFriendBookshelf, currentView
     setSuccessMsg('');
 
     try {
-      // 1. 해당 이메일의 유저가 profiles 테이블에 존재하는지 확인
+      // 1. 해당 이메일의 유저가 있는지 확인. profiles 는 나·친구만 보이게 막혀 있어서(전체 목록 노출 방지)
+      //    이메일이 정확히 같은 한 명만 찾는 RPC find_profile_by_email 을 쓴다.
       const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, email, name')
-        .eq('email', friendEmail.trim())
+        .rpc('find_profile_by_email', { p_email: friendEmail.trim() })
         .maybeSingle();
 
       if (profileError) throw profileError;
