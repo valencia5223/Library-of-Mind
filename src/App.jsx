@@ -17,6 +17,7 @@ import SharedLiveMemoModal from './components/SharedLiveMemoModal';
 import ThemePicker from './components/ThemePicker';
 import { alertDialog } from './utils/notify';
 import { registerServiceWorker, subscribeUserToPush, isNotificationSupported, getNotificationPermission } from './utils/webPush';
+import { randomNudgeMessage } from './utils/nudgeMessages';
 
 
 // 메인 탭 (위쪽 탭 = label, 핸드폰 아래쪽 탭 바 = short)
@@ -187,15 +188,15 @@ export default function App() {
   const triggerWebNotification = ({ senderEmail, senderId, title, body, nid }) => {
     if (!isNotificationSupported() || Notification.permission !== 'granted') return;
     const tag = 'nudge-shake-notification';
-    const t = title || '🔔 일정 알림';
+    const t = title;
     const opts = {
-      body: body || '확인할 일정이 있습니다.',
+      body,
       icon: '/favicon.ico',
       badge: '/favicon.ico',
       tag,
       renotify: true,
       requireInteraction: false,
-      data: { url: '/', sender_id: senderId || '', sender_email: senderEmail || '', nid: nid || '' }
+      data: { url: '/', sender_id: senderId || '', sender_email: senderEmail || '', nid: nid || '', at: Date.now() }
     };
     const showInPage = () => {
       const n = new Notification(t, opts);
@@ -213,7 +214,8 @@ export default function App() {
         const reg = await navigator.serviceWorker.getRegistration();
         if (!reg) { showInPage(); return; }
         const list = await reg.getNotifications({ tag });
-        if (nid && list.some((n) => n.data?.nid === nid)) return; // 푸시로 이미 떴음
+        // 푸시로 이미 떴음(번호가 없는 예전 버전 흔들기는 8초 안에 뜬 알림이면 같은 것으로 봄)
+        if (list.some((n) => (nid ? n.data?.nid === nid : Date.now() - (n.data?.at || 0) < 8000))) return;
         await reg.showNotification(t, opts);
       } catch {
         showInPage();
@@ -246,7 +248,10 @@ export default function App() {
           // 2. 작업표시줄 & 브라우저 탭 제목 깜박임
           const senderEmail = payload.payload?.sender_email;
           const senderId = payload.payload?.sender_id;
-          const { title, body, nid } = payload.payload || {};
+          const { nid } = payload.payload || {};
+          // 예전 버전 화면에서 보낸 흔들기는 문구가 없거나 기본값이라 여기서 홍보 문구로 바꾼다
+          const sent = payload.payload || {};
+          const { title, body } = sent.title && sent.title !== '🔔 일정 알림' ? sent : randomNudgeMessage();
           triggerTaskbarBlink(title);
 
           // 3. 데스크톱 알림 (Windows 작업표시줄 팝업, 웹 푸시와 겹치면 한 번만)
