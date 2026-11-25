@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../supabaseClient';
 import { X, Sparkles, Copy, Trash2, CheckCircle2, RefreshCw, Zap, GripHorizontal, ArrowRightLeft, User, MessageSquare } from 'lucide-react';
 import { sendWebPushNotification } from '../utils/webPush';
+import { newNudgeId, randomNudgeMessage } from '../utils/nudgeMessages';
 
 import { confirmDialog } from '../utils/notify';
 import useIsMobile from '../utils/useIsMobile';
@@ -65,8 +66,10 @@ export default function SharedLiveMemoModal({ user, friend, onClose }) {
       await sendWebPushNotification(targetUserId, {
         target_user_email: friend.email,
         sender_id: user.id,
-        sender_email: user.email
-        // 제목·본문은 sendWebPushNotification 기본값(채팅과 무관한 '일정 알림')을 쓴다
+        sender_email: user.email,
+        // 업무 중 떠도 채팅인지 모르게 매번 다른 AI 교육 홍보 문구로 보낸다
+        ...randomNudgeMessage(),
+        nid: newNudgeId()
       });
     } catch (err) {
       console.warn('흔들기 알람 전송 예외 발생:', err);

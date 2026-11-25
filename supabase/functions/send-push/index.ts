@@ -27,7 +27,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { target_user_id, target_user_email, title, body, icon, url, sender_email, sender_id } = await req.json();
+    const { target_user_id, target_user_email, title, body, icon, url, sender_email, sender_id, nid } = await req.json();
 
     if (!target_user_id && !target_user_email) {
       return new Response(JSON.stringify({ error: 'target_user_id or target_user_email is required' }), {
@@ -72,7 +72,8 @@ Deno.serve(async (req: Request) => {
       data: {
         url: url || '/',
         sender_email: sender_email || '',
-        sender_id: sender_id || ''
+        sender_id: sender_id || '',
+        nid: nid || ''
       }
     });
 

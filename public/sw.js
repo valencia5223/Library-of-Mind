@@ -36,20 +36,31 @@ self.addEventListener('push', (event) => {
     }
   }
 
-  const options = {
-    body: notificationData.body,
-    icon: notificationData.icon,
-    badge: notificationData.badge,
-    tag: notificationData.tag,
-    renotify: notificationData.renotify,
-    requireInteraction: false,
-    vibrate: [200, 100, 200, 100, 200],
-    data: notificationData.data
-  };
+  // 흔들기 번호(nid): 같은 흔들기가 실시간 알림·여러 푸시 구독으로 두 번 와도 한 번만 울린다.
+  // 푸시를 받으면 알림을 꼭 띄워야 해서(안 띄우면 브라우저가 기본 알림을 띄움) 같은 번호면 소리 없이 덮어쓴다
+  const data = notificationData.data || {};
+  let nid = data.nid || '';
+  if (!nid && data.url) {
+    try { nid = new URL(data.url, self.location.origin).searchParams.get('nudge') || ''; } catch (e) { /* 무시 */ }
+  }
+  data.nid = nid;
 
   event.waitUntil(
-    // 자동으로 닫지 않는다: 안 누르고 사라지는 알림이 쌓이면 브라우저가 알림 권한을 회수한다
-    self.registration.showNotification(notificationData.title, options)
+    self.registration.getNotifications({ tag: notificationData.tag }).then((list) => {
+      const seen = !!nid && list.some((n) => n.data && n.data.nid === nid);
+      // 자동으로 닫지 않는다: 안 누르고 사라지는 알림이 쌓이면 브라우저가 알림 권한을 회수한다
+      return self.registration.showNotification(notificationData.title, {
+        body: notificationData.body,
+        icon: notificationData.icon,
+        badge: notificationData.badge,
+        tag: notificationData.tag,
+        renotify: !seen,
+        silent: seen,
+        requireInteraction: false,
+        vibrate: seen ? undefined : [200, 100, 200, 100, 200],
+        data
+      });
+    })
   );
 });
 

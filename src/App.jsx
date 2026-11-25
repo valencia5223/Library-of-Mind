@@ -164,10 +164,9 @@ export default function App() {
   };
 
   // 작업표시줄 아이콘 & 탭 제목 깜박임 (document.title 교체)
-  const triggerTaskbarBlink = (senderEmail) => {
+  const triggerTaskbarBlink = (alertTitle = '🔔 일정 알림') => {
     const originalTitle = 'Library of Mind';
-    // 업무 중 화면을 봐도 채팅인지 모르게 보낸 사람·채팅 문구를 넣지 않는다
-    const alertTitle = '🔔 일정 알림';
+    // 업무 중 화면을 봐도 채팅인지 모르게 보낸 사람·채팅 문구를 넣지 않는다(보낸 쪽이 고른 홍보 문구 제목)
 
     let count = 0;
     const interval = setInterval(() => {
@@ -180,33 +179,46 @@ export default function App() {
     }, 500);
   };
 
-  // 웹 데스크톱 알림 발송 (OS 작업표시줄 및 알림 센터에 팝업 노출, 클릭 시 바로가기 연동)
-  const triggerWebNotification = (senderEmail, senderId) => {
-    if (isNotificationSupported() && Notification.permission === 'granted') {
-      const senderName = senderEmail ? senderEmail.split('@')[0] : '상대방';
-      // 보낸 사람·채팅 문구는 화면에 보이지 않게 한다 (senderName 은 클릭 시 채팅창 여는 데만 씀)
-      // 웹 푸시(sw.js)와 같은 tag 라서 둘 다 와도 알림은 하나만 남는다.
-      // 자동으로 닫지 않는다: 아무도 안 누르고 사라지는 알림이 쌓이면 브라우저가 알림 권한을 회수한다
-      const notification = new Notification('🔔 일정 알림', {
-        body: '확인할 일정이 있습니다.',
-        icon: '/favicon.ico',
-        tag: 'nudge-shake-notification',
-        renotify: true,
-        requireInteraction: false
-      });
-
-      notification.onclick = () => {
+  // 웹 데스크톱 알림 (OS 작업표시줄·알림 센터). 같은 흔들기는 웹 푸시(sw.js)로도 오므로,
+  // 잠깐 기다렸다가 같은 번호(nid)의 알림이 이미 떠 있으면 띄우지 않는다(한 번만 울리게).
+  // 서비스워커 알림으로 띄워 나중에 도착한 푸시도 같은 번호를 보고 소리 없이 덮어쓴다(sw.js).
+  // 보낸 사람·채팅 문구는 보이지 않게 하고, 누르면 sw.js 가 ?open_chat 으로 채팅창을 연다.
+  // 자동으로 닫지 않는다: 아무도 안 누르고 사라지는 알림이 쌓이면 브라우저가 알림 권한을 회수한다
+  const triggerWebNotification = ({ senderEmail, senderId, title, body, nid }) => {
+    if (!isNotificationSupported() || Notification.permission !== 'granted') return;
+    const tag = 'nudge-shake-notification';
+    const t = title || '🔔 일정 알림';
+    const opts = {
+      body: body || '확인할 일정이 있습니다.',
+      icon: '/favicon.ico',
+      badge: '/favicon.ico',
+      tag,
+      renotify: true,
+      requireInteraction: false,
+      data: { url: '/', sender_id: senderId || '', sender_email: senderEmail || '', nid: nid || '' }
+    };
+    const showInPage = () => {
+      const n = new Notification(t, opts);
+      n.onclick = () => {
         window.focus();
         if (senderEmail || senderId) {
-          setActiveMemoFriend({
-            friend_id: senderId || '',
-            email: senderEmail || '상대방',
-            name: senderName
-          });
+          setActiveMemoFriend({ friend_id: senderId || '', email: senderEmail || '상대방', name: senderEmail ? senderEmail.split('@')[0] : '상대방' });
         }
-        notification.close();
+        n.close();
       };
-    }
+    };
+    if (!('serviceWorker' in navigator)) { showInPage(); return; }
+    setTimeout(async () => {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (!reg) { showInPage(); return; }
+        const list = await reg.getNotifications({ tag });
+        if (nid && list.some((n) => n.data?.nid === nid)) return; // 푸시로 이미 떴음
+        await reg.showNotification(t, opts);
+      } catch {
+        showInPage();
+      }
+    }, 3000);
   };
 
   // 로그인 시 메모창 미오픈 상태에서도 흔들기/알람 수신 가능한 전역 Supabase 채널 구독 및 서비스 워커 연동
@@ -234,10 +246,11 @@ export default function App() {
           // 2. 작업표시줄 & 브라우저 탭 제목 깜박임
           const senderEmail = payload.payload?.sender_email;
           const senderId = payload.payload?.sender_id;
-          triggerTaskbarBlink(senderEmail);
+          const { title, body, nid } = payload.payload || {};
+          triggerTaskbarBlink(title);
 
-          // 3. 데스크톱 알림 (Windows 작업표시줄 팝업)
-          triggerWebNotification(senderEmail, senderId);
+          // 3. 데스크톱 알림 (Windows 작업표시줄 팝업, 웹 푸시와 겹치면 한 번만)
+          triggerWebNotification({ senderEmail, senderId, title, body, nid });
 
           // 4. 최소화 상태 대응 띵동! 사운드 알림음
           triggerNudgeChime();

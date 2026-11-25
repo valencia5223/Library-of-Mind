@@ -181,6 +181,8 @@ export async function sendWebPushNotification(targetUserId, payload) {
   const body = payload.body || '확인할 일정이 있습니다.';
   const senderEmail = payload.sender_email || '';
   const senderId = payload.sender_id || '';
+  // 흔들기 번호: 받는 쪽이 실시간 알림·웹 푸시(여러 구독) 중 같은 번호는 한 번만 띄운다
+  const nid = payload.nid || '';
 
   if (isSupabaseConfigured()) {
     // 1) Supabase Realtime Broadcast 전송 (현재 브라우저를 열어둔 웹 온라인 상태 대응)
@@ -200,7 +202,8 @@ export async function sendWebPushNotification(targetUserId, payload) {
                 sender_id: senderId,
                 sender_email: senderEmail,
                 title: title,
-                body: body
+                body: body,
+                nid: nid
               }
             });
             setTimeout(() => {
@@ -223,7 +226,9 @@ export async function sendWebPushNotification(targetUserId, payload) {
           sender_email: senderEmail,
           title: title,
           body: body,
-          url: '/'
+          nid: nid,
+          // 배포된 send-push 가 nid 를 안 넘겨도 url 은 그대로 넘기므로 여기에도 싣는다(sw.js 가 읽음)
+          url: nid ? `/?nudge=${nid}` : '/'
         }
       });
 
